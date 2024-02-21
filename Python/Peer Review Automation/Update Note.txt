@@ -1,0 +1,1 @@
+check for YS or NS at the specific location of the field instead "in" the item name
