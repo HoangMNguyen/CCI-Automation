@@ -1,0 +1,103 @@
+Casebook Version,Form Name,Form Label,Form External ID,Form SDTM Name,Form Restricted
+1,LBCHEM,Chemistry,LBCHEM,,No
+1,LBCOAG,Coagulation Tests,LBCOAG,,No
+1,LBHEMA,Hematology,LBHEMA,,No
+1,SV,Study Visit,SV,,No
+1,LBLC,Lymphocyte Subset Analysis,LBLC,,No
+1,QSECOG,ECOG Performance Status,QSECOG,,No
+1,LBHLH,HLH/MAS,LBHLH,,No
+1,LBSIG,Serum Immunoglobulin,LBSIG,,No
+1,PE,Physical Exam,PE,,No
+1,VS,Vital Signs,VS,,No
+1,AE,Adverse Event,AE,,No
+1,CM,Concomitant Medication,CM,,No
+1,CECRS,Cytokine Release Syndrome,CECRS,,No
+1,ICANS,ICANS,ICANS,,No
+1,LPMHCONF,Medical History Confirmation,LPMHCONF,,No
+1,MH,Medical History,MH,,No
+1,PRANP,Prior Antineoplastic (ANP) Therapy,PRANP,,No
+1,PANP,Primary Antineoplastic (ANP) Therapy,PANP,,No
+1,PDAE,Protocol-Defined Adverse Event,PDAE,,No
+1,LANP,LTFU Antineoplastic (ANP) Therapy,LANP,,No
+1,TF,Transfusion,TF,,No
+1,PRBM, Bone Marrow,PRBM,,No
+1,CLLIMG,CLL Disease Evaluation/Imaging,CLLIMG,,No
+1,CDEXP,CD19 Expression,CDEXP,,No
+1,NHLIMG,NHL Radiographic Evaluations,NHLIMG,,No
+1,RPPREG,Pregnancy Test,RPPREG,,No
+1,PRCNSEVL,CNS Evaluation,PRCNSEVL,,No
+1,PRXRAY,Chest X-Ray,PRXRAY,,No
+1,IE,Eligibility,IE,,No
+1,EM,ECHO-MUGA,EM,,No
+1,HW,Height and Weight,HW,,No
+1,RSC,Research Specimen Collection,RSC,,No
+1,TIBX,Tissue Biopsy,TIBX,,No
+1,VIRS,Viral Serology,VIRS,,No
+1,UNSPRMPT,Unscheduled Prompt,UNSPRMPT,,No
+1,APH,Apheresis,APH,,No
+1,RS,Disease Assessment,RS,,No
+1,EOS,End of Study,EOS,,No
+1,RCL,Replication Competent Lentivirus,RCL,,No
+1,QSICE,ICE Score,QSICE,,No
+1,RVP,Respiratory Virus Panel,RVP,,No
+1,EXCHMO,Chemotherapy,EXCHMO,,No
+1,DSSVLTFU,Study Visit for Long-Term Follow-up,DSSVLTFU,,No
+1,DLA,Dose Level Assignment,DLA,,No
+1,INITLF,Initiation of Long-Term Follow-Up (LTFU),INITLF,,No
+1,PRDIAG,Diagnosis and Extent of Cancer,PRDIAG,,No
+1,INF,Infusion,INF,,No
+1,ECVS,Infusion Vital Signs,ECVS,,No
+1,PTF,Pre-Treatment Transfusion History,PTF,,No
+1,DM,Demographics,DM,,No
+2,LBCHEM,Chemistry,LBCHEM,,No
+2,QSECOG,ECOG Performance Status,QSECOG,,No
+2,LBCOAG,Coagulation Tests,LBCOAG,,No
+2,LBHEMA,Hematology,LBHEMA,,No
+2,PE,Physical Exam,PE,,No
+2,SV,Study Visit,SV,,No
+2,LBLC,Lymphocyte Subset Analysis,LBLC,,No
+2,LBHLH,HLH/MAS,LBHLH,,No
+2,LBSIG,Serum Immunoglobulin,LBSIG,,No
+2,VS,Vital Signs,VS,,No
+2,PRBM, Bone Marrow,PRBM,,No
+2,CLLIMG,CLL Disease Evaluation/Imaging,CLLIMG,,No
+2,RS,Disease Assessment,RS,,No
+2,RCL,Replication Competent Lentivirus,RCL,,No
+2,DSSVLTFU,Study Visit for Long-Term Follow-up,DSSVLTFU,,No
+2,NHLIMG,NHL Radiographic Evaluations,NHLIMG,,No
+2,RSC,Research Specimen Collection,RSC,,No
+2,QSICE,ICE Score,QSICE,,No
+2,INF,Infusion,INF,,No
+2,ECVS,Infusion Vital Signs,ECVS,,No
+2,PTF,Pre-Treatment Transfusion History,PTF,,No
+2,TIBX,Tissue Biopsy,TIBX,,No
+2,CDEXP,CD19 Expression,CDEXP,,No
+2,HW,Height and Weight,HW,,No
+2,PRXRAY,Chest X-Ray,PRXRAY,,No
+2,PRCNSEVL,CNS Evaluation,PRCNSEVL,,No
+2,RPPREG,Pregnancy Test,RPPREG,,No
+2,EM,ECHO-MUGA,EM,,No
+2,IE,Eligibility,IE,,No
+2,VIRS,Viral Serology,VIRS,,No
+2,APH,Apheresis,APH,,No
+2,EXCHMO,Chemotherapy,EXCHMO,,No
+2,AE,Adverse Event,AE,,No
+2,CM,Concomitant Medication,CM,,No
+2,CECRS,Cytokine Release Syndrome,CECRS,,No
+2,ICANS,ICANS,ICANS,,No
+2,LPMHCONF,Medical History Confirmation,LPMHCONF,,No
+2,MH,Medical History,MH,,No
+2,PRANP,Prior Antineoplastic (ANP) Therapy,PRANP,,No
+2,PANP,Primary Antineoplastic (ANP) Therapy,PANP,,No
+2,PDAE,Protocol-Defined Adverse Event,PDAE,,No
+2,LANP,LTFU Antineoplastic (ANP) Therapy,LANP,,No
+2,TF,Transfusion,TF,,No
+2,PRDIAG,Diagnosis and Extent of Cancer,PRDIAG,,No
+2,DM,Demographics,DM,,No
+2,RVP,Respiratory Virus Panel,RVP,,No
+2,DLA,Dose Level Assignment,DLA,,No
+2,RTSCOENR,Rescue Therapy Study Co-Enrollment Form,RTSCOENR,,No
+2,EOS,End of Study,EOS,,No
+2,INITLF,Initiation of Long-Term Follow-Up (LTFU),INITLF,,No
+2,DSINITRT,Initiation of Retreatment Phase,DSINITRT,,No
+2,UNSPRMPT,Unscheduled Prompt,UNSPRMPT,,No

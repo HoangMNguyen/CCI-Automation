@@ -1,0 +1,44 @@
+Casebook Version,Event Group Name,Event Group Label,Event Group External ID,Event Group Type,Event Group Repeats,Event Name,Event Label,Event External ID,Event Type,Event Restricted
+1,eg_CHEMO,Lymphodepleting Chemotherapy,eg_CHEMO,EDC,No,ev_CHEMO,Lymphodepleting Chemotherapy,ev_CHEMO,EDC,No
+1,eg_CHEMO2,Repeat Lymphodepleting Chemotherapy,eg_CHEMO2,Unscheduled,No,ev_CHEMO2,Repeat Lymphodepleting Chemotherapy,ev_CHEMO2,EDC,No
+1,eg_SCR2,Re-Screening/Enrollment,eg_SCR2,Unscheduled,No,ev_SCR2,Re-Screening/Enrollment,ev_SCR2,EDC,No
+1,eg_LOGS,Log Forms,eg_LOGS,EDC,No,ev_LOGS,Log Forms,ev_LOGS,Log,No
+1,eg_APH,Apheresis,eg_APH,EDC,No,ev_APH,Apheresis,ev_APH,EDC,No
+1,eg_APH2,Repeat Apheresis,eg_APH2,Unscheduled,No,ev_APH2,Repeat Apheresis,ev_APH2,EDC,No
+1,eg_PRMTXFUP,Primary Treatment and Follow-up,eg_PRMTXFUP,EDC,Yes,ev_PRMTXFUP,Primary Treatment and Follow-up,ev_PRMTXFUP,EDC,No
+1,eg_LTFUP2NOV,Annual Visits no Vector,eg_LTFUP2NOV,EDC,Yes,ev_LTFUP2NOV,Annual Visits no Vector,ev_LTFUP2NOV,EDC,No
+1,eg_UNS,Unscheduled,eg_UNS,Unscheduled,No,ev_UNS,Unscheduled,ev_UNS,EDC,No
+1,eg_PRSCR,Prescreen,eg_PRSCR,EDC,No,ev_PRSCR,Prescreen,ev_PRSCR,Screened,No
+1,eg_SCR,Screening/Enrollment,eg_SCR,EDC,No,ev_SCR,Screening/Enrollment,ev_SCR,EDC,No
+1,eg_PINF,Pre-Infusion Visit,eg_PINF,EDC,No,ev_PINF,Pre-Infusion Visit,ev_PINF,EDC,No
+1,eg_PINF2,Repeat Pre-Infusion Visit,eg_PINF2,Unscheduled,No,ev_PINF2,Repeat Pre-Infusion Visit,ev_PINF2,EDC,No
+1,eg_LTFUP2V,Annual Visits with Vector,eg_LTFUP2V,EDC,Yes,ev_LTFUP2V,Annual Visits with Vector,ev_LTFUP2V,EDC,No
+1,eg_LTFUP1,Long Term Follow-up Months 3-60,eg_LTFUP1,EDC,Yes,ev_LTFUP1,Long Term Follow-up Months 3-60,ev_LTFUP1,EDC,No
+1,eg_PTS2,Repeat Pre-Treatment Safety Visit,eg_PTS2,Unscheduled,No,ev_PTS2,Repeat Pre-Treatment Safety Visit,ev_PTS2,EDC,No
+1,eg_PTS,Pre-Treatment Safety Visit,eg_PTS,EDC,No,ev_PTS,Pre-Treatment Safety Visit,ev_PTS,EDC,No
+1,eg_DISP,Subject Disposition,eg_DISP,EDC,No,ev_DISP,Subject Disposition,ev_DISP,Log,No
+2,eg_PRMTXFUPR,Primary Retreatment and Follow-up,eg_PRMTXFUPR,EDC,Yes,ev_PRMTXFUPR,Primary Retreatment and Follow-up,ev_PRMTXFUPR,EDC,No
+2,eg_SCR2,Re-Screening/Enrollment,eg_SCR2,Unscheduled,No,ev_SCR2,Re-Screening/Enrollment,ev_SCR2,EDC,No
+2,eg_CHEMO2,Repeat Lymphodepleting Chemotherapy,eg_CHEMO2,Unscheduled,No,ev_CHEMO2,Repeat Lymphodepleting Chemotherapy,ev_CHEMO2,EDC,No
+2,eg_PTSR,Pre-Retreatment Safety Visit,eg_PTSR,EDC,No,ev_PTSR,Pre-Retreatment Safety Visit,ev_PTSR,EDC,No
+2,eg_CHEMO2R,Repeat Retreatment Lymphodepleting Chemotherapy,eg_CHEMO2R,Unscheduled,No,ev_CHEMO2R,Repeat Retreatment Lymphodepleting Chemotherapy,ev_CHEMO2R,EDC,No
+2,eg_PINF,Pre-Infusion Visit,eg_PINF,EDC,No,ev_PINF,Pre-Infusion Visit,ev_PINF,EDC,No
+2,eg_PTS2,Repeat Pre-Treatment Safety Visit,eg_PTS2,Unscheduled,No,ev_PTS2,Repeat Pre-Treatment Safety Visit,ev_PTS2,EDC,No
+2,eg_SCR,Screening/Enrollment,eg_SCR,EDC,No,ev_SCR,Screening/Enrollment,ev_SCR,EDC,No
+2,eg_APH2,Repeat Apheresis,eg_APH2,Unscheduled,No,ev_APH2,Repeat Apheresis,ev_APH2,EDC,No
+2,eg_LOGS,Log Forms,eg_LOGS,EDC,No,ev_LOGS,Log Forms,ev_LOGS,Log,No
+2,eg_DISP,Subject Disposition,eg_DISP,EDC,No,ev_DISP,Subject Disposition,ev_DISP,Log,No
+2,eg_CHEMO,Lymphodepleting Chemotherapy,eg_CHEMO,EDC,No,ev_CHEMO,Lymphodepleting Chemotherapy,ev_CHEMO,EDC,No
+2,eg_LTFUP2NOV,Annual Visits no Vector,eg_LTFUP2NOV,EDC,Yes,ev_LTFUP2NOV,Annual Visits no Vector,ev_LTFUP2NOV,EDC,No
+2,eg_PRSCR,Prescreen,eg_PRSCR,EDC,No,ev_PRSCR,Prescreen,ev_PRSCR,Screened,No
+2,eg_PTS2R,Repeat Pre-Retreatment Safety Visit,eg_PTS2R,Unscheduled,No,ev_PTS2R,Repeat Pre-Retreatment Safety Visit,ev_PTS2R,EDC,No
+2,eg_CHEMOR,Retreatment Lymphodepleting Chemotherapy,eg_CHEMOR,EDC,No,ev_CHEMOR,Retreatment Lymphodepleting Chemotherapy,ev_CHEMOR,EDC,No
+2,eg_APH,Apheresis,eg_APH,EDC,No,ev_APH,Apheresis,ev_APH,EDC,No
+2,eg_LTFUP2V,Annual Visits with Vector,eg_LTFUP2V,EDC,Yes,ev_LTFUP2V,Annual Visits with Vector,ev_LTFUP2V,EDC,No
+2,eg_PTS,Pre-Treatment Safety Visit,eg_PTS,EDC,No,ev_PTS,Pre-Treatment Safety Visit,ev_PTS,EDC,No
+2,eg_PRMTXFUP2,Primary Treatment and Follow-up,eg_PRMTXFUP2,EDC,Yes,ev_PRMTXFUP2,Primary Treatment and Follow-Up,ev_PRMTXFUP2,EDC,No
+2,eg_PINF2,Repeat Pre-Infusion Visit,eg_PINF2,Unscheduled,No,ev_PINF2,Repeat Pre-Infusion Visit,ev_PINF2,EDC,No
+2,eg_PRMTXFUP,Primary Treatment and Follow-up,eg_PRMTXFUP,EDC,Yes,ev_PRMTXFUP,Primary Treatment and Follow-up,ev_PRMTXFUP,EDC,No
+2,eg_LTFUP1,Long Term Follow-up Months 3-60,eg_LTFUP1,EDC,Yes,ev_LTFUP1,Long Term Follow-up Months 3-60,ev_LTFUP1,EDC,No
+2,eg_LTFUP1R,Retreatment Long Term follow-up Months 3-60,eg_LTFUP1R,EDC,Yes,ev_LTFUP1R,Retreatment Long Term Follow-up Months 3-60,ev_LTFUP1R,EDC,No
+2,eg_UNS,Unscheduled,eg_UNS,Unscheduled,No,ev_UNS,Unscheduled,ev_UNS,EDC,No
