@@ -1,0 +1,10 @@
+numpy
+matplotlib
+pandas
+pyqt5
+pyqt6
+PySide6
+xlsxwriter
+openpyxl
+pyqtdarktheme
+requests
