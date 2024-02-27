@@ -26,7 +26,7 @@ ComboBox1.AddItem "Query Detail Listing Format"
 ComboBox1.AddItem "Subject Progress Listing Format"
 ComboBox1.AddItem "Format Core Listing AE"
 ComboBox1.AddItem "Format Core Listing Non AE"
-ComboBox1.AddItem "15420 DSMB Report"
+' ComboBox1.AddItem "15420 DSMB Report"
 ComboBox1.AddItem "15420 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "03821 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "Sheet Format (Left Align)"
@@ -47,8 +47,8 @@ Sub CommandButton1_Click()
         Call VeevaAE.FormatVeevaAE
     ElseIf ComboBox1.Value = "Format Core Listing Non AE" Then
         Call SafetyMacro.FormatNonAECRF
-    ElseIf ComboBox1.Value = "15420 DSMB Report" Then
-        Call S15420.DSMB_Report
+    'ElseIf ComboBox1.Value = "15420 DSMB Report" Then
+    '    Call S15420.DSMB_Report
     ElseIf ComboBox1.Value = "15420 Ming's Comprehensive Form Summary Format" Then
         Call S15420.MingComprehensiveFormSummary
     ElseIf ComboBox1.Value = "03821 Ming's Comprehensive Form Summary Format" Then
