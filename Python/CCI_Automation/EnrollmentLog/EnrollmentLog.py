@@ -33,16 +33,16 @@ class EnrollmentLog():
         if self.study_name == '12423':
             from .EnrollmentLog12423 import EnrollmentLog12423
             output_df = EnrollmentLog12423(self.data)
-        if self.study_name == '03821':
+        elif self.study_name == '03821':
             from .EnrollmentLog03821 import EnrollmentLog03821
             output_df = EnrollmentLog03821(self.data)  
-        if self.study_name =='11823':
+        elif self.study_name =='11823':
             from .EnrollmentLog11823 import EnrollmentLog11823
             output_df = EnrollmentLog11823(self.data)      
-        if self.study_name =='15420':
+        elif self.study_name =='15420':
             from .EnrollmentLog15420 import EnrollmentLog15420
             output_df = EnrollmentLog15420(self.data) 
-        if self.study_name =='16321':
+        elif self.study_name =='16321':
             from .EnrollmentLog16321 import EnrollmentLog16321
             output_df = EnrollmentLog16321(self.data)
         return output_df
@@ -99,7 +99,7 @@ class EnrollmentLog():
                             worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
                         for i in range (22, 23):
                             worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
-                    if self.study_name == '12423':
+                    elif self.study_name == '12423':
                         for i in range (8):
                             worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
                         for i in range (8, 12):
@@ -110,7 +110,7 @@ class EnrollmentLog():
                             worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
                         for i in range (23, 24):
                             worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
-                    if self.study_name == '15420':
+                    elif self.study_name == '15420':
                         for i in range (8):
                             worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
                         for i in range (8, 11):
