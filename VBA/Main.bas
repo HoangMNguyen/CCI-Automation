@@ -191,8 +191,10 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     
     'Save file
     Dim modifiedDate As String
-    modifiedDate = dateToText(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & " Study ##### Quick Reports Form Status for Sponsor " & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    modifiedDate = Now2Date(Now)
+    Dim modifiedTime As String
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "- XXXXX Form Status Report " & modifiedTime & " EST_Sponsor " & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation
@@ -216,7 +218,6 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     Dim SheetNum As Long
     Dim CurrentSheetNum As Long
     Dim fileSaveName As Variant
-    
     Set NewBook = duplicateWorkbook(ActiveWorkbook)
     'Disable Screen Update
     Application.ScreenUpdating = False
@@ -335,9 +336,12 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     Application.ScreenUpdating = True
     
     'Save file
+    
     Dim modifiedDate As String
-    modifiedDate = dateToText(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & " Study ##### Quick Reports Form Status for Site " & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    modifiedDate = Now2Date(Now)
+    Dim modifiedTime As String
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "- XXXXX Form Status Report " & modifiedTime & " EST_Site.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation
     Else
@@ -506,8 +510,11 @@ Application.ScreenUpdating = True
 
 'Save file
 Dim modifiedDate As String
-modifiedDate = dateToText(Now)
-fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & " Study ##### Quick Reports Query Status " & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+modifiedDate = Now2Date(Now)
+Dim modifiedTime As String
+modifiedTime = Now2Time(Now)
+
+fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "- XXXXX Query Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
 
 If fileSaveName = False Then
     MsgBox "You haven't saved the document", vbExclamation

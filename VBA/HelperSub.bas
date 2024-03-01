@@ -122,8 +122,12 @@ Public Function getLastModified() As Date
    getLastModified = ActiveWorkbook.BuiltinDocumentProperties("Last Save Time")
 End Function
 
-Public Function dateToText(mDate As Date)
-    dateToText = Format(mDate, "YYYYMMDD_hhmm AM/PM")
+Public Function Now2Date(mDate As Date)
+    Now2Date = Format(mDate, "YYMMDD")
+End Function
+
+Public Function Now2Time(mDate As Date)
+    Now2Time = Format(mDate, "hmm")
 End Function
 
 Public Function showAll()
@@ -883,6 +887,15 @@ Function DeepCopyArray(sourceArray As Variant) As Variant
     DeepCopyArray = copiedArray
 End Function
 
-
+Function GetStudyNumber() As String
+    ' Check if cell A2 is not empty
+    If Len(ActiveSheet.Range("A2").Value) > 0 Then
+        ' Retrieve and return the first 5 characters of the value in cell A2
+        GetStudyNumber = Left(ActiveSheet.Range("A2").Value, 5)
+    Else
+        ' Return an empty string if A2 is empty
+        GetStudyNumber = ""
+    End If
+End Function
 
 

@@ -77,7 +77,6 @@ Function GetAEHeaders(StudyNum As String) As Variant
                             "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", _
                             "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
                             "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
-                            "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", _
                             "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", _
                             "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", _
                             "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", _

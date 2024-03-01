@@ -28,16 +28,25 @@ Sub SubjectProgressListingFormat()
 
 End Sub
 
-Sub QueryDetailListingFormat()
+Sub QueryDetailListingFormatSponsor()
     Application.ScreenUpdating = False
     Dim WS1 As Worksheet
+    Dim StudyNum As String
     Set WS1 = ActiveWorkbook.Sheets(1)
+    StudyNum = GetStudyNumber()
     
     ' Remove columns by calling RemoveColumn function
     Call RemoveColumn(WS1, "Study")
     Call RemoveColumn(WS1, "Country")
     Call RemoveColumn(WS1, "Site")
     Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Query ID")
+    Call RemoveColumn(WS1, "Query Rule")
+    Call RemoveColumn(WS1, "Created By Role")
+    Call RemoveColumn(WS1, "Created By Query Team")
+    Call RemoveColumn(WS1, "Answered By Role")
+    Call RemoveColumn(WS1, "Closed By Role")
+    Call RemoveColumn(WS1, "Query Vault ID")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "Item OID")
     Call RemoveColumn(WS1, "Query Team")
@@ -69,8 +78,22 @@ Sub QueryDetailListingFormat()
     WS2.Range("A4").Value = "Open"
     WS2.Range("B4").Value = CountPerColumnName(WS1, "Query Status", "Open")
     
+    WS2.Range("A6").Value = "Open Query Form Types"
+    WS2.Range("B6").Value = "Counts"
+    WS2.Range("A7").Value = "Adverse Event"
+    WS2.Range("B7").Value = CountPerColumnName(WS1, "Query Status", "Open", "Form Label", "Adverse Event")
+    WS2.Range("A8").Value = "Concomitant Medications"
+    WS2.Range("B8").Value = CountPerColumnName(WS1, "Query Status", "Open", "Form Label", "Concomitant Medication")
+    WS2.Range("A9").Value = "LTFU ANP"
+    WS2.Range("B9").Value = CountPerColumnName(WS1, "Query Status", "Open", "Form Label", "LTFU Antineoplastic (ANP) Therapy")
+    WS2.Range("A10").Value = "All Other Forms"
+    WS2.Range("B10").Value = CountPerColumnName(WS1, "Query Status", "Open") - WS2.Range("B7").Value - WS2.Range("B8").Value - WS2.Range("B9").Value
+    
     WS2.Activate
     ActiveSheet.Range("A1").Select
+    Call FormatTable
+    
+    ActiveSheet.Range("A6").Select
     Call FormatTable
     
     'Filter values
@@ -80,7 +103,79 @@ Sub QueryDetailListingFormat()
     
     Application.ScreenUpdating = True
     
-    Call WarningCSV
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "_" & StudyNum & " Query Detail Report " & modifiedTime & " EST_Sponsor" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
+
+End Sub
+
+Sub QueryDetailListingFormatSite()
+    Application.ScreenUpdating = False
+    Dim WS1 As Worksheet
+    Dim StudyNum As String
+    Set WS1 = ActiveWorkbook.Sheets(1)
+    StudyNum = GetStudyNumber()
+    ' Remove columns by calling RemoveColumn function
+    Call RemoveColumn(WS1, "Study")
+    Call RemoveColumn(WS1, "Country")
+    Call RemoveColumn(WS1, "Site")
+    Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Query ID")
+    Call RemoveColumn(WS1, "Query Rule")
+    Call RemoveColumn(WS1, "Created By Role")
+    Call RemoveColumn(WS1, "Created By Query Team")
+    Call RemoveColumn(WS1, "Answered By Role")
+    Call RemoveColumn(WS1, "Closed By Role")
+    Call RemoveColumn(WS1, "Query Vault ID")
+    Call RemoveColumn(WS1, "Event Group Sequence Number")
+    Call RemoveColumn(WS1, "Item OID")
+    Call RemoveColumn(WS1, "Query Team")
+    Call RemoveColumn(WS1, "Answered By Query Team")
+    Call RemoveColumn(WS1, "Closed By Query Team")
+    
+    Call OutFormat
+    
+    Call SetWidthWrapColumn(WS1, "Item Label", 60)
+    Call SetWidthWrapColumn(WS1, "Original Query Text", 60)
+    Call SetWidthWrapColumn(WS1, "Latest Query Comment", 60)
+    Call SetWidthWrapColumn(WS1, "Latest Query Answer Text", 60)
+    Call SetWidthWrapColumn(WS1, "Item Value Now", 60)
+    Call SetWidthWrapColumn(WS1, "Item Value Before Query", 60)
+    
+    'Round down column
+    Call RoundDownColumn(WS1, "Days Unresolved")
+
+    
+    'Filter values
+    Dim FilterValues() As Variant
+    FilterValues = Array("Open")
+    Call FilterColumn(WS1, "Query Status", FilterValues)
+    
+    Application.ScreenUpdating = True
+    
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "_" & StudyNum & " Query Detail Report " & modifiedTime & " EST_Site" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
 
 End Sub
 
