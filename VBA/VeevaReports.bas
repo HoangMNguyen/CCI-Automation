@@ -34,7 +34,7 @@ Sub QueryDetailListingFormatSponsor()
     Dim StudyNum As String
     Set WS1 = ActiveWorkbook.Sheets(1)
     StudyNum = GetStudyNumber()
-    
+    WS1.Name = StudyNum + "_Query_Detail"
     ' Remove columns by calling RemoveColumn function
     Call RemoveColumn(WS1, "Study")
     Call RemoveColumn(WS1, "Country")
@@ -109,7 +109,7 @@ Sub QueryDetailListingFormatSponsor()
     Dim fileSaveName As Variant
     modifiedDate = Now2Date(Now)
     modifiedTime = Now2Time(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "_" & StudyNum & " Query Detail Report " & modifiedTime & " EST_Sponsor" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Query Report " & modifiedTime & " EST_Sponsor" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation
@@ -125,6 +125,7 @@ Sub QueryDetailListingFormatSite()
     Dim StudyNum As String
     Set WS1 = ActiveWorkbook.Sheets(1)
     StudyNum = GetStudyNumber()
+    WS1.Name = StudyNum + "_Query_Detail"
     ' Remove columns by calling RemoveColumn function
     Call RemoveColumn(WS1, "Study")
     Call RemoveColumn(WS1, "Country")
@@ -142,6 +143,8 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Query Team")
     Call RemoveColumn(WS1, "Answered By Query Team")
     Call RemoveColumn(WS1, "Closed By Query Team")
+    Call RemoveColumn(WS1, "Closed Date")
+    Call RemoveColumn(WS1, "Closed By")
     
     Call OutFormat
     
@@ -169,7 +172,7 @@ Sub QueryDetailListingFormatSite()
     Dim fileSaveName As Variant
     modifiedDate = Now2Date(Now)
     modifiedTime = Now2Time(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "_" & StudyNum & " Query Detail Report " & modifiedTime & " EST_Site" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Query Report " & modifiedTime & " EST_Site" & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation

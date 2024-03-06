@@ -68,7 +68,7 @@ Function GetAEHeaders(StudyNum As String) As Variant
     ElseIf StudyNum = "16321" Then
         GetAEHeaders = Array("Subject", "AE or SAE? (ig_AE2.AESEV)", "T-cell Attribution (ig_AE1.AEREL)", "T-cell Expectedness (ig_AE1.AETRTINTP)", "Specify Other Attribution (ig_AE1.AERELSPOTH)", "Other Attribution (ig_AE1.AERELOTH)", "Other Expectedness (ig_AE1.AETRTINTPOTH)", "CTCAE Category (ig_AE1.AECAT)", "Derived Toxicity (ig_AE1.AETOXDV)", "Toxicity (ig_AE1.AETOX)", "Grade (ig_AE1.AETOXGR)", "Start Date (ig_AE1.AESTDAT)", "Stop Date (ig_AE1.AEENDAT)", "Event Onset (ig_AE1.AEONSET)", "Additional Toxicity Details (ig_AE1.AETOXTERM)", "Event Ongoing (ig_AE1.AEONGO)")
     ElseIf StudyNum = "15122" Then
-        GetAEHeaders = Array("Subject", "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)", "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_YS_TCELLATRIB1)", "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)", "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_YS_OTHATRIB1)", "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_YS_CTCAECAT2)", "CTCAE Term Available? (IG_NS_NA_AE1.CL_YS_YH_AECATOTH_cl_YS_YN1)", "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)", "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)", "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_YS_AEONGO1)", "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)")
+        GetAEHeaders = Array("Subject", "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)", "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_YS_TCELLATRIB1)", "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)", "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_YS_OTHATRIB1)", "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_YS_CTCAECAT2)", "CTCAE Term Available? (IG_NS_NA_AE1.CL_YS_YH_AECATOTH_cl_YS_YN1)", "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)", "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)", "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_YS_AEONGO1)", "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)")
     ElseIf StudyNum = "12423" Then
         GetAEHeaders = Array("Subject", _
                             "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)", _
@@ -77,6 +77,7 @@ Function GetAEHeaders(StudyNum As String) As Variant
                             "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", _
                             "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
                             "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
+                            "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", _
                             "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", _
                             "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", _
                             "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", _
