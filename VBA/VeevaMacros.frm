@@ -1,10 +1,10 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} VeevaMacros 
    Caption         =   "Veeva Automation"
-   ClientHeight    =   1956
-   ClientLeft      =   120
-   ClientTop       =   470
-   ClientWidth     =   6360
+   ClientHeight    =   1560
+   ClientLeft      =   96
+   ClientTop       =   372
+   ClientWidth     =   5088
    OleObjectBlob   =   "VeevaMacros.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
@@ -22,11 +22,11 @@ Sub UserForm_Initialize()
 
 ComboBox1.Clear
 ComboBox1.AddItem "Form Progress Listing Format"
-ComboBox1.AddItem "Query Detail Listing Format"
+ComboBox1.AddItem "Query Detail Listing Format Site"
+ComboBox1.AddItem "Query Detail Listing Format Sponsor"
 ComboBox1.AddItem "Subject Progress Listing Format"
 ComboBox1.AddItem "Format Core Listing AE"
 ComboBox1.AddItem "Format Core Listing Non AE"
-' ComboBox1.AddItem "15420 DSMB Report"
 ComboBox1.AddItem "15420 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "03821 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "Sheet Format (Left Align)"
@@ -39,16 +39,16 @@ End Sub
 Sub CommandButton1_Click()
     If ComboBox1.Value = "Form Progress Listing Format" Then
         Call VeevaReports.FormProgressListingFormat
-    ElseIf ComboBox1.Value = "Query Detail Listing Format" Then
-        Call VeevaReports.QueryDetailListingFormat
+    ElseIf ComboBox1.Value = "Query Detail Listing Format Site" Then
+        Call VeevaReports.QueryDetailListingFormatSite
+    ElseIf ComboBox1.Value = "Query Detail Listing Format Sponsor" Then
+        Call VeevaReports.QueryDetailListingFormatSponsor
     ElseIf ComboBox1.Value = "Subject Progress Listing Format" Then
         Call VeevaReports.SubjectProgressListingFormat
     ElseIf ComboBox1.Value = "Format Core Listing AE" Then
         Call VeevaAE.FormatVeevaAE
     ElseIf ComboBox1.Value = "Format Core Listing Non AE" Then
         Call SafetyMacro.FormatNonAECRF
-    'ElseIf ComboBox1.Value = "15420 DSMB Report" Then
-    '    Call S15420.DSMB_Report
     ElseIf ComboBox1.Value = "15420 Ming's Comprehensive Form Summary Format" Then
         Call S15420.MingComprehensiveFormSummary
     ElseIf ComboBox1.Value = "03821 Ming's Comprehensive Form Summary Format" Then
