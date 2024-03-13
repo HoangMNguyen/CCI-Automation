@@ -1,5 +1,7 @@
 Attribute VB_Name = "VeevaReports"
 Sub SubjectProgressListingFormat()
+    Dim StudyNum As String
+    StudyNum = GetStudyNumber()
     Application.ScreenUpdating = False
     Dim ws As Worksheet
     Set ws = ActiveWorkbook.Sheets(1)
@@ -24,7 +26,19 @@ Sub SubjectProgressListingFormat()
     Call OutFormat
     Application.ScreenUpdating = True
     
-    Call WarningCSV
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Subject Progress Report " & modifiedTime & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
 
 End Sub
 
@@ -183,7 +197,8 @@ Sub QueryDetailListingFormatSite()
 End Sub
 
 Sub FormProgressListingFormat()
-
+    Dim StudyNum As String
+    StudyNum = GetStudyNumber()
     Application.ScreenUpdating = False
     Dim WS1 As Worksheet
     Set WS1 = ActiveWorkbook.Sheets(1)
@@ -382,7 +397,19 @@ Sub FormProgressListingFormat()
     Call FilterColumn(WS1, "Form Status", FilterValues)
     
     Application.ScreenUpdating = True
-    Call WarningCSV
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Form Status Report " & modifiedTime & ".xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
     
 
 End Sub
