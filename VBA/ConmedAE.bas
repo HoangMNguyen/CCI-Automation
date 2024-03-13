@@ -242,7 +242,7 @@ Sub FormatAE()
     modifiedDate = Now2Date(Now)
     Dim modifiedTime As String
     modifiedTime = Now2Time(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "- XXXXX Adverse Events Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-XXXXX Adverse Events Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation
     Else
@@ -257,7 +257,7 @@ Sub FormatPDAE()
     modifiedDate = Now2Date(Now)
     Dim modifiedTime As String
     modifiedTime = Now2Time(Now)
-    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "- XXXXX Protocol Defined Adverse Events Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-XXXXX Protocol Defined Adverse Events Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
     If fileSaveName = False Then
         MsgBox "You haven't saved the document", vbExclamation
     Else
