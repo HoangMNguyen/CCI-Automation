@@ -1,8 +1,11 @@
 Attribute VB_Name = "VeevaReports"
 Sub SubjectProgressListingFormat()
     Application.ScreenUpdating = False
+    Dim StudyNum As String
+    StudyNum = GetStudyNumber()
     Dim ws As Worksheet
     Set ws = ActiveWorkbook.Sheets(1)
+    ws.Name = StudyNum + "_Subject_Progress"
     
     ' Remove columns by calling RemoveColumn function
     Call RemoveColumn(ws, "Study")
@@ -24,7 +27,19 @@ Sub SubjectProgressListingFormat()
     Call OutFormat
     Application.ScreenUpdating = True
     
-    Call WarningCSV
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Subject Progress Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
 
 End Sub
 
@@ -183,10 +198,13 @@ Sub QueryDetailListingFormatSite()
 End Sub
 
 Sub FormProgressListingFormat()
-
     Application.ScreenUpdating = False
+    
     Dim WS1 As Worksheet
     Set WS1 = ActiveWorkbook.Sheets(1)
+    Dim StudyNum As String
+    StudyNum = GetStudyNumber()
+    WS1.Name = StudyNum + "_Form_Progress"
     
     ' Remove columns by calling RemoveColumn function
     Call RemoveColumn(WS1, "Study")
@@ -382,7 +400,19 @@ Sub FormProgressListingFormat()
     Call FilterColumn(WS1, "Form Status", FilterValues)
     
     Application.ScreenUpdating = True
-    Call WarningCSV
+    'Save file
+    Dim modifiedDate As String
+    Dim modifiedTime As String
+    Dim fileSaveName As Variant
+    modifiedDate = Now2Date(Now)
+    modifiedTime = Now2Time(Now)
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-" & StudyNum & " Form Status Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
     
 
 End Sub
