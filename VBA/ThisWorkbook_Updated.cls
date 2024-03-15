@@ -17,8 +17,7 @@ Private Sub Workbook_Open()
 End Sub
 Sub SetUp()
 Dim vbCom As Object
-'Const ModulePath As String = "A:\Testing Environment\Hoang's testing\InstallingMod.bas"
-Const ModulePath As String = "C:\Users\hmn39\Dropbox\Current Work\Macros\"
+Const ModulePath As String = "A:\VBA Production\"
 Const InstallingMod As String = "InstallingMod.bas"
 Set vbCom = ThisWorkbook.VBProject.VBComponents
 Call DeleteAllModule
@@ -53,19 +52,3 @@ Sub Reset()
 Export
 SetUp
 End Sub
-
-Sub Export()
-
-Dim vbCom As Object
-Const ModulePath As String = "A:\Testing Environment\Hoang's testing\"
-Set vbCom = ThisWorkbook.VBProject.VBComponents
-
-Dim VBComp As VBComponent
-For Each VBComp In vbCom
-If VBComp.Type = vbext_ct_StdModule Then
-    VBComp.Export ModulePath & VBComp.Name & ".bas"
-End If
-Next
-End Sub
-
-
