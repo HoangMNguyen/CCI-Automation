@@ -18,7 +18,7 @@ End Sub
 Sub SetUp()
 Dim vbCom As Object
 Const ModulePath As String = "A:\VBA Production\"
-Const InstallingMod As String = "InstallingMod.bas"
+Const InstallingMod As String = "InstallingMod_Updated.bas"
 Set vbCom = ThisWorkbook.VBProject.VBComponents
 Call DeleteAllModule
 On Error GoTo ErrorHandler
