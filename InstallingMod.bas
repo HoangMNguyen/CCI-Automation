@@ -1,5 +1,5 @@
 Attribute VB_Name = "InstallingMod"
-Sub RemoveAddMod(Optional ModulePath As String = "A:\VBA Production\")
+Sub RemoveAddMod(Optional ModulePath As String = "A:\VBA\")
 
 Dim vbCom As Object
 Set vbCom = ThisWorkbook.VBProject.VBComponents
