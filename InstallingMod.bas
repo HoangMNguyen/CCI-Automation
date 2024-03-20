@@ -1,8 +1,7 @@
 Attribute VB_Name = "InstallingMod"
-Sub RemoveAddMod()
+Sub RemoveAddMod(Optional ModulePath As String = "A:\VBA\")
 
 Dim vbCom As Object
-Const ModulePath As String = "A:\VBA Production\"
 Set vbCom = ThisWorkbook.VBProject.VBComponents
 On Error Resume Next
 vbCom.Import (ModulePath & "Main.bas")
@@ -35,34 +34,15 @@ End Sub
 
 
 Sub CreatShortcut()
-    Application.OnKey "+^{F}", "Main.QuickReportsFormStatusFormatSponsor" 'reformat quick report form status report
-    Application.OnKey "+^{Q}", "Main.QuickReportQueryStatusFormat" 'reformat quick report patient form query status report
-    Application.OnKey "+^{N}", "Main.QuickReportsFormStatusFormatSite" 'Form Status Report for Site (only WIP, INC)
     Application.OnKey "+^{S}", "UserFormLaunch2"   'Formatting for individual CRF
-    Application.OnKey "+^{W}", "SafetyMacro.FormatNonAECRF"
     Application.OnKey "+^{V}", "VeevaForm"
     Application.OnKey "+^{P}", "VelosForm"
-    Application.OnKey "+^{M}", "Main.VelosScheduleReview"
-    Application.OnKey "+^{C}", "ConmedAE.FormatConmed" 'reformat single row conmed report
-    Application.OnKey "+^{A}", "ConmedAE.FormatAE" 'reformat AE page and CCI AE report
-    Application.OnKey "+^{Y}", "ConmedAE.FormatCRFs" 'reformat any CRF report
-
 
 End Sub
 
 Sub DeleteShortcut()
     Application.OnKey "+^{S}"
-    Application.OnKey "+^{N}"
-    Application.OnKey "+^{W}"
-    Application.OnKey "+^{D}"
-    Application.OnKey "+^{R}"
-    Application.OnKey "+^{M}"
-    Application.OnKey "+^{F}"
-    Application.OnKey "+^{C}"
-    Application.OnKey "+^{A}"
-    Application.OnKey "+^{Y}"
     Application.OnKey "+^{V}"
-    Application.OnKey "+^{Q}"
     Application.OnKey "+^{P}"
 End Sub
 Sub UserFormLaunch2()

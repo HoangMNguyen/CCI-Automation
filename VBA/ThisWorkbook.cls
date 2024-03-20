@@ -1,3 +1,12 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "ThisWorkbook"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
 Option Explicit
 Private Sub Workbook_BeforeClose(Cancle As Boolean)
     ThisWorkbook.Saved = True
@@ -8,12 +17,13 @@ Private Sub Workbook_Open()
 End Sub
 Sub SetUp()
 Dim vbCom As Object
-Const ModulePath As String = "A:\InstallingMod.bas"
+Const ModulePath As String = "A:\"
+Const InstallingMod As String = "InstallingMod.bas"
 Set vbCom = ThisWorkbook.VBProject.VBComponents
 Call DeleteAllModule
 On Error GoTo ErrorHandler
-vbCom.Import (ModulePath)
-Call Dodge
+vbCom.Import (ModulePath & InstallingMod)
+Call Dodge(ModulePath)
 Exit Sub
 
 ErrorHandler:
@@ -35,39 +45,6 @@ With ThisWorkbook.VBProject
 End With
 On Error GoTo 0
 End Sub
-Sub Dodge()
-Call InstallingMod.RemoveAddMod
-End Sub
-Sub Reset()
-Export
-SetUp
-End Sub
-
-Sub Export()
-
-Dim vbCom As Object
-Const ModulePath As String = "A:\Testing Environment\Hoang's testing\"
-Set vbCom = ThisWorkbook.VBProject.VBComponents
-
-Dim VBComp As VBComponent
-For Each VBComp In vbCom
-If VBComp.Type = vbext_ct_StdModule Then
-    VBComp.Export ModulePath & VBComp.Name & ".bas"
-End If
-Next
-End Sub
-
-Sub RunPythonScript()
-
-Dim objShell As Object
-Dim PythonExePath, PythonScriptPath As String
-
-    Set objShell = VBA.CreateObject("Wscript.Shell")
-
-    PythonExePath = """C:\Users\hmn39\AppData\Local\Programs\Python\Python310-32\python.exe"""
-    PythonScriptPath = """A:\Testing Environment\Hoang's testing\Python\Testing1.py"""
-
-    objShell.Run "cmd /k a: && cd A:\Testing Environment\Hoang's testing\Python && python Testing1.py"
-
-
+Sub Dodge(ModulePath As String)
+Call InstallingMod.RemoveAddMod(ModulePath)
 End Sub
