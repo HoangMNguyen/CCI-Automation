@@ -1,11 +1,8 @@
-﻿Task
-(Developer) DPT Preparation - Deliverable Tracker/Visit IDs tabs
-(Project Manager) DPT Preparation - Deliverable Tracker tab
-(Data Manager) DPT Preparation - Deliverable Tracker tab
-(Developer) Amendment Preparation - Deliverable Tracker/Visit IDs tabs
-(Project Manager) Amendment Preparation - Deliverable Tracker tab
-(Data Manager) Amendment Preparation - Deliverable Tracker tab
-(Developer) Amendment Preparation - Playground testing and assessment
+Task
+(Developer) DPT Preparation and Related Meetings - Deliverable Tracker/Visit IDs tabs
+(Project Manager) DPT Preparation and Related Meetings - Deliverable Tracker tab
+(Data Manager) DPT Preparation and Related Meetings - Deliverable Tracker tab
+(Developer) Amendment Preparation - Dummy Study testing and assessment (Database Amendment only)
 (Project Manager) Validation of Visit ID DPT tab
 (Data Manager) Validation of Visit ID DPT tab
 (Project Manager) Deliverable #1 - CRF content development
@@ -23,10 +20,14 @@
 (Project Manager) Supplemental CCGs Development/DMP Review
 (Data Manager) Supplemental CCG Review/DMP Creation
 (Developer) Casebook Schedule Build/Validation - CRFs and related rules
+(Project Manager) CRF review and finalization from all stakeholders - All Deliverables
+(Developer) Incorporate feedback from all stakeholders before UAT1 - All Deliverables and Schedule/Rules
 (Peer Reviewer) Review/Validate Casebook Schedule - CRFs and related rules
-(Developer) Updating CRFs/schedule based on feedback
-(Data Manager) Training Script Draft
-(Project Manager) Training Script Review
+(Data Manager) Data Entry Impact Evaluations (Database Amendment only)
+(Data Manager) Training Agenda/Script Draft and Finalization
+(Developer) Training Script Review
+(Project Manager) Training Agenda/Script Review
+(Developer) Prepare UAT feedback log and deploy to UAT (All UAT)
 (PM UAT Reviewer) UAT #1 Review
 (DM UAT Reviewer) UAT #1 Review
 (PM UAT Reviewer) UAT #2 Review
@@ -35,6 +36,6 @@
 (DM UAT Reviewer) UAT #3 Review
 (PM UAT Reviewer) UAT #4 Review
 (DM UAT Reviewer) UAT #4 Review
-(Project Manager) CRF review and finalization from all stakeholders - All Deliverables
-(Developer) Incorporate feedback from all stakeholders - All Deliverables
-(Developer) Training Script Review
+(Project Manager) Updating CCGs/CRF Content Based on  UAT Feedback (All UAT)
+(Developer) Updating CRFs/Schedule/Rules based on UAT Feedback (All UAT)
+(Developer) Deploy to Training and Production Environment; Related Set-up
