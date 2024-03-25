@@ -240,7 +240,7 @@ def clockify_create_tasks(api_key, workspace_id, project_name):
         list: A list containing the responses from the Clockify API for each task creation request.
     """
     current_dir = os.getcwd()
-    template_tasks = pd.read_csv(os.path.join(current_dir, "Tasks.csv"))
+    template_tasks = pd.read_csv(os.path.join(current_dir, "Clockify/Tasks.csv"))
     task_list = template_tasks['Task'].tolist()
     # print(task_list)
     project_id = clockify_get_project_id(clockify_get_api_key(), clockify_get_workplace_id(), project_name)
