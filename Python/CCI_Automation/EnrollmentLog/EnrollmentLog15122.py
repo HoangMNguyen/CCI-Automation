@@ -97,7 +97,7 @@ def EnrollmentLog15122(raw_data):
         for col in column_list:
             if col not in merged_df.columns:
                 merged_df[col] = None
-        merged_df = merged_df[['Subject ID#', 'Cohort', 'Assigned Dose Level', 'Race', 'Ethnicity', 'Sex Assigned at Birth', 'Legal Sex', 'Age at Consent', 'Pre-Screening Consent Date', 'Main Consent Date', 'Date Physician-Investigator Confirmed Eligibility', 'Date of Monitoring Visit for Eligibility', 'Apheresis Type (Fresh or Historical)', 'Date of Apheresis Collection', 'Date of huCART-meso Injection (Day 0)', 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)', 'Last Study Visit Completed in Primary Follow-Up', 'Initiation of LTFU Date', 'End of Study Date']]
+        merged_df = merged_df[column_list]
         # merge the dataframes with the output dataframe
         output_df = pd.concat([output_df, merged_df], ignore_index=True)
     #sort based on 'Subject ID#' and 'Pre-Screening Consent Date'
