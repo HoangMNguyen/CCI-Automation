@@ -65,9 +65,9 @@ def EnrollmentLog15122(raw_data):
         # for rows that 'Pre-Screening Consent Date' isnull but 'Main Consent Date' is not null, then use 'Main Consent Date' instead to calculate age
         if not merged_df['Main Consent Date'].empty:
             merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull()), 'Age at Consent'] = merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull())].apply(lambda x: relativedelta(x['Main Consent Date'], x['Date of Birth']).years, axis=1)
-        if not 'Age at Consent' in merged_df.columns:
-            # add an empty column 'Age at Consent' if it does not exist
-            merged_df['Age at Consent'] = None
+    if not 'Age at Consent' in merged_df.columns:
+        # add an empty column 'Age at Consent' if it does not exist
+        merged_df['Age at Consent'] = None
             
     #* Formatting
     # convert the date columns to string format
@@ -76,7 +76,6 @@ def EnrollmentLog15122(raw_data):
             merged_df[col] = merged_df[col].dt.strftime('%m/%d/%Y')
     merged_df = merged_df.rename(columns={'Subject': 'Subject ID#'})
     merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())] = merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())].fillna('Missing Data')
-    merged_df.loc[merged_df['End of Study Date'].notna(), merged_df.columns.tolist()] = merged_df.loc[merged_df['End of Study Date'].notna(), merged_df.columns.tolist()].fillna('N/A')
     # select and reorder columns
     output_df = merged_df[['Subject ID#', 'Cohort', 'Assigned Dose Level', 'Race', 'Ethnicity', 'Sex Assigned at Birth', 'Legal Sex', 'Age at Consent', 'Pre-Screening Consent Date', 'Main Consent Date', 'Date Physician-Investigator Confirmed Eligibility', 'Date of Monitoring Visit for Eligibility', 'Apheresis Type (Fresh or Historical)', 'Date of Apheresis Collection', 'Date of huCART-meso Injection (Day 0)', 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)', 'Last Study Visit Completed in Primary Follow-Up', 'Initiation of LTFU Date', 'End of Study Date']]
 
