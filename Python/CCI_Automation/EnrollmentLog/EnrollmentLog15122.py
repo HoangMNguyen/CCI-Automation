@@ -31,8 +31,7 @@ def EnrollmentLog15122(raw_data):
                      'End of Primary Follow-Up Date (IG_NS_NA_DSINITLF1.DT_NS_YH_INITLFPFUENDDAT)': 'Initiation of LTFU Date'},
         'DSEOS': {'End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)': 'End of Study Date'},
     }
-    # get dataframe for subject list from raw data DM
-    merged_df = raw_data['DM'][['Subject']].copy()
+    
     for key in input_dict.keys():
         if key not in raw_data:
             print(f"Missing {key} data")
@@ -49,7 +48,10 @@ def EnrollmentLog15122(raw_data):
             # drop 'Event Date' column
             collected_data = collected_data.drop('Event Date', axis=1)
             # merge dataframes
-            merged_df = pd.merge(merged_df, collected_data, on='Subject', how='left')
+            if key == 'DM':
+                merged_df = collected_data
+            else:
+                merged_df = pd.merge(merged_df, collected_data, on='Subject', how='left')
     # Sort the data by 'Subject'
     merged_df = merged_df.sort_values(['Subject'])
 
