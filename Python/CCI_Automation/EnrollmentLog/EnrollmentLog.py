@@ -5,7 +5,7 @@ from util import *
 
 
 class EnrollmentLog():
-    def __init__(self, study_name, input_dir, output_dir, output_file_name, cut_off_date = None):   #self.selected_option2, self.input_folder_name, self.output_folder_name, self.output_file_name 
+    def __init__(self, study_name, input_dir, output_dir, output_file_name, cut_off_date = None):
         if input_dir == None:
             print("No dir selected!")
             return
@@ -38,7 +38,10 @@ class EnrollmentLog():
             output_df = EnrollmentLog03821(self.data)  
         elif self.study_name =='11823':
             from .EnrollmentLog11823 import EnrollmentLog11823
-            output_df = EnrollmentLog11823(self.data)      
+            output_df = EnrollmentLog11823(self.data)
+        elif self.study_name =='15122':
+            from .EnrollmentLog15122 import EnrollmentLog15122
+            output_df = EnrollmentLog15122(self.data)    
         elif self.study_name =='15420':
             from .EnrollmentLog15420 import EnrollmentLog15420
             output_df = EnrollmentLog15420(self.data) 
@@ -109,6 +112,17 @@ class EnrollmentLog():
                         for i in range (17, 23):
                             worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
                         for i in range (23, 24):
+                            worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
+                    elif self.study_name == '15122':
+                        for i in range (8):
+                            worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
+                        for i in range (8, 12):
+                            worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
+                        for i in range (12, 17):
+                            worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
+                        for i in range (17, 18):
+                            worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
+                        for i in range (18, 19):
                             worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
                     elif self.study_name == '15420':
                         for i in range (8):

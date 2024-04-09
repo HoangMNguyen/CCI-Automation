@@ -88,7 +88,7 @@ class Widget(QWidget):
     def update_comboBox2(self, index):
         self.ui.comboBox_2.clear()
         if index == 1:
-            self.ui.comboBox_2.addItems(["03821", "11823", "12423", "15420", "16321"])
+            self.ui.comboBox_2.addItems(["03821", "11823", "12423", "15122", "15420", "16321"])
         elif index == 2:
             self.ui.comboBox_2.addItems(["15420", "12423"])
         elif index == 3:
@@ -128,6 +128,7 @@ class Widget(QWidget):
         self.selected_option = self.ui.comboBox.currentText()
         if self.selected_option == "Enrollment Log":
             self.ui.checkBox.setVisible(True)
+            self.ui.lineEdit.setText(datetime.now().strftime("%y%m%d") + "-" + self.selected_option2 + " Enrollment Log")
             self.ui.lineEdit.setEnabled(True)
             self.ui.lineEdit.show()
         elif self.selected_option == "DSMB Report":
@@ -151,7 +152,7 @@ class Widget(QWidget):
         # Get the selected item text
         self.selected_option2 = self.ui.comboBox_2.currentText()
         if self.selected_option == "Enrollment Log":
-            self.ui.lineEdit.setText("")
+            self.ui.lineEdit.setText(date.today().strftime("%y%m%d") + "-" + self.selected_option2 + " Enrollment Log")
         elif self.selected_option == "Clockify Dashboard":
             self.ui.lineEdit.setText(date.today().strftime("%y%m%d") + "-" + self.selected_option2 + "-Clockify Dashboard")
         elif self.selected_option == "Add templated tasks":
