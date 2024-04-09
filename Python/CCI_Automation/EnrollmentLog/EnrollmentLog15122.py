@@ -6,15 +6,17 @@ from util import *
 def EnrollmentLog15122(raw_data):
     #* Filter conditions before calling
     # filter conditions for the raw data
-    # Re-screen subjects
+    raw_data['PRTUBX'] = raw_data['PRTUBX'][raw_data['PRTUBX']['Event Label'] == 'Surgical Excision/Biopsy (Day 7)']
+    
+    # Re-consented subjects
     filtered_data1 = raw_data.copy()
     filtered_data1['DM'] = filtered_data1['DM'][filtered_data1['DM']['Event Group Label'] == 'Repeat Pre-Screening']
     filtered_data1['DSEOS'] = filtered_data1['DSEOS'][filtered_data1['DSEOS']['Event Group Label'] == 'Repeat End of Study']
-    # New subjects
+    # Subjects not re-consented
     filtered_data2 = raw_data.copy()
     filtered_data2['DM'] = filtered_data2['DM'][~filtered_data2['DM']['Subject'].isin(filtered_data1['DM']['Subject'])]
     filtered_data2['DSEOS'] = filtered_data2['DSEOS'][filtered_data2['DSEOS']['Event Group Label'] == 'Common Forms']
-    # Re-screen subjects but failed first time
+    # re-consented subjects capturing the initial consent
     filtered_data3 = raw_data.copy()
     filtered_data3['DM'] = filtered_data3['DM'][filtered_data3['DM']['Subject'].isin(filtered_data1['DM']['Subject']) & (filtered_data3['DM']['Event Group Label'] == 'Pre-Screening')]
     filtered_data3['DSEOS'] = filtered_data3['DSEOS'][filtered_data3['DSEOS']['Event Group Label'] == 'Common Forms']
@@ -41,9 +43,8 @@ def EnrollmentLog15122(raw_data):
             'PRAPH': {'Apheresis Type (IG_NS_NA_PRAPH1.CL_NS_YH_APHTP_cl_NS_APHTP1)': 'Apheresis Type (Fresh or Historical)',
                     'Apheresis Date (IG_NS_NA_PRAPH1.DT_NS_NH_APHDAT)': 'Date of Apheresis Collection'},
             'EXINF': {'Date Study Treatment Administered (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)': 'Date of huCART-meso Injection (Day 0)'},
-            'PRTUBX': {'Date of Tumor Sample Collection (IG_NS_NA_PRTUBX1.DT_NS_NH_TUDAT)': 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)',
-                    #    'Date of Tumor Sample Collection (IG_NS_NA_PRTUBX2.DT_NS_NH_TUDAT)': 'Date of Surgical Excision'},
-                    },
+            'PRTUBX': {'Date of Tumor Sample Collection (IG_NS_NA_PRTUBX2.DT_NS_NH_TUDAT)': 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)',
+                       'Date of Surgery (IG_NS_NA_PRTUBX3.DT_NS_NH_SGDAT)': 'Date of Surgery'},
             'DSINITLF': {'Last Study Visit Completed in Primary Follow-Up (IG_NS_NA_DSINITLF1.CL_NS_NH_LVCPFU_cl_YS_LVCPFU1)': 'Last Study Visit Completed in Primary Follow-Up',
                         'End of Primary Follow-Up Date (IG_NS_NA_DSINITLF1.DT_NS_YH_INITLFPFUENDDAT)': 'Initiation of LTFU Date'},
             'DSEOS': {'End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)': 'End of Study Date'},
@@ -70,7 +71,7 @@ def EnrollmentLog15122(raw_data):
                 else:
                     merged_df = pd.merge(merged_df, collected_data, on='Subject', how='left')
         #* Additional processing after merging dataframes
-        if 'IE' in data:
+        if 'DM' in data:
             # calculate age at consent
             # check if the two columns 'Pre-Screening Consent Date' and 'Date of Birth' are not empty
             if not merged_df['Date of Birth'].empty:
@@ -79,10 +80,15 @@ def EnrollmentLog15122(raw_data):
                     mask = ~merged_df[['Pre-Screening Consent Date', 'Date of Birth']].isnull().any(axis=1)
                     # apply relativedelta only to rows with non-NaT values in both columns
                     merged_df.loc[mask, 'Age at Consent'] = merged_df[mask].apply(lambda x: relativedelta(x['Pre-Screening Consent Date'], x['Date of Birth']).years, axis=1)
-                # for rows that 'Pre-Screening Consent Date' isnull but 'Main Consent Date' is not null, then use 'Main Consent Date' instead to calculate age
-                if not merged_df['Main Consent Date'].empty:
-                    merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull()), 'Age at Consent'] = merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull())].apply(lambda x: relativedelta(x['Main Consent Date'], x['Date of Birth']).years, axis=1)
-                
+                if 'IE' in data:
+                    # for rows that 'Pre-Screening Consent Date' isnull but 'Main Consent Date' is not null, then use 'Main Consent Date' instead to calculate age
+                    if not merged_df['Main Consent Date'].empty:
+                        merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull()), 'Age at Consent'] = merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull())].apply(lambda x: relativedelta(x['Main Consent Date'], x['Date of Birth']).years, axis=1)
+        
+        if 'PRTUBX' in data:
+            # combine 'Date of Surgery' and 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)' columns
+            merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'] = merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'].fillna(merged_df['Date of Surgery'])
+        
         #* Formatting
         # convert the date columns to string format
         for col in merged_df.columns:
@@ -102,5 +108,5 @@ def EnrollmentLog15122(raw_data):
         output_df = pd.concat([output_df, merged_df], ignore_index=True)
     #sort based on 'Subject ID#' and 'Pre-Screening Consent Date'
     output_df = output_df.sort_values(['Subject ID#', 'Pre-Screening Consent Date']).reset_index(drop=True)
-    print(output_df)
+
     return output_df
