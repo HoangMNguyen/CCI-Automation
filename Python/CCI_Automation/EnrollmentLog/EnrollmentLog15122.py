@@ -90,10 +90,8 @@ def EnrollmentLog15122(raw_data):
             merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'] = merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'].fillna(merged_df['Date of Surgery'])
         
         #* Formatting
-        # convert the date columns to string format
-        for col in merged_df.columns:
-            if 'Date' in col:
-                merged_df[col] = merged_df[col].dt.strftime('%m/%d/%Y')
+        
+
         merged_df = merged_df.rename(columns={'Subject': 'Subject ID#'})
         # merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())] = merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())].fillna('Missing Data')
     
@@ -108,5 +106,9 @@ def EnrollmentLog15122(raw_data):
         output_df = pd.concat([output_df, merged_df], ignore_index=True)
     #sort based on 'Subject ID#' and 'Pre-Screening Consent Date'
     output_df = output_df.sort_values(['Subject ID#', 'Pre-Screening Consent Date']).reset_index(drop=True)
+    # convert the date columns to string format
+    for col in output_df.columns:
+        if 'Date' in col:
+            output_df[col] = output_df[col].dt.strftime('%m/%d/%Y')
 
     return output_df
