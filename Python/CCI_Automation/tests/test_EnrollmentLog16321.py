@@ -1,5 +1,5 @@
 import pytest
-from EnrollmentLog.EnrollmentLog15122 import EnrollmentLog15122
+from EnrollmentLog.EnrollmentLog16321 import EnrollmentLog16321
 from util import *
 import os
 
@@ -8,10 +8,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # Define a fixture for setup procedures
 @pytest.fixture
 def setup_data_1():
-    input_path = os.path.join(current_dir, 'data', 'Core_Listings_15122_Meso-CAR_Breast_Cancer_PPT1_2024_04_08_09_09_EDT.zip')
+    input_path = os.path.join(current_dir, 'data', 'Core_Listings_16321_EGFR-IL13Ra2_2024_04_10_09_47_EDT.zip')
     valid_input = read_data_dict_zip_corelisting(input_path)
-    actual_output = EnrollmentLog15122(valid_input)
-    output_path = os.path.join(current_dir, 'data', '240409-15122 Enrollment Log PPT1.csv')
+    actual_output = EnrollmentLog16321(valid_input)
+    output_path = os.path.join(current_dir, 'data', '240410-16321 Enrollment Log actual.csv')
     # Read expected output from .csv file into pandas dataframe
     expected_output = pd.read_csv(output_path, keep_default_na=False, na_values=[''])
     return expected_output, actual_output
