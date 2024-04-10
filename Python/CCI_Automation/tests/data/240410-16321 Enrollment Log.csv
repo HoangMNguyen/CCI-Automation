@@ -1,0 +1,38 @@
+Subject ID#,Assigned Cohort,Race,Ethnicity,Sex Assigned at Birth,Legal Sex,Age at Consent,Apheresis Consent Date,Main Consent Date,Date Physician-Investigator Confirmed Eligibility,Date of Monitoring Visit for Eligibility,Apheresis Type (Fresh or Historical),Date of Apheresis Collection,CART T cell Administration Date (Day 0),Last Study Visit Completed in Primary Follow-Up,Initiation of LTFU Date,Retreatment?,Initiation of Retx Date,CAR T Cell Retreatment Date (Day 0-R1),Last Study Visit Completed in Retreatment (-R1),Initiation of Retreatment LTFU Date,End of Study Date
+16321-01,,Other,Non-Hispanic,Female,Female,68,02/24/2023,,,,Fresh,03/09/2023,,,,,,,,,
+16321-02,,Caucasian,Non-Hispanic,Male,Male,66,03/02/2023,,,,Fresh,03/16/2023,,,,,,,,,
+16321-03,Cohort 1,Caucasian,Non-Hispanic,Male,Male,66,03/16/2023,06/23/2023,07/03/2023,07/05/2023,Fresh,04/06/2023,08/16/2023,,,,,,,,
+16321-04,Cohort 1,Caucasian,Non-Hispanic,Male,Male,71,04/13/2023,04/28/2023,05/05/2023,05/08/2023,Fresh,05/04/2023,06/14/2023,Month 2,N/A,Yes,08/30/2023,08/31/2023,Month 2-R,10/27/2023,
+16321-05,Cohort 1,Caucasian,Non-Hispanic,Male,Male,65,04/20/2023,06/27/2023,07/07/2023,07/07/2023,Fresh,05/04/2023,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,01/05/2024
+16321-06,Cohort 2,Caucasian,Non-Hispanic,Female,Female,52,04/26/2023,08/08/2023,08/11/2023,08/29/2023,Fresh,05/24/2023,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,11/14/2023
+16321-07,Cohort 1,Unknown,Non-Hispanic,Not Reported,Male,50,04/28/2023,06/27/2023,07/07/2023,07/10/2023,Fresh,05/01/2023,08/08/2023,Day 28,10/02/2023,N/A,N/A,N/A,N/A,N/A,01/06/2024
+16321-08,,Caucasian,Non-Hispanic,Not Reported,Female,62,04/28/2023,,,,,,,,,,,,,,
+16321-09,,Caucasian,Non-Hispanic,Not Reported,Female,59,05/04/2023,,,,Fresh,07/27/2023,,,,,,,,,
+16321-10,Cohort 2,Caucasian,Non-Hispanic,Male,Male,66,06/09/2023,09/22/2023,09/26/2023,09/27/2023,Fresh,07/26/2023,11/02/2023,,,,,,,,
+16321-11,,Caucasian,Non-Hispanic,Not Reported,Female,47,06/20/2023,,,,Fresh,07/20/2023,,,,,,,,,
+16321-12,,Caucasian,Non-Hispanic,Male,Male,67,06/29/2023,08/25/2023,08/28/2023,08/28/2023,Fresh,07/06/2023,,,,,,,,,
+16321-13,Cohort 2,Caucasian,Non-Hispanic,Male,Male,65,07/25/2023,12/01/2023,12/05/2023,12/05/2023,Fresh,08/23/2023,12/20/2023,Month 3,03/06/2024,,,,,,
+16321-14,,Caucasian,Non-Hispanic,Female,Female,65,08/04/2023,,,,Fresh,09/12/2023,,,,,,,,,
+16321-15,,African American,Non-Hispanic,Female,Female,72,09/01/2023,,,,,,,,,,,,,,
+16321-16,,Caucasian,Non-Hispanic,Not Reported,Male,70,09/08/2023,,,,Fresh,11/07/2023,,,,,,,,,
+16321-17,,Caucasian,Non-Hispanic,Not Reported,Male,45,09/15/2023,,,,Fresh,10/12/2023,,,,,,,,,
+16321-18,Cohort 2,Caucasian,Non-Hispanic,Male,Male,33,09/15/2023,12/05/2023,12/06/2023,12/06/2023,Fresh,09/27/2023,01/04/2024,Day 28,03/01/2024,N/A,N/A,N/A,N/A,N/A,04/03/2024
+16321-19,N/A,Caucasian,Non-Hispanic,Male,Male,50,09/29/2023,N/A,N/A,N/A,Fresh,10/26/2023,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,02/21/2024
+16321-20,,Caucasian,Non-Hispanic,Not Reported,Male,56,10/05/2023,,,,Fresh,10/26/2023,,,,,,,,,
+16321-21,,Caucasian,Non-Hispanic,Not Reported,Male,54,11/01/2023,,,,,,,,,,,,,,
+16321-22,,Caucasian,Non-Hispanic,Male,Male,48,11/02/2023,,,,Fresh,11/09/2023,,,,,,,,,
+16321-23,,Caucasian,Non-Hispanic,Not Reported,Female,62,11/03/2023,03/07/2024,03/08/2024,03/08/2024,Fresh,11/14/2023,,,,,,,,,
+16321-24,,Pacific Islander,Non-Hispanic,Female,Female,44,11/30/2023,,,,Fresh,01/11/2024,,,,,,,,,
+16321-25,,Unknown,Non-Hispanic,Female,Female,62,12/05/2023,03/12/2024,03/14/2024,03/14/2024,Fresh,12/07/2023,,,,,,,,,
+16321-26,,Caucasian,Non-Hispanic,Male,Male,50,12/07/2023,,,,Fresh,12/14/2023,,,,,,,,,
+16321-27,,Caucasian,Non-Hispanic,Not Reported,Female,68,12/11/2023,,,,,,,,,,,,,,
+16321-28,Cohort 2,Unknown,Non-Hispanic,Male,Male,53,12/27/2023,01/16/2024,01/17/2024,01/19/2024,Fresh,01/03/2024,02/21/2024,,,,,,,,
+16321-29,,Caucasian,Non-Hispanic,Not Reported,Male,47,01/05/2024,,,,Fresh,01/25/2024,,,,,,,,,
+16321-30,,Caucasian,Non-Hispanic,Male,Male,56,01/11/2024,,,,Fresh,01/24/2024,,,,,,,,,
+16321-31,,Unknown,Unknown,Not Reported,Female,25,01/17/2024,03/01/2024,03/04/2024,03/04/2024,Fresh,01/18/2024,,,,,,,,,
+16321-32,,Caucasian,Non-Hispanic,Not Reported,Male,64,02/16/2024,,,,Fresh,03/20/2024,,,,,,,,,
+16321-33,,Caucasian,Non-Hispanic,Female,Female,64,02/23/2024,,,,,,,,,,,,,,
+16321-34,,Caucasian,Non-Hispanic,Male,Male,53,02/23/2024,,,,Fresh,03/28/2024,,,,,,,,,
+16321-35,,Caucasian,Non-Hispanic,Female,Female,65,02/27/2024,,,,,,,,,,,,,,
+16321-36,,African American,Non-Hispanic,Not Reported,Male,44,02/29/2024,,,,Fresh,03/08/2024,,,,,,,,,
+16321-37,,Caucasian,Non-Hispanic,Not Reported,Male,63,03/21/2024,,,,Fresh,04/04/2024,,,,,,,,,
