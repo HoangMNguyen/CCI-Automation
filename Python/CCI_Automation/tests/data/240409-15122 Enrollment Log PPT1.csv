@@ -1,0 +1,15 @@
+Subject ID#,Cohort,Assigned Dose Level,Race,Ethnicity,Sex Assigned at Birth,Legal Sex,Age at Consent,Pre-Screening Consent Date,Main Consent Date,Date Physician-Investigator Confirmed Eligibility,Date of Monitoring Visit for Eligibility,Apheresis Type (Fresh or Historical),Date of Apheresis Collection,Date of huCART-meso Injection (Day 0),Date of Surgical Excision or Tumor Biopsy (Day 7 +2d),Last Study Visit Completed in Primary Follow-Up,Initiation of LTFU Date,End of Study Date
+15122-01,,,African American,Non-Hispanic,Female,Female,54,02/07/2023,,,,,,,,,,02/14/2023
+15122-01,Cohort 1,Dose Level 1 (DL1),African American,Non-Hispanic,Female,Female,55,03/01/2024,03/02/2024,03/02/2024,03/02/2024,Historical,03/29/2023,03/03/2024,03/30/2024,Day 28,03/29/2024,04/01/2024
+15122-02,Not Assigned,,African American,Non-Hispanic,Female,Female,,03/16/2023,,,,,,,,,,03/03/2023
+15122-03,Not Assigned,Not Assigned,Caucasian,Non-Hispanic,Female,Female,,,,,,,,,,,,07/17/2023
+15122-04,Not Assigned,Not Assigned,African American,Non-Hispanic,Female,Female,40,,04/03/2024,04/04/2024,04/05/2024,,,,,,,07/25/2023
+15122-05,Not Assigned,Not Assigned,Caucasian,Unknown,Female,Female,60,09/15/2023,,,,,,,,,,11/16/2023
+15122-06,Not Assigned,Not Assigned,Unknown,Non-Hispanic,Female,Female,58,09/29/2023,04/01/2024,04/02/2024,04/03/2024,Historical,02/27/2023,,,,,11/16/2023
+15122-07,Not Assigned,Not Assigned,Unknown,Hispanic,Female,Female,47,10/18/2023,02/01/2024,02/01/2024,02/01/2024,Fresh,02/05/2024,02/09/2024,02/16/2024,,,11/16/2023
+15122-08,Not Assigned,Not Assigned,Asian,Non-Hispanic,Female,Female,56,10/30/2023,01/01/2024,01/01/2024,01/01/2024,Historical,10/29/2023,01/05/2024,01/15/2024,Day 28,02/29/2024,11/22/2023
+15122-09,Not Assigned,Not Assigned,Asian,Unknown,Female,Female,46,11/20/2023,,,,,,,,,,
+15122-10,Not Assigned,Not Assigned,African American,Non-Hispanic,Female,Female,53,11/20/2023,,,,,,,,,,12/01/2023
+15122-11,,,Multiple Races,Unknown,Female,Female,24,03/01/2024,,,,,,,,,,
+15122-11,Cohort 1,Dose Level 2 (DL2),Unknown,Unknown,Female,Female,24,03/31/2024,04/01/2024,04/01/2024,04/01/2024,,,,,,,
+15122-12,,,Multiple Races,Unknown,Not Reported,Male,24,04/02/2024,,,,,,,,,,

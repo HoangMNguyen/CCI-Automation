@@ -10,3 +10,4 @@ PySide6-Essentials>=6.5.2
 XlsxWriter>=3.1.2
 openpyxl>=3.1.2
 requests>=2.31.0
+pytest>=8.1.1

@@ -43,7 +43,7 @@ def EnrollmentLog15122(raw_data):
             'PRAPH': {'Apheresis Type (IG_NS_NA_PRAPH1.CL_NS_YH_APHTP_cl_NS_APHTP1)': 'Apheresis Type (Fresh or Historical)',
                     'Apheresis Date (IG_NS_NA_PRAPH1.DT_NS_NH_APHDAT)': 'Date of Apheresis Collection'},
             'EXINF': {'Date Study Treatment Administered (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)': 'Date of huCART-meso Injection (Day 0)'},
-            'PRTUBX': {'Date of Tumor Sample Collection (IG_NS_NA_PRTUBX2.DT_NS_NH_TUDAT)': 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)',
+            'PRTUBX': {'Date of Tumor Sample Collection (IG_NS_NA_PRTUBX2.DT_NS_NH_TUDAT)': 'Date of Surgical Excision or Tumor Biopsy (Day 7 +2d)',
                        'Date of Surgery (IG_NS_NA_PRTUBX3.DT_NS_NH_SGDAT)': 'Date of Surgery'},
             'DSINITLF': {'Last Study Visit Completed in Primary Follow-Up (IG_NS_NA_DSINITLF1.CL_NS_NH_LVCPFU_cl_YS_LVCPFU1)': 'Last Study Visit Completed in Primary Follow-Up',
                         'End of Primary Follow-Up Date (IG_NS_NA_DSINITLF1.DT_NS_YH_INITLFPFUENDDAT)': 'Initiation of LTFU Date'},
@@ -51,9 +51,7 @@ def EnrollmentLog15122(raw_data):
         }
         
         for key in input_dict.keys():
-            if key not in data:
-                print(f"Missing {key} data")
-            else:
+            if key in data:
                 input_keys = ['Subject', 'Event Date'] + list(input_dict[key].keys())
                 collected_data = data[key][input_keys].copy()
                 collected_data.rename(columns=input_dict[key], inplace=True)
@@ -86,8 +84,8 @@ def EnrollmentLog15122(raw_data):
                         merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull()), 'Age at Consent'] = merged_df.loc[(merged_df['Pre-Screening Consent Date'].isnull() & merged_df['Main Consent Date'].notnull())].apply(lambda x: relativedelta(x['Main Consent Date'], x['Date of Birth']).years, axis=1)
         
         if 'PRTUBX' in data:
-            # combine 'Date of Surgery' and 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)' columns
-            merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'] = merged_df['Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)'].fillna(merged_df['Date of Surgery'])
+            # combine 'Date of Surgery' and 'Date of Surgical Excision or Tumor Biopsy (Day 7 +2d)' columns
+            merged_df['Date of Surgical Excision or Tumor Biopsy (Day 7 +2d)'] = merged_df['Date of Surgical Excision or Tumor Biopsy (Day 7 +2d)'].fillna(merged_df['Date of Surgery'])
         
         #* Formatting
         
@@ -96,11 +94,11 @@ def EnrollmentLog15122(raw_data):
         # merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())] = merged_df.loc[(merged_df['End of Study Date'].notna() & merged_df['Date of huCART-meso Injection (Day 0)'].notna())].fillna('Missing Data')
     
         # select and reorder columns
-        column_list = ['Subject ID#', 'Cohort', 'Assigned Dose Level', 'Race', 'Ethnicity', 'Sex Assigned at Birth', 'Legal Sex', 'Age at Consent', 'Pre-Screening Consent Date', 'Main Consent Date', 'Date Physician-Investigator Confirmed Eligibility', 'Date of Monitoring Visit for Eligibility', 'Apheresis Type (Fresh or Historical)', 'Date of Apheresis Collection', 'Date of huCART-meso Injection (Day 0)', 'Date of Surgical Excision or Tumor Biopsy \n(Day 7 +2d)', 'Last Study Visit Completed in Primary Follow-Up', 'Initiation of LTFU Date', 'End of Study Date']
+        column_list = ['Subject ID#', 'Cohort', 'Assigned Dose Level', 'Race', 'Ethnicity', 'Sex Assigned at Birth', 'Legal Sex', 'Age at Consent', 'Pre-Screening Consent Date', 'Main Consent Date', 'Date Physician-Investigator Confirmed Eligibility', 'Date of Monitoring Visit for Eligibility', 'Apheresis Type (Fresh or Historical)', 'Date of Apheresis Collection', 'Date of huCART-meso Injection (Day 0)', 'Date of Surgical Excision or Tumor Biopsy (Day 7 +2d)', 'Last Study Visit Completed in Primary Follow-Up', 'Initiation of LTFU Date', 'End of Study Date']
         # if merged_df does not have all the columns in column_list, add the missing columns
         for col in column_list:
             if col not in merged_df.columns:
-                merged_df[col] = None
+                merged_df[col] = np.NaN
         merged_df = merged_df[column_list]
         # merge the dataframes with the output dataframe
         output_df = pd.concat([output_df, merged_df], ignore_index=True)
