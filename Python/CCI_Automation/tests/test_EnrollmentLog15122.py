@@ -13,7 +13,7 @@ def setup_data_1():
     actual_output = EnrollmentLog15122(valid_input)
     output_path = os.path.join(current_dir, 'data', '240409-15122 Enrollment Log PPT1.csv')
     # Read expected output from .csv file into pandas dataframe
-    expected_output = pd.read_csv(output_path)
+    expected_output = pd.read_csv(output_path, keep_default_na=False, na_values=[''])
     return expected_output, actual_output
 
 def test_headers(setup_data_1):
