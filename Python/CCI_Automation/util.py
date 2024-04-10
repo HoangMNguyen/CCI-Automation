@@ -514,6 +514,8 @@ def convert_sci_notation_2_float(s):
     """
     try:
         parts = s.split('x10^')
+        if len(parts) != 2:
+            return np.nan
         mantissa = float(parts[0])
         exponent = float(parts[1])
         return mantissa * 10 ** exponent
