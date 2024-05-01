@@ -11,7 +11,7 @@ def setup_data_1():
     input_path = os.path.join(current_dir, 'data', 'Core_Listings_16321_EGFR-IL13Ra2_2024_04_10_09_47_EDT.zip')
     valid_input = read_data_dict_zip_corelisting(input_path)
     actual_output = EnrollmentLog16321(valid_input)
-    output_path = os.path.join(current_dir, 'data', '240410-16321 Enrollment Log actual.csv')
+    output_path = os.path.join(current_dir, 'data', '240410-16321 Enrollment Log.csv')
     # Read expected output from .csv file into pandas dataframe
     expected_output = pd.read_csv(output_path, keep_default_na=False, na_values=[''])
     return expected_output, actual_output
