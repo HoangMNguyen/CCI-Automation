@@ -23,6 +23,12 @@ Sub SubjectProgressListingFormat()
     Call RemoveColumn(ws, "MedDRA MC Need Coding")
     Call RemoveColumn(ws, "WHODrug MC Need Coding")
     Call RemoveColumn(ws, "Subject Vault ID")
+    Call RemoveColumn(ws, "Method of Most Recent Visit")
+    Call RemoveColumn(ws, "Visit Methods Not SDV")
+    Call RemoveColumn(ws, "Visit Methods Not DMR")
+    Call RemoveColumn(ws, "Visit Methods Not Frozen")
+    Call RemoveColumn(ws, "Visit Methods Not Locked")
+    Call RemoveColumn(ws, "Visit Methods Not Signed")
     
     Call OutFormat
     Application.ScreenUpdating = True
