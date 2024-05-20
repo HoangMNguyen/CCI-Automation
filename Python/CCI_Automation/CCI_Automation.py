@@ -209,6 +209,11 @@ class Widget(QWidget):
             self.ui.lineEdit.setEnabled(False)
             self.ui.pushButton.setEnabled(False)
             self.ui.pushButton_2.setEnabled(False)
+        elif self.selected_option == "Format .csv to .xlsx for lab range issue":
+            self.ui.checkBox.setVisible(False)
+            self.ui.dateEdit.setVisible(False)
+            self.ui.pushButton.setEnabled(True)
+            self.ui.pushButton_2.setEnabled(True)
 
     def onComboBoxChanged2(self):
         """_summary_"""
