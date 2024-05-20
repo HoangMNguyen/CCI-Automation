@@ -19,7 +19,9 @@ def change_type(input_path, output_dir, output_file_name):
 
     # Create a Pandas Excel writer using XlsxWriter as the engine
     writer = pd.ExcelWriter(
-        output_dir + "/" + output_file_name + ".xlsx", engine="xlsxwriter"
+        output_dir + "/" + output_file_name + ".xlsx",
+        engine="xlsxwriter",
+        engine_kwargs={"options": {"strings_to_numbers": True}},
     )
 
     # Convert the dataframe to an XlsxWriter Excel object
@@ -36,7 +38,7 @@ def change_type(input_path, output_dir, output_file_name):
     def has_pattern(series):
         return series.apply(lambda x: bool(re.match(r"\d+-\d+", str(x)))).any()
 
-    # Apply formatting only to columns that contain the pattern
+    # Apply formatting to columns based on their content
     for col_num, col_name in enumerate(data.columns):
         if has_pattern(data[col_name]):
             worksheet.set_column(col_num, col_num, None, text_format)
