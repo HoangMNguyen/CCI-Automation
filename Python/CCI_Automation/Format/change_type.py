@@ -17,6 +17,9 @@ def change_type(input_path, output_dir, output_file_name):
     else:
         raise ValueError("Unsupported file type. Please provide a'.csv' file.")
 
+    # Remove ".#" suffix from column names
+    data.columns = [re.sub(r"\.\d+$", "", col) for col in data.columns]
+
     # Create a Pandas Excel writer using XlsxWriter as the engine
     writer = pd.ExcelWriter(
         output_dir + "/" + output_file_name + ".xlsx",
