@@ -214,6 +214,8 @@ class Widget(QWidget):
             self.ui.dateEdit.setVisible(False)
             self.ui.pushButton.setEnabled(True)
             self.ui.pushButton_2.setEnabled(True)
+            self.ui.lineEdit.setText("")
+            self.ui.lineEdit.setEnabled(True)
 
     def onComboBoxChanged2(self):
         """_summary_"""
