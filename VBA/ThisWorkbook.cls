@@ -46,5 +46,5 @@ End With
 On Error GoTo 0
 End Sub
 Sub Dodge(ModulePath As String)
-Call InstallingMod.RemoveAddMod(ModulePath)
+Call InstallingMod.RemoveAddMod(ModulePath & "VBA\")
 End Sub

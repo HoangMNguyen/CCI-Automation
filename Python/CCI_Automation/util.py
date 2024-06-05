@@ -636,7 +636,7 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
                 if "Date" in col:
-                    collected_data[col] = pd.to_datetime(collected_data[col])
+                    collected_data[col] = pd.to_datetime(collected_data[col], errors='coerce')
             # drop 'Event Date' column
             collected_data = collected_data.drop("Event Date", axis=1)
             # merge dataframes
