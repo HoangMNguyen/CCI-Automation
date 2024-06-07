@@ -86,7 +86,10 @@ def EnrollmentLog15420(final_data):
     #EXCHMO
     EXCHMO_df = final_data['EXCHMO'][['Subject','Event Group Label', 'Start Date (ig_EXCHMO2.EXSTDAT)']].copy()
     EXCHMO_df = EXCHMO_df[EXCHMO_df['Start Date (ig_EXCHMO2.EXSTDAT)'] != 'NaN']
-    EXCHMO_df = EXCHMO_df[EXCHMO_df['Event Group Label'] != 'Retreatment Lymphodepleting Chemotherapy']
+    EXCHMO_df = EXCHMO_df[
+        EXCHMO_df["Event Group Label"] != "Retreatment Lymphodepleting Chemotherapy"]
+    EXCHMO_df = EXCHMO_df[
+        EXCHMO_df["Event Group Label"] != "Retreatment Lymphodepleting Chemotherapy - ALL"]
     EXCHMO_df = EXCHMO_df.drop_duplicates(subset=['Subject'])
     EXCHMO_new_col_name = {'Start Date (ig_EXCHMO2.EXSTDAT)': 'Date of Initiation of LD Chemo'}
     EXCHMO_df = EXCHMO_df.rename(columns=EXCHMO_new_col_name)
@@ -133,6 +136,9 @@ def EnrollmentLog15420(final_data):
     EXCHMO_df = final_data['EXCHMO'][['Subject','Event Group Label', 'Start Date (ig_EXCHMO2.EXSTDAT)']].copy()
     EXCHMO_df = EXCHMO_df[EXCHMO_df['Start Date (ig_EXCHMO2.EXSTDAT)'] != 'NaN']
     EXCHMO_df = EXCHMO_df[EXCHMO_df['Event Group Label'] != 'Lymphodepleting Chemotherapy']
+    EXCHMO_df = EXCHMO_df[
+        EXCHMO_df["Event Group Label"] != "Lymphodepleting Chemotherapy - ALL"
+    ]
     EXCHMO_df = EXCHMO_df.drop_duplicates(subset=['Subject'])
     EXCHMO_new_col_name = {'Start Date (ig_EXCHMO2.EXSTDAT)': 'Date of Initiation of Retx LD Chemo'}
     EXCHMO_df = EXCHMO_df.rename(columns=EXCHMO_new_col_name)
