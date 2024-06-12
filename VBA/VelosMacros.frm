@@ -3,7 +3,7 @@ Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} VelosMacros
    Caption         =   "PennCTMS Automation"
    ClientHeight    =   1890
    ClientLeft      =   120
-   ClientTop       =   468
+   ClientTop       =   470
    ClientWidth     =   6360
    OleObjectBlob   =   "VelosMacros.frx":0000
    StartUpPosition =   1  'CenterOwner
@@ -13,6 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
+
 
 
 
@@ -28,6 +29,8 @@ ComboBox1.AddItem "Velos/PennCTMS Schedule Review"
 ComboBox1.AddItem "Format Conmed"
 ComboBox1.AddItem "Format AE"
 ComboBox1.AddItem "Format PDAE"
+ComboBox1.AddItem "Format Quick AE"
+ComboBox1.AddItem "Format Quick ConMed"
 ComboBox1.AddItem "Format CRFs"
 ComboBox1.AddItem "Sheet Format (Left Align)"
 ComboBox1.AddItem "Table Format (Left Align)"
@@ -54,6 +57,10 @@ Sub CommandButton1_Click()
         Call ConmedAE.FormatPDAE
     ElseIf ComboBox1.Value = "Format CRFs" Then
         Call ConmedAE.FormatCRFs
+    ElseIf ComboBox1.Value = "Format Quick AE" Then
+        Call ConmedAE.FormatQuickAE
+    ElseIf ComboBox1.Value = "Format Quick ConMed" Then
+        Call ConmedAE.FormatQuickConMed
     ElseIf ComboBox1.Value = "Sheet Format (Left Align)" Then
         Call Main.OutFormat
     ElseIf ComboBox1.Value = "Table Format (Left Align)" Then
