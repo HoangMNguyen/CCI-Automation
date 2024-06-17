@@ -580,35 +580,56 @@ Public Function CopyColumnsWithHeaders(SourceWorksheet As Worksheet, Destination
     Dim lastRow As Long, i As Integer, ColIndex As Integer
     Dim DestinationCell As Range
 
-    ' Find the last row with data in the source worksheet
-    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.Count, 1).End(xlUp).Row
-    
-    'exit if lastrow is 1
-    If lastRow = 1 Then
+    ' Ensure HeaderNames is an array
+    If Not IsArray(HeaderNames) Then
+        MsgBox "HeaderNames must be an array."
+        
         Exit Function
     End If
 
-    ' Loop through the array of header names
-    For i = LBound(HeaderNames) To UBound(HeaderNames)
-        ' Find the column for each header name
-        Set ColRange = SourceWorksheet.Rows(1).Find(What:=HeaderNames(i), LookIn:=xlValues, LookAt:=xlWhole)
-        If Not ColRange Is Nothing Then
-            ColIndex = ColRange.Column
-
-            ' Define the range to copy for this column, including headers
-            Set sourceRange = SourceWorksheet.Range(SourceWorksheet.Cells(1, ColIndex), SourceWorksheet.Cells(lastRow, ColIndex))
-
-            ' Set the destination range
-            Set DestinationCell = DestinationWorksheet.Cells(DestRow, DestColumn + i - LBound(HeaderNames))
-
-            ' Copy the visible cells of this column
-            sourceRange.Copy DestinationCell
-
-        Else
-            MsgBox "Column with header '" & HeaderNames(i) & "' not found."
-            Debug.Print "Column with header '" & HeaderNames(i) & "' not found."
-        End If
-    Next i
+    ' Find the last row with data in the source worksheet
+    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.Count, 1).End(xlUp).Row
+    
+    'if lastrow is 1
+    If lastRow = 1 Then
+        ' Loop through the array of header names
+        For i = LBound(HeaderNames) To UBound(HeaderNames)
+            ' Find the column for each header name
+            Set ColRange = SourceWorksheet.Rows(1).Find(What:=HeaderNames(i), LookIn:=xlValues, LookAt:=xlWhole)
+            If Not ColRange Is Nothing Then
+                ' Define the range to copy for this column, including headers
+                Set sourceRange = ColRange
+    
+                ' Set the destination range
+                Set DestinationCell = DestinationWorksheet.Cells(DestRow, DestColumn + i - LBound(HeaderNames))
+    
+                ' Copy the visible cells of this column
+                sourceRange.Copy DestinationCell
+            End If
+        Next i
+    Else
+        ' Loop through the array of header names
+        For i = LBound(HeaderNames) To UBound(HeaderNames)
+            ' Find the column for each header name
+            Set ColRange = SourceWorksheet.Rows(1).Find(What:=HeaderNames(i), LookIn:=xlValues, LookAt:=xlWhole)
+            If Not ColRange Is Nothing Then
+                ColIndex = ColRange.Column
+    
+                ' Define the range to copy for this column, including headers
+                Set sourceRange = SourceWorksheet.Range(SourceWorksheet.Cells(1, ColIndex), SourceWorksheet.Cells(lastRow, ColIndex))
+    
+                ' Set the destination range
+                Set DestinationCell = DestinationWorksheet.Cells(DestRow, DestColumn + i - LBound(HeaderNames))
+    
+                ' Copy the visible cells of this column
+                sourceRange.Copy DestinationCell
+    
+            Else
+                MsgBox "Column with header '" & HeaderNames(i) & "' not found."
+                Debug.Print "Column with header '" & HeaderNames(i) & "' not found."
+            End If
+        Next i
+    End If
 
     ' Optional: Clear clipboard to release memory
     Application.CutCopyMode = False

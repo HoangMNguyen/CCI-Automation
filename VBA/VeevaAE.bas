@@ -26,10 +26,11 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     End With
 
     StudyNum = Left(WS1.Range("A2").Value, 5)
-    Dim HeadersToCopy As Variant
-    HeadersToCopy = GetAEHeaders(StudyNum)
-    Call CopyColumnsWithHeaders(WS1, WS2, HeadersToCopy, 1, 1)
-    HeadersIndex = FindHeaderIndexes(WS1, HeadersToCopy)
+    If Len(StudyNum) <> 5 And Not IsNumeric(StudyNum) Then
+        StudyNum = Left(ActiveWorkbook.Name, 5)
+    End If
+    Call CopyColumnsWithHeaders(WS1, WS2, GetAEHeaders(StudyNum), 1, 1)
+    HeadersIndex = FindHeaderIndexes(WS1, GetAEHeaders(StudyNum))
     
     Dim LastColumn As Long
     Dim LastColumnWS2 As Long
@@ -47,7 +48,8 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         End If
     Next i
     
-    Call OutFormat
+    WS2.Cells(1, 1).Select
+    Call FormatTable
     With ActiveWindow
         .SplitRow = 1
     End With
