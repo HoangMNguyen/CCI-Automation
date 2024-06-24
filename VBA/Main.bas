@@ -306,7 +306,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
             End If
         End If
     Next
-    If SelectCells <> Nothing Then
+    If Not SelectCells Is Nothing Then
         SelectCells.EntireRow.Delete
     End If
     Set SelectCells = Nothing
@@ -330,7 +330,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
             End If
         Next
         
-        If SelectCells <> Nothing Then
+        If Not SelectCells Is Nothing Then
             SelectCells.EntireRow.Delete
         End If
         Set SelectCells = Nothing
