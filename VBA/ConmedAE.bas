@@ -3,6 +3,8 @@ Option Explicit
 
 Sub MainConmed(FCon As Boolean)
 
+'This sub is shared between AdHoc and Quick ConMed reports
+
 Dim WS1 As Worksheet
 Dim WS2 As Worksheet
 Dim RowNum As Integer
@@ -13,6 +15,8 @@ Dim i As Integer
 Dim lastRow As Long
 Dim RemoveRow As Long
 
+'Disable Screen Update
+Application.ScreenUpdating = False
 Set WS1 = ActiveSheet
 
 WS1.Activate
@@ -84,24 +88,14 @@ Application.CutCopyMode = False
     Selection.AutoFilter
     ActiveSheet.Range("A1").AutoFilter Field:=FSField, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
 
-End Sub
-
-Sub QuickConmed()
-
-'Format Quick Conmed Report
-
-Dim WS1 As Worksheet
-Set WS1 = ActiveSheet
-
-WS1.Activate
-
-QuickRepCleanup WS1 'Remove columns specified in the sub
-
-MainConmed False
+    'Enable Screen Update
+    Application.ScreenUpdating = True
 
 End Sub
 
 Sub MainAE(FAdverse As Boolean)
+
+'This sub is shared between AdHoc and Quick AE and PDAE reports
 
 Dim WS1 As Worksheet
 Dim WS2 As Worksheet
@@ -199,36 +193,9 @@ Selection.Borders.Weight = xlThin
 Selection.AutoFilter
 ActiveSheet.Range("A1").AutoFilter Field:=FSField, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
 
+'Enable Screen Update
 Application.ScreenUpdating = True
     
-End Sub
-
-Sub QuickAE()
-
-'Format Quick AE Report
-
-Dim WS1 As Worksheet
-Set WS1 = ActiveSheet
-
-WS1.Activate
-
-QuickRepCleanup WS1 'Remove columns specified in the sub
-
-MainAE False
-    
-End Sub
-
-Sub QuickRepCleanup(ws As Worksheet)
-
-    Dim QuickColName As Variant
-    Dim Col As Variant
-    
-    QuickColName = Array("Form Type", "Filled Date", "FK_FILLEDFORM", "FK_FORM", "FORM_COMPLETED", "TYPE", "FK_STUDY", "FK_PER", "ID", "FK_PATPROT", "CREATOR", "EVENT_SCHEDULE")
-    
-    For Each Col In QuickColName
-        Call RemoveColumn(ws, CStr(Col))
-    Next Col
-        
 End Sub
 
 Sub FormatCRFs()
@@ -278,8 +245,14 @@ Application.ScreenUpdating = True
 
 End Sub
 
-Sub FormatConMed()
-    Call MainConmed(True)
+Sub AdHocConMed()
+
+'Format Ad Hoc Conmed Report
+
+    Call MainConmed(True) 'Call MainConmed with True parameter to format Ad Hoc report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -291,9 +264,17 @@ Sub FormatConMed()
     Else
         ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
     End If
+    
 End Sub
-Sub FormatAE()
-    Call MainAE(True)
+
+Sub AdHocAE()
+
+'Format Ad Hoc AE Report
+
+    Call MainAE(True) 'Call MainAE with True parameter to format Ad Hoc report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -305,10 +286,17 @@ Sub FormatAE()
     Else
         ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
     End If
+    
 End Sub
 
-Sub FormatPDAE()
-    Call MainAE(True)
+Sub AdHocPDAE()
+
+'Format Ad Hoc PDAE Report
+
+    Call MainAE(True) 'Call MainAE with True parameter to format Ad Hoc report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -320,10 +308,17 @@ Sub FormatPDAE()
     Else
         ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
     End If
+    
 End Sub
 
-Sub FormatQuickConMed()
-    Call QuickConmed
+Sub QuickConMed()
+    
+    QuickRepCleanup 'Remove columns specified in the helper sub
+
+    MainConmed False 'Call MainConmed with False parameter to format Quick report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -337,8 +332,16 @@ Sub FormatQuickConMed()
     End If
 End Sub
 
-Sub FormatQuickAE()
-    Call QuickAE
+Sub QuickAE()
+
+    'Format Quick AE Report
+
+    QuickRepCleanup 'Remove columns specified in the helper sub
+
+    MainAE False 'Call MainAE with False parameter to format Quick report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -352,8 +355,16 @@ Sub FormatQuickAE()
     End If
 End Sub
 
-Sub FormatQuickPDAE()
-    Call QuickAE
+Sub QuickPDAE()
+  
+    'Format Quick PDAE Report
+
+    QuickRepCleanup 'Remove columns specified in the helper sub
+
+    MainAE False 'Call MainAE with False parameter to format Quick report
+    
+    'Prompt the user to update the file name and save the file
+    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)

@@ -20,6 +20,8 @@ Attribute VB_Exposed = False
 
 
 
+
+
 Sub UserForm_Initialize()
 
 ComboBox1.Clear
@@ -52,19 +54,19 @@ Sub CommandButton1_Click()
     ElseIf ComboBox1.Value = "Velos/PennCTMS Schedule Review" Then
         Call Main.VelosScheduleReview
     ElseIf ComboBox1.Value = "Format Ad Hoc Conmed" Then
-        Call ConmedAE.FormatConMed
+        Call ConmedAE.AdHocConMed
     ElseIf ComboBox1.Value = "Format Ad Hoc AE Report" Then
-        Call ConmedAE.FormatAE
+        Call ConmedAE.AdHocAE
     ElseIf ComboBox1.Value = "Format Ad Hoc PDAE Report" Then
-        Call ConmedAE.FormatPDAE
+        Call ConmedAE.AdHocPDAE
     ElseIf ComboBox1.Value = "Format CRFs" Then
         Call ConmedAE.FormatCRFs
     ElseIf ComboBox1.Value = "Format Quick ConMed Report" Then
-        Call ConmedAE.FormatQuickConMed
+        Call ConmedAE.QuickConMed
     ElseIf ComboBox1.Value = "Format Quick AE Report" Then
-        Call ConmedAE.FormatQuickAE
+        Call ConmedAE.QuickAE
     ElseIf ComboBox1.Value = "Format Quick PDAE Report" Then
-        Call ConmedAE.FormatQuickPDAE
+        Call ConmedAE.QuickPDAE
     ElseIf ComboBox1.Value = "Sheet Format (Left Align)" Then
         Call Main.OutFormat
     ElseIf ComboBox1.Value = "Table Format (Left Align)" Then
