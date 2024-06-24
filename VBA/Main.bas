@@ -139,7 +139,9 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
         End If
     End If
     Next
-    SelectCells.EntireRow.Delete
+    If Not SelectCells Is Nothing Then
+        SelectCells.EntireRow.Delete
+    End If
     Set SelectCells = Nothing
     
     TempSheet.Range("J1", TempSheet.Range("J1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
@@ -304,7 +306,9 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
             End If
         End If
     Next
-    SelectCells.EntireRow.Delete
+    If Not SelectCells Is Nothing Then
+        SelectCells.EntireRow.Delete
+    End If
     Set SelectCells = Nothing
     
     'sheet count
@@ -325,7 +329,10 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
                 End If
             End If
         Next
-        SelectCells.EntireRow.Delete
+        
+        If Not SelectCells Is Nothing Then
+            SelectCells.EntireRow.Delete
+        End If
         Set SelectCells = Nothing
         Call FormatTable
     Next CurrentSheetNum
