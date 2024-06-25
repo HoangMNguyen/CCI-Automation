@@ -3,7 +3,7 @@ Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} VelosMacros
    Caption         =   "PennCTMS Automation"
    ClientHeight    =   1890
    ClientLeft      =   120
-   ClientTop       =   468
+   ClientTop       =   470
    ClientWidth     =   6360
    OleObjectBlob   =   "VelosMacros.frx":0000
    StartUpPosition =   1  'CenterOwner
@@ -18,6 +18,10 @@ Attribute VB_Exposed = False
 
 
 
+
+
+
+
 Sub UserForm_Initialize()
 
 ComboBox1.Clear
@@ -25,9 +29,12 @@ ComboBox1.AddItem "Quick Report Query Status Format"
 ComboBox1.AddItem "Quick Reports Form Status Format Site"
 ComboBox1.AddItem "Quick Reports Form Status Format Sponsor"
 ComboBox1.AddItem "Velos/PennCTMS Schedule Review"
-ComboBox1.AddItem "Format Conmed"
-ComboBox1.AddItem "Format AE"
-ComboBox1.AddItem "Format PDAE"
+ComboBox1.AddItem "Format Ad Hoc Conmed"
+ComboBox1.AddItem "Format Ad Hoc AE Report"
+ComboBox1.AddItem "Format Ad Hoc PDAE Report"
+ComboBox1.AddItem "Format Quick ConMed Report"
+ComboBox1.AddItem "Format Quick AE Report"
+ComboBox1.AddItem "Format Quick PDAE Report"
 ComboBox1.AddItem "Format CRFs"
 ComboBox1.AddItem "Sheet Format (Left Align)"
 ComboBox1.AddItem "Table Format (Left Align)"
@@ -46,14 +53,20 @@ Sub CommandButton1_Click()
         Call Main.QuickReportsFormStatusFormatSponsor
     ElseIf ComboBox1.Value = "Velos/PennCTMS Schedule Review" Then
         Call Main.VelosScheduleReview
-    ElseIf ComboBox1.Value = "Format Conmed" Then
-        Call ConmedAE.FormatConmed
-    ElseIf ComboBox1.Value = "Format AE" Then
-        Call ConmedAE.FormatAE
-    ElseIf ComboBox1.Value = "Format PDAE" Then
-        Call ConmedAE.FormatPDAE
+    ElseIf ComboBox1.Value = "Format Ad Hoc Conmed" Then
+        Call ConmedAE.AdHocConMed
+    ElseIf ComboBox1.Value = "Format Ad Hoc AE Report" Then
+        Call ConmedAE.AdHocAE
+    ElseIf ComboBox1.Value = "Format Ad Hoc PDAE Report" Then
+        Call ConmedAE.AdHocPDAE
     ElseIf ComboBox1.Value = "Format CRFs" Then
         Call ConmedAE.FormatCRFs
+    ElseIf ComboBox1.Value = "Format Quick ConMed Report" Then
+        Call ConmedAE.QuickConMed
+    ElseIf ComboBox1.Value = "Format Quick AE Report" Then
+        Call ConmedAE.QuickAE
+    ElseIf ComboBox1.Value = "Format Quick PDAE Report" Then
+        Call ConmedAE.QuickPDAE
     ElseIf ComboBox1.Value = "Sheet Format (Left Align)" Then
         Call Main.OutFormat
     ElseIf ComboBox1.Value = "Table Format (Left Align)" Then

@@ -919,4 +919,22 @@ Function GetStudyNumber() As String
     End If
 End Function
 
+Public Sub QuickRepCleanup()
 
+    'Remove columns from Quick Conmed and AE Reports specified in the array
+    
+    Dim WS1 As Worksheet
+    Dim QuickColName As Variant
+    Dim col As Variant
+    
+    Set WS1 = ActiveSheet
+
+    WS1.Activate
+    
+    QuickColName = Array("Form Type", "Filled Date", "FK_FILLEDFORM", "FK_FORM", "FORM_COMPLETED", "TYPE", "FK_STUDY", "FK_PER", "ID", "FK_PATPROT", "CREATOR", "EVENT_SCHEDULE")
+    
+    For Each col In QuickColName
+        Call RemoveColumn(WS1, CStr(col))
+    Next col
+        
+End Sub
