@@ -1,7 +1,7 @@
 Attribute VB_Name = "ConmedAE"
 Option Explicit
 
-Sub MainConmed(FCon As Boolean)
+Sub MainConmed()
 
 'This sub is shared between AdHoc and Quick ConMed reports
 
@@ -19,26 +19,7 @@ Dim RemoveRow As Long
 Application.ScreenUpdating = False
 Set WS1 = ActiveSheet
 
-WS1.Activate
-WS1.Range("A1").Select
-lastRow = ActiveSheet.Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
-
-If FCon = True Then
-    If WS1.Range("B5").Value = "Basic Stats" Then 'report without header
-        'delete first 7 rows and last 2 rows.
-        Rows("1:7").Select
-        Selection.Delete Shift:=xlUp
-        Range("A" & (lastRow - 6) & ":A" & (lastRow - 5)).Select 'last row was returned before deletion of first 7 rows
-    ElseIf WS1.Range("B8").Value = "Basic Stats" Then 'report with header
-    'delete first 10 rows and last 2 rows.
-        Rows("1:10").Select
-        Selection.Delete Shift:=xlUp
-        Range("A" & (lastRow - 9) & ":A" & (lastRow - 8)).Select 'last row was returned before deletion of first 10 rows
-    End If
-    Selection.EntireRow.Delete
-End If
-
-WS1.Rows(lastRow).Delete
+lastRow = FindLastRowA(WS1)
 ActiveSheet.Name = "Conmed Status"
 
 FSField = Application.Match("Form Status", WS1.Range("A1:AF1"), 0)
@@ -93,7 +74,7 @@ Application.CutCopyMode = False
 
 End Sub
 
-Sub MainAE(FAdverse As Boolean)
+Sub MainAE()
 
 'This sub is shared between AdHoc and Quick AE and PDAE reports
 
@@ -112,26 +93,7 @@ Application.ScreenUpdating = False
 Set WS1 = ActiveSheet
     
 'Count number of rows w/ header
-WS1.Activate
-WS1.Range("A1").Select
-lastRow = ActiveSheet.Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
-
-If FAdverse = True Then
-    If WS1.Range("B5").Value = "Basic Stats" Then 'report without header
-        'delete first 7 rows and last 2 rows.
-        Rows("1:7").Select
-        Selection.Delete Shift:=xlUp
-        Range("A" & (lastRow - 6) & ":A" & (lastRow - 5)).Select 'last row was returned before deletion of first 7 rows
-    ElseIf WS1.Range("B8").Value = "Basic Stats" Then 'report with header
-    'delete first 10 rows and last 2 rows.
-        Rows("1:10").Select
-        Selection.Delete Shift:=xlUp
-        Range("A" & (lastRow - 9) & ":A" & (lastRow - 8)).Select 'last row was returned before deletion of first 10 rows
-    End If
-    Selection.EntireRow.Delete
-End If
-
-WS1.Rows(lastRow).Delete
+lastRow = FindLastRowA(WS1)
 
 ActiveSheet.Name = "Adverse Event Status"
  
@@ -216,15 +178,6 @@ lastRow = ActiveSheet.Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
 Cells.Select
 Selection.Copy
 
-'Add WS2 as output
-'With WB1
- '   .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Report"
- '   Set WS2 = Sheets("Filtered Report")
-'End With
-
-   ' Cells.Select
-   ' ActiveSheet.Paste
-
 If WS1.Range("B5").Value = "Basic Stats" Then 'report without header
     'delete first 7 rows and last 2 rows.
     Rows("1:7").Select
@@ -246,13 +199,14 @@ Application.ScreenUpdating = True
 End Sub
 
 Sub AdHocConMed()
-
 'Format Ad Hoc Conmed Report
-
-    Call MainConmed(True) 'Call MainConmed with True parameter to format Ad Hoc report
+    'Removing unnecessary headers and rows
+    Call FormatCRFs
+    
+    'Call the similar part of ad-hoc and Quick reports
+    Call MainConmed
     
     'Prompt the user to update the file name and save the file
-    
     Dim fileSaveName As Variant
     Dim modifiedDate As String
     modifiedDate = Now2Date(Now)
@@ -270,8 +224,10 @@ End Sub
 Sub AdHocAE()
 
 'Format Ad Hoc AE Report
-
-    Call MainAE(True) 'Call MainAE with True parameter to format Ad Hoc report
+    'Removing unnecessary headers and rows
+    Call FormatCRFs
+    
+    Call MainAE
     
     'Prompt the user to update the file name and save the file
     
@@ -292,8 +248,10 @@ End Sub
 Sub AdHocPDAE()
 
 'Format Ad Hoc PDAE Report
-
-    Call MainAE(True) 'Call MainAE with True parameter to format Ad Hoc report
+    'Removing unnecessary headers and rows
+    Call FormatCRFs
+    
+    Call MainAE
     
     'Prompt the user to update the file name and save the file
     
@@ -313,9 +271,11 @@ End Sub
 
 Sub QuickConMed()
     
-    QuickRepCleanup 'Remove columns specified in the helper sub
-
-    MainConmed False 'Call MainConmed with False parameter to format Quick report
+    'Formatting before calling MainConmed
+    Call QuickRepCleanup 'Remove columns specified in the helper sub
+    ActiveSheet.Rows(FindLastRowA(ActiveSheet)).Delete
+    
+    Call MainConmed 'Call MainConmed
     
     'Prompt the user to update the file name and save the file
     
@@ -336,9 +296,9 @@ Sub QuickAE()
 
     'Format Quick AE Report
 
-    QuickRepCleanup 'Remove columns specified in the helper sub
-
-    MainAE False 'Call MainAE with False parameter to format Quick report
+    Call QuickRepCleanup 'Remove columns specified in the helper sub
+    ActiveSheet.Rows(FindLastRowA(ActiveSheet)).Delete
+    Call MainAE 'Call MainAE
     
     'Prompt the user to update the file name and save the file
     
@@ -357,11 +317,12 @@ End Sub
 
 Sub QuickPDAE()
   
-    'Format Quick PDAE Report
+    'Format Quick AE Report
 
-    QuickRepCleanup 'Remove columns specified in the helper sub
-
-    MainAE False 'Call MainAE with False parameter to format Quick report
+    Call QuickRepCleanup 'Remove columns specified in the helper sub
+    ActiveSheet.Rows(FindLastRowA(ActiveSheet)).Delete
+    
+    Call MainAE 'Call MainAE
     
     'Prompt the user to update the file name and save the file
     
