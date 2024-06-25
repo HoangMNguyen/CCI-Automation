@@ -29,7 +29,7 @@ ComboBox1.AddItem "Quick Report Query Status Format"
 ComboBox1.AddItem "Quick Reports Form Status Format Site"
 ComboBox1.AddItem "Quick Reports Form Status Format Sponsor"
 ComboBox1.AddItem "Velos/PennCTMS Schedule Review"
-ComboBox1.AddItem "Format Ad Hoc Conmed"
+ComboBox1.AddItem "Format Ad Hoc ConMed Report"
 ComboBox1.AddItem "Format Ad Hoc AE Report"
 ComboBox1.AddItem "Format Ad Hoc PDAE Report"
 ComboBox1.AddItem "Format Quick ConMed Report"
@@ -53,7 +53,7 @@ Sub CommandButton1_Click()
         Call Main.QuickReportsFormStatusFormatSponsor
     ElseIf ComboBox1.Value = "Velos/PennCTMS Schedule Review" Then
         Call Main.VelosScheduleReview
-    ElseIf ComboBox1.Value = "Format Ad Hoc Conmed" Then
+    ElseIf ComboBox1.Value = "Format Ad Hoc ConMed Report" Then
         Call ConmedAE.AdHocConMed
     ElseIf ComboBox1.Value = "Format Ad Hoc AE Report" Then
         Call ConmedAE.AdHocAE
