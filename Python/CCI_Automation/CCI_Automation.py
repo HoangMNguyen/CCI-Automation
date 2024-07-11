@@ -150,7 +150,7 @@ class Widget(QWidget):
             )
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "DSMB Report":
-            self.ui.comboBox_2.addItems(["15420", "12423"])
+            self.ui.comboBox_2.addItems(["15420", "12423", "15122"])
             self.ui.comboBox_2.setVisible(True)
         elif (
             self.selected_option == "Clockify Dashboard"
