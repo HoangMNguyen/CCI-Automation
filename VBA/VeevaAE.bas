@@ -14,11 +14,8 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     Set WS1 = ActiveSheet
     ActiveSheet.Name = "Veeva AE Data Listing"
     'Count number of rows w/ header
-    WS1.Range("A1").Select
-    lastRow = ActiveSheet.Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = FindLastRowA(WS1)
     
-
-
     'Add WS2 as output
     With WB1
         .Sheets.Add(Before:=.Sheets(.Sheets.Count)).Name = "Reformated AE Report"
@@ -31,7 +28,13 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     End If
     Call CopyColumnsWithHeaders(WS1, WS2, GetAEHeaders(StudyNum), 1, 1)
     HeadersIndex = FindHeaderIndexes(WS1, GetAEHeaders(StudyNum))
+    Dim Index As Long
+    For Index = 1 To UBound(HeadersIndex) + 1
+        'Split header name to remove part after the last "("
+        WS2.Cells(1, Index).Value = HeaderWNoParenthesis(WS2.Cells(1, Index).Value)
+    Next Index
     
+    'Copy the rest of the form
     Dim LastColumn As Long
     Dim LastColumnWS2 As Long
     LastColumn = FindLastColumn(WS1)
@@ -48,11 +51,126 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         End If
     Next i
     
+    'Find the start date column
+    Dim StartDate As String
+    StartDate = FindColumn(WS2, "Start Date")
+    Dim StopDate As String
+    StopDate = FindColumn(WS2, "Stop Date")
+    Set startDateRange = WS2.Range(StartDate & "2:" & StartDate & lastRow)
+    Set stopDateRange = WS2.Range(StopDate & "2:" & StopDate & lastRow)
+    Dim DurationColumn As Long
+    DurationColumn = stopDateRange.Column + 1
+    'Insert empty column
+    WS2.Columns(DurationColumn).Insert Shift = xlToRight
+    ' Set the header for the duration column
+    WS2.Cells(1, DurationColumn).Value = "Duration"
+    'Check if there is no data
+    If lastRow > 1 Then
+        Set durationRange = WS2.Cells(2, DurationColumn).Resize(lastRow - 1, 1)
+        ' Read data into arrays
+        Dim startDateArray As Variant
+        Dim stopDateArray As Variant
+        Dim durationArray() As Variant
+        startDateArray = startDateRange.Value
+        stopDateArray = stopDateRange.Value
+        ' Prepare the duration array
+        If IsArray(startDateArray) Then
+            If UBound(startDateArray, 1) = 1 And UBound(startDateArray, 2) = 1 Then
+                ' Handle special case where there is only one row of data
+                ReDim durationArray(1 To 1, 1 To 1)
+            Else
+                ' General case for arrays with more than one element
+                ReDim durationArray(1 To UBound(startDateArray, 1), 1 To 1)
+            End If
+            
+            ' Perform the calculation
+            For i = 1 To UBound(startDateArray, 1)
+                If IsDate(startDateArray(i, 1)) And IsDate(stopDateArray(i, 1)) Then
+                    durationArray(i, 1) = DateDiff("d", startDateArray(i, 1), stopDateArray(i, 1)) + 1
+                Else
+                    durationArray(i, 1) = "" ' Empty field
+                End If
+            Next i
+        Else
+            ' Handle single value case
+            ReDim durationArray(1 To 1, 1 To 1)
+            If IsDate(startDateArray) And IsDate(stopDateArray) Then
+                durationArray(1, 1) = DateDiff("d", startDateArray, stopDateArray) + 1
+            Else
+                durationArray(1, 1) = "" ' Empty field
+            End If
+        End If
+    ' Write the results back to the worksheet
+    durationRange.Value = durationArray
+    ' Set the number format of the duration column to number
+    durationRange.EntireColumn.NumberFormat = "0"
+    End If
+    
+    ' Set the color of the new column to HEX #6666FF
+    WS2.Cells(2, DurationColumn).EntireColumn.Font.Color = RGB(102, 102, 255)
+    'for study 15420 Derived Toxicity rule only
+    If StudyNum = "15420" Then
+        Dim innerString As String
+        'Find column of Toxicity
+        Dim Toxicity As String
+        Toxicity = FindColumn(WS2, "Toxicity")
+        Set toxicityRange = WS2.Range(Toxicity & "2:" & Toxicity & lastRow)
+        ' Read data into arrays
+        toxicityArray = toxicityRange.Value
+        Dim derivedToxicityColumn As Long
+        derivedToxicityColumn = toxicityRange.Column
+        WS2.Columns(derivedToxicityColumn).Insert Shift = xlToRight
+        ' Define the derived toxicity range after the insert
+        Set derivedToxicityRange = WS2.Range(WS2.Cells(2, derivedToxicityColumn), WS2.Cells(lastRow, derivedToxicityColumn)) ' Define the derived toxicity range
+        ' Prepare the derived toxicity array
+        ReDim derivedToxicityArray(1 To UBound(toxicityArray, 1), 1 To 1)
+        ' Perform the calculation
+        For i = 1 To UBound(toxicityArray, 1)
+            Toxicity = toxicityArray(i, 1)
+            derivedToxicity = Toxicity ' Initialize derived toxicity with original toxicity value
+
+            ' Check if "Other" word is present and apply rules
+            If InStr(1, Toxicity, "Other", vbTextCompare) > 0 Then
+                ' Extract the text within parentheses
+                innerString = ExtractInnerString(Toxicity)
+                
+                ' Apply the rules
+                If Left(UCase(innerString), 4) = "CAR " Then
+                    derivedToxicity = Replace(Toxicity, innerString, "CAR " & LCase(Mid(innerString, 5)))
+                Else
+                    If Left(UCase(innerString), 5) = "COVID" Then
+                        derivedToxicity = Toxicity
+                    Else
+                        derivedToxicity = Replace(Toxicity, innerString, UCase(Left(innerString, 1)) & LCase(Mid(innerString, 2)))
+                    End If
+                End If
+                derivedToxicity = Replace(derivedToxicity, "hlh", "HLH")
+            Else
+            End If
+            
+            ' Store the result in the derived toxicity array
+            derivedToxicityArray(i, 1) = derivedToxicity
+        Next i
+        
+        ' Write the results back to the worksheet
+        derivedToxicityRange.Value = derivedToxicityArray
+
+        ' Set the header for the derived toxicity column
+        WS2.Cells(1, derivedToxicityColumn).Value = "Derived Toxicity"
+
+        ' Set the font color of the new column to HEX #6666FF
+        derivedToxicityRange.EntireColumn.Font.Color = RGB(102, 102, 255)
+        
+    End If
+    
+    
+    'Formatting
     WS2.Cells(1, 1).Select
     Call FormatTable
     With ActiveWindow
         .SplitRow = 1
     End With
+    Call UpdateSheetFontToCalibri(WS2)
     
     ActiveWindow.FreezePanes = True
     Application.ScreenUpdating = True
@@ -64,13 +182,76 @@ End Sub
 Function GetAEHeaders(StudyNum As String) As Variant
 
     If StudyNum = "15420" Then
-        GetAEHeaders = Array("Subject", "AE or SAE? (ig_AE2.AESEV)", "T-cell Attribution (ig_AE1.AEREL)", "T-cell Expectedness (ig_AE1.AETRTINTP)", "Specify Other Attribution (ig_AE1.AERELSPOTH)", "Other Attribution (ig_AE1.AERELOTH)", "Other Expectedness (ig_AE1.AETRTINTPOTH)", "CTCAE Category (ig_AE1.AECAT)", "Toxicity (ig_AE1.AETOX)", "Grade (ig_AE1.AETOXGR)", "Start Date (ig_AE1.AESTDAT)", "Stop Date (ig_AE1.AEENDAT)", "Event Onset (ig_AE1.AEONSET)", "Additional Toxicity Details (ig_AE1.AETOXTERM)", "Event Ongoing (ig_AE1.AEONGO)")
+        GetAEHeaders = Array("Subject", _
+                            "AE or SAE? (ig_AE2.AESEV)", _
+                            "T-cell Attribution (ig_AE1.AEREL)", _
+                            "T-cell Expectedness (ig_AE1.AETRTINTP)", _
+                            "Specify Other Attribution (ig_AE1.AERELSPOTH)", _
+                            "Other Attribution (ig_AE1.AERELOTH)", _
+                            "Other Expectedness (ig_AE1.AETRTINTPOTH)", _
+                            "CTCAE Category (ig_AE1.AECAT)", _
+                            "Toxicity (ig_AE1.AETOX)", _
+                            "Grade (ig_AE1.AETOXGR)", _
+                            "Start Date (ig_AE1.AESTDAT)", _
+                            "Stop Date (ig_AE1.AEENDAT)", _
+                            "Event Onset (ig_AE1.AEONSET)", _
+                            "Additional Toxicity Details (ig_AE1.AETOXTERM)", _
+                            "Event Ongoing (ig_AE1.AEONGO)")
     ElseIf StudyNum = "03821" Then
-        GetAEHeaders = Array("Subject", "Cohort Assignment (ig_AE1.CACHASCOD)", "AE or SAE? (ig_AE2.AESEV)", "Investigational Product(s) (ig_AE1.AEIP)", "Attribution to T-cell Therapy (IP1) (ig_AE1.AEREL1)", "T-cell Therapy Expectedness (IP1) (ig_AE1.AETRTINTP1)", "Attribution to VCN-01 (IP2) (ig_AE1.AEREL2)", "VCN-01 Expectedness (IP2) (ig_AE1.AETRTINTP2)", "Other Attribution (ig_AE1.AERELOTH)", "Specify Other Attribution (ig_AE1.AERELSPOTH)", "CTCAE Category (ig_AE1.AECAT)", "Toxicity (ig_AE1.AETOX)", "Derived Toxicity (ig_AE1.AETOXDV)", "Grade (ig_AE1.AETOXGR)", "Start Date (ig_AE1.AESTDAT)", "Stop Date (ig_AE1.AEENDAT)", "Event Onset (ig_AE1.AEONSETCH-1)", "Event Onset (ig_AE1.AEONSETCH12)", "Event Onset (ig_AE1.AEONSETCHNAS)", "Event Ongoing? (ig_AE1.AEONGO)", "Additional Toxicity Details (ig_AE1.AETOXTERM)")
+        GetAEHeaders = Array("Subject", _
+                            "Cohort/Treatment Arm Assignment (ig_AE1.CACHASCOD)", _
+                            "AE or SAE? (ig_AE2.AESEV)", _
+                            "Investigational Product(s) (ig_AE1.AEIP)", _
+                            "Attribution to T-cell Therapy (IP1) (ig_AE1.AEREL1)", _
+                            "T-cell Therapy Expectedness (IP1) (ig_AE1.AETRTINTP1)", _
+                            "Attribution to VCN-01 (IP2) (ig_AE1.AEREL2)", _
+                            "VCN-01 Expectedness (IP2) (ig_AE1.AETRTINTP2)", _
+                            "Other Attribution (ig_AE1.AERELOTH)", _
+                            "Specify Other Attribution (ig_AE1.AERELSPOTH)", _
+                            "CTCAE Category (ig_AE1.AECAT)", _
+                            "Toxicity (ig_AE1.AETOX)", _
+                            "Derived Toxicity (ig_AE1.AETOXDV)", _
+                            "Grade (ig_AE1.AETOXGR)", _
+                            "Start Date (ig_AE1.AESTDAT)", _
+                            "Stop Date (ig_AE1.AEENDAT)", _
+                            "Event Onset (ig_AE1.AEONSETCH-1)", _
+                            "Event Onset (ig_AE1.AEONSETCH12)", _
+                            "Event Onset (ig_AE1.AEONSETCHNAS)", _
+                            "Event Ongoing? (ig_AE1.AEONGO)", _
+                            "Additional Toxicity Details (ig_AE1.AETOXTERM)")
     ElseIf StudyNum = "16321" Then
-        GetAEHeaders = Array("Subject", "AE or SAE? (ig_AE2.AESEV)", "T-cell Attribution (ig_AE1.AEREL)", "T-cell Expectedness (ig_AE1.AETRTINTP)", "Specify Other Attribution (ig_AE1.AERELSPOTH)", "Other Attribution (ig_AE1.AERELOTH)", "Other Expectedness (ig_AE1.AETRTINTPOTH)", "CTCAE Category (ig_AE1.AECAT)", "Derived Toxicity (ig_AE1.AETOXDV)", "Toxicity (ig_AE1.AETOX)", "Grade (ig_AE1.AETOXGR)", "Start Date (ig_AE1.AESTDAT)", "Stop Date (ig_AE1.AEENDAT)", "Event Onset (ig_AE1.AEONSET)", "Additional Toxicity Details (ig_AE1.AETOXTERM)", "Event Ongoing (ig_AE1.AEONGO)")
+        GetAEHeaders = Array("Subject", _
+                            "AE or SAE? (ig_AE2.AESEV)", _
+                            "T-cell Attribution (ig_AE1.AEREL)", _
+                            "T-cell Expectedness (ig_AE1.AETRTINTP)", _
+                            "Specify Other Attribution (ig_AE1.AERELSPOTH)", _
+                            "Other Attribution (ig_AE1.AERELOTH)", _
+                            "Other Expectedness (ig_AE1.AETRTINTPOTH)", _
+                            "CTCAE Category (ig_AE1.AECAT)", _
+                            "Derived Toxicity (ig_AE1.AETOXDV)", _
+                            "Toxicity (ig_AE1.AETOX)", _
+                            "Grade (ig_AE1.AETOXGR)", _
+                            "Start Date (ig_AE1.AESTDAT)", _
+                            "Stop Date (ig_AE1.AEENDAT)", _
+                            "Event Onset (ig_AE1.AEONSET)", _
+                            "Additional Toxicity Details (ig_AE1.AETOXTERM)", _
+                            "Event Ongoing (ig_AE1.AEONGO)")
     ElseIf StudyNum = "15122" Then
-        GetAEHeaders = Array("Subject", "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)", "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_YS_TCELLATRIB1)", "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)", "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_YS_OTHATRIB1)", "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_YS_CTCAECAT2)", "CTCAE Term Available? (IG_NS_NA_AE1.CL_YS_YH_AECATOTH_cl_YS_YN1)", "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)", "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)", "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_YS_AEONGO1)", "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)")
+        GetAEHeaders = Array("Subject", "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)", _
+                            "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_YS_TCELLATRIB1)", _
+                            "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)", _
+                            "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_YS_OTHATRIB1)", _
+                            "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)", _
+                            "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_YS_CTCAECAT2)", _
+                            "CTCAE Term Available? (IG_NS_NA_AE1.CL_YS_YH_AECATOTH_cl_YS_YN1)", _
+                            "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", _
+                            "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)", _
+                            "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", _
+                            "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)", _
+                            "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)", _
+                            "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)", _
+                            "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_YS_AEONGO1)", _
+                            "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)")
     ElseIf StudyNum = "12423" Then
         GetAEHeaders = Array("Subject", _
                             "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)", _

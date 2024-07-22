@@ -818,14 +818,12 @@ Function ExtractUniqueValues(WS1 As Worksheet, ColumnNum As Long)
     ' Create a temporary column to store the study number values
     Set tempRange = ws.Range("Z1:Z" & lastRow) ' Using column Z as temporary, change if needed
     For i = 1 To lastRow
-
         lastPosition = InStrRev(sourceRange.Cells(i, 1).Value, "-")
         If lastPosition > 0 Then
             tempRange.Cells(i, 1).Value = Left(sourceRange.Cells(i, 1).Value, lastPosition - 1)
         Else
             tempRange.Cells(i, 1).Value = sourceRange.Cells(i, 1).Value ' If the character is not found, return the whole string
         End If
-    
     Next i
 
     ' Get unique values from the temporary column
@@ -937,4 +935,36 @@ Public Sub QuickRepCleanup()
         Call RemoveColumn(WS1, CStr(col))
     Next col
         
+End Sub
+
+Public Function HeaderWNoParenthesis(header As String) As String
+'Remove item names of the headers
+    Dim pos As Long
+    pos = InStrRev(header, "(")
+    If pos > 0 Then
+        HeaderWNoParenthesis = Trim(Left(header, pos - 1))
+    Else
+        HeaderWNoParenthesis = header
+    End If
+End Function
+
+Public Function ExtractInnerString(text As String) As String
+'Extract inner string of the parenthesis "(" and ")" (mainly for AE Derived toxicity)
+    Dim startPos As Long
+    Dim endPos As Long
+    '
+    startPos = InStr(1, text, "(", vbTextCompare)
+    endPos = InStr(1, text, ")", vbTextCompare)
+    
+    If startPos > 0 And endPos > startPos Then
+        ExtractInnerString = Mid(text, startPos + 1, endPos - startPos - 1)
+    Else
+        ExtractInnerString = "" ' Return an empty string if not found
+    End If
+End Function
+Sub UpdateSheetFontToCalibri(ws)
+    ' Update the entire sheet to Calibri font
+    With ws.Cells
+        .Font.Name = "Calibri"
+    End With
 End Sub
