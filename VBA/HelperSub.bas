@@ -938,6 +938,7 @@ Public Sub QuickRepCleanup()
 End Sub
 
 Public Function HeaderWNoParenthesis(header As String) As String
+'Remove item names of the headers
     Dim pos As Long
     pos = InStrRev(header, "(")
     If pos > 0 Then
@@ -948,9 +949,10 @@ Public Function HeaderWNoParenthesis(header As String) As String
 End Function
 
 Public Function ExtractInnerString(text As String) As String
+'Extract inner string of the parenthesis "(" and ")" (mainly for AE Derived toxicity)
     Dim startPos As Long
     Dim endPos As Long
-    
+    '
     startPos = InStr(1, text, "(", vbTextCompare)
     endPos = InStr(1, text, ")", vbTextCompare)
     

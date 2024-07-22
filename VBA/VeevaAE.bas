@@ -50,19 +50,22 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
             j = j + 1
         End If
     Next i
+    
+    'Find the start date column
+    Dim StartDate As String
+    StartDate = FindColumn(WS2, "Start Date")
+    Dim StopDate As String
+    StopDate = FindColumn(WS2, "Stop Date")
+    Set startDateRange = WS2.Range(StartDate & "2:" & StartDate & lastRow)
+    Set stopDateRange = WS2.Range(StopDate & "2:" & StopDate & lastRow)
+    Dim DurationColumn As Long
+    DurationColumn = stopDateRange.Column + 1
+    'Insert empty column
+    WS2.Columns(DurationColumn).Insert Shift = xlToRight
+    ' Set the header for the duration column
+    WS2.Cells(1, DurationColumn).Value = "Duration"
     'Check if there is no data
     If lastRow > 1 Then
-        'Find the start date column
-        Dim StartDate As String
-        StartDate = FindColumn(WS2, "Start Date")
-        Dim StopDate As String
-        StopDate = FindColumn(WS2, "Stop Date")
-        Set startDateRange = WS2.Range(StartDate & "2:" & StartDate & lastRow)
-        Set stopDateRange = WS2.Range(StopDate & "2:" & StopDate & lastRow)
-        Dim DurationColumn As Long
-        DurationColumn = stopDateRange.Column + 1
-        'Insert empty column
-        WS2.Columns(DurationColumn).Insert Shift = xlToRight
         Set durationRange = WS2.Cells(2, DurationColumn).Resize(lastRow - 1, 1)
         ' Read data into arrays
         Dim startDateArray As Variant
@@ -97,18 +100,14 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
                 durationArray(1, 1) = "" ' Empty field
             End If
         End If
-    
     ' Write the results back to the worksheet
     durationRange.Value = durationArray
-    ' Set the header for the duration column
-    WS2.Cells(1, DurationColumn).Value = "Duration"
-    
     ' Set the number format of the duration column to number
     durationRange.EntireColumn.NumberFormat = "0"
+    End If
     
     ' Set the color of the new column to HEX #6666FF
-    durationRange.EntireColumn.Font.Color = RGB(102, 102, 255)
-    End If
+    WS2.Cells(2, DurationColumn).EntireColumn.Font.Color = RGB(102, 102, 255)
     'for study 15420 Derived Toxicity rule only
     If StudyNum = "15420" Then
         Dim innerString As String
