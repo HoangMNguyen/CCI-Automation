@@ -28,11 +28,11 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     End If
     Call CopyColumnsWithHeaders(WS1, WS2, GetAEHeaders(StudyNum), 1, 1)
     HeadersIndex = FindHeaderIndexes(WS1, GetAEHeaders(StudyNum))
-    Dim Index As Long
-    For Index = 1 To UBound(HeadersIndex) + 1
+    Dim index As Long
+    For index = 1 To UBound(HeadersIndex) + 1
         'Split header name to remove part after the last "("
-        WS2.Cells(1, Index).Value = HeaderWNoParenthesis(WS2.Cells(1, Index).Value)
-    Next Index
+        WS2.Cells(1, index).Value = HeaderWNoParenthesis(WS2.Cells(1, index).Value)
+    Next index
     
     'Copy the rest of the form
     Dim LastColumn As Long
@@ -51,6 +51,7 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         End If
     Next i
     
+    'Calculate the Duration column
     'Find the start date column
     Dim StartDate As String
     StartDate = FindColumn(WS2, "Start Date")
@@ -105,9 +106,11 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     ' Set the number format of the duration column to number
     durationRange.EntireColumn.NumberFormat = "0"
     End If
-    
     ' Set the color of the new column to HEX #6666FF
     WS2.Cells(2, DurationColumn).EntireColumn.Font.Color = RGB(102, 102, 255)
+    
+    
+    
     'for study 15420 Derived Toxicity rule only
     If StudyNum = "15420" Then
         Dim innerString As String
@@ -128,12 +131,10 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         For i = 1 To UBound(toxicityArray, 1)
             Toxicity = toxicityArray(i, 1)
             derivedToxicity = Toxicity ' Initialize derived toxicity with original toxicity value
-
             ' Check if "Other" word is present and apply rules
             If InStr(1, Toxicity, "Other", vbTextCompare) > 0 Then
                 ' Extract the text within parentheses
                 innerString = ExtractInnerString(Toxicity)
-                
                 ' Apply the rules
                 If Left(UCase(innerString), 4) = "CAR " Then
                     derivedToxicity = Replace(Toxicity, innerString, "CAR " & LCase(Mid(innerString, 5)))
@@ -145,32 +146,49 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
                     End If
                 End If
                 derivedToxicity = Replace(derivedToxicity, "hlh", "HLH")
-            Else
             End If
-            
             ' Store the result in the derived toxicity array
             derivedToxicityArray(i, 1) = derivedToxicity
         Next i
-        
         ' Write the results back to the worksheet
         derivedToxicityRange.Value = derivedToxicityArray
-
         ' Set the header for the derived toxicity column
         WS2.Cells(1, derivedToxicityColumn).Value = "Derived Toxicity"
-
         ' Set the font color of the new column to HEX #6666FF
         derivedToxicityRange.EntireColumn.Font.Color = RGB(102, 102, 255)
-        
     End If
     
+    Dim CTCAEabbrev As Variant
+    CTCAEabbrev = Array("COVID", "GGT ", "INR ", "CD4 ", "CPK ", " I ", " T ", " QT ", " NOS", "CAR ", "HLH")
+    'Find column of Derived Toxicity
+    Dim DeTox As String
+    DeTox = FindColumn(WS2, "Derived Toxicity")
+    Set DeToxRange = WS2.Range(DeTox & "2:" & DeTox & lastRow)
+    ' Read data into arrays
+    DeToxArray = DeToxRange.Value
+    Dim NewDeToxValue As String
+    Dim index2 As Long
+    For i = 1 To UBound(DeToxArray, 1)
+        For j = 1 To UBound(CTCAEabbrev, 1)
+            NewDeToxValue = DeToxArray(i, 1)
+            index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
+            If index2 > 0 Then
+                DeToxArray(i, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
+            End If
+        Next j
+    Next i
+    ' Write the results back to the worksheet
+    DeToxRange.Value = DeToxArray
+    DeToxRange.EntireColumn.Font.Color = RGB(102, 102, 255)
     
     'Formatting
+    Call UpdateSheetFontToCalibri(WS2)
     WS2.Cells(1, 1).Select
     Call FormatTable
     With ActiveWindow
         .SplitRow = 1
     End With
-    Call UpdateSheetFontToCalibri(WS2)
+    
     
     ActiveWindow.FreezePanes = True
     Application.ScreenUpdating = True
