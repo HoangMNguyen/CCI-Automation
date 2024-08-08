@@ -159,7 +159,7 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     End If
     
     Dim CTCAEabbrev As Variant
-    CTCAEabbrev = Array("COVID", "GGT ", "INR ", "CD4 ", "CPK ", " I ", " T ", " QT ", " NOS", "CAR ", "HLH")
+    CTCAEabbrev = Array("COVID", "GGT ", "INR ", "CD4 ", "CPK ", " I ", " II ", " T ", " QT ", " NOS", "CAR ", "HLH")
     'Find column of Derived Toxicity
     Dim DeTox As String
     DeTox = FindColumn(WS2, "Derived Toxicity")
@@ -188,7 +188,7 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     With ActiveWindow
         .SplitRow = 1
     End With
-    
+    Selection.AutoFilter
     
     ActiveWindow.FreezePanes = True
     Application.ScreenUpdating = True
