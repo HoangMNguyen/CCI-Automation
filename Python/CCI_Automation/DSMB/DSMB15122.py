@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from openpyxl import Workbook
 import pandas as pd
 import numpy as np
 from util import *
@@ -6,6 +7,7 @@ from DSMB.DSMB_util import *
 from dateutil.relativedelta import *
 from datetime import datetime, date
 from typing import Optional
+import xlsxwriter
 
 
 def DSMB15122(
@@ -24,7 +26,9 @@ def DSMB15122(
                 "Legal Sex (IG_NS_NA_DM1.CL_NS_YH_SEX_cl_NS_DMSEX1)",
                 "Sex Assigned at Birth (IG_NS_NA_DM1.CL_NS_NH_BRTHSEX_cl_NS_DMSEX3)",
                 "Gender Identity (IG_NS_NA_DM1.CL_NS_NH_GENDERID_cl_NS_DMSEX2)",
+                "Specify Other Gender Identity (IG_NS_NA_DM1.TX_NS_NH_GENDERIDOTH)",
                 "Race (IG_NS_NA_DM1.CL_NS_YH_RACE_cl_NS_DMRACE1)",
+                "Specify Other or Multiple Races (IG_NS_NA_DM1.TX_NS_NH_RACEOTH)",
                 "Ethnicity (IG_NS_NA_DM1.CL_NS_NH_ETHNIC_cl_NS_DMETHNIC1)",
                 "Date of Birth (IG_NS_NA_DM1.DT_NS_NH_BRTHDAT)",
                 "Pre-Screening Consent Date (IG_NS_NA_DM1.DT_NS_YH_RFICDAT)",
@@ -33,15 +37,51 @@ def DSMB15122(
         ].copy()
         DM_new_col_name = {
             "Race (IG_NS_NA_DM1.CL_NS_YH_RACE_cl_NS_DMRACE1)": "Race",
+            "Specify Other or Multiple Races (IG_NS_NA_DM1.TX_NS_NH_RACEOTH)": "Race other",
             "Ethnicity (IG_NS_NA_DM1.CL_NS_NH_ETHNIC_cl_NS_DMETHNIC1)": "Ethnicity",
             "Sex Assigned at Birth (IG_NS_NA_DM1.CL_NS_NH_BRTHSEX_cl_NS_DMSEX3)": "Sex Assigned at Birth",
             "Legal Sex (IG_NS_NA_DM1.CL_NS_YH_SEX_cl_NS_DMSEX1)": "Legal Sex",
             "Gender Identity (IG_NS_NA_DM1.CL_NS_NH_GENDERID_cl_NS_DMSEX2)": "Gender Identity",
+            "Specify Other Gender Identity (IG_NS_NA_DM1.TX_NS_NH_GENDERIDOTH)": "Gender Identity SP",
             "Date of Birth (IG_NS_NA_DM1.DT_NS_NH_BRTHDAT)": "Date of Birth",
             "Pre-Screening Consent Date (IG_NS_NA_DM1.DT_NS_YH_RFICDAT)": "Consent Date",
             "Event Date": "Event Date DM",
         }
         DM_df = DM_df.rename(columns=DM_new_col_name)
+
+        DM_df["Race1"] = DM_df["Race"]
+        DM_df.loc[
+            (DM_df["Race"] == "Other") | (DM_df["Race"] == "Multiple Races"),
+            "Race1",
+        ] = ""
+
+        DM_df["Race"] = DM_df[DM_df["Race"].notna()]["Race"].astype(str)
+        DM_df["Race1"] = DM_df[DM_df["Race1"].notna()]["Race1"].astype(str)
+        DM_df["Race other"] = DM_df[DM_df["Race other"].notna()]["Race other"].astype(
+            str
+        )
+
+        DM_df["Race1"] = DM_df["Race1"].fillna("") + DM_df["Race other"].fillna("")
+        DM_df["Race1"].fillna(DM_df["Race1"], inplace=True)
+        DM_df = DM_df.drop(
+            columns=[
+                "Race other",
+            ]
+        )
+
+        DM_df.loc[
+            DM_df["Gender Identity"] == "Other",
+            "Gender Identity",
+        ] = ""
+        DM_df["Gender Identity SP"] = DM_df[DM_df["Gender Identity SP"].notna()][
+            "Gender Identity SP"
+        ].astype(str)
+        DM_df["Gender Identity"] = DM_df["Gender Identity"].fillna("") + DM_df[
+            "Gender Identity SP"
+        ].fillna("")
+
+        DM_df["Gender Identity"].fillna(DM_df["Gender Identity"], inplace=True)
+        DM_df = DM_df.drop(columns=["Gender Identity SP"])
 
         # # when there are two DM entered, use the latest DM
         DM_df["Event Date DM"] = pd.to_datetime(DM_df["Event Date DM"])
@@ -73,6 +113,8 @@ def DSMB15122(
         enrollment_df.insert(
             index_reference, "Cohort Assignment", enrollment_df.pop("Cohort Assignment")
         )
+    #  status_df = enrollment_df[["Subject", "Cohort Assignment"]]
+
     # when 2 dose level assignment forms are entered, use the latest data
     if not data["DSDLA"].empty:
         DSDLA_df = data["DSDLA"][
@@ -139,11 +181,9 @@ def DSMB15122(
         )
 
         # combine disease and disease other into disease type
-        enrollment_df["Disease Type"] = (
-            enrollment_df["Disease"].fillna("")
-            + " "
-            + enrollment_df["Disease other"].fillna("")
-        )
+        enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna(
+            ""
+        ) + enrollment_df["Disease other"].fillna("")
         enrollment_df["Disease Type"].fillna(
             enrollment_df["Disease Type"], inplace=True
         )
@@ -192,7 +232,6 @@ def DSMB15122(
         )
         IE_df["Reason for Screen FailureIE"] = (
             IE_df["SF1"].fillna("")
-            + " "
             + IE_df["SF2"].fillna("")
             + IE_df["SF3"].fillna("")
             + IE_df["SF4"].fillna("")
@@ -251,6 +290,7 @@ def DSMB15122(
                 "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)",
                 "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)",
                 "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)",
+                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)",
             ]
         ].copy()
         DSEOS_new_col_name = {
@@ -259,6 +299,7 @@ def DSMB15122(
             "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Reason for Screen FailureEOS",
             "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
             "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)": "Last Study Visit",
+            "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)": "Off-Study Reason",
         }
         DSEOS_df = DSEOS_df.rename(columns=DSEOS_new_col_name)
         DSEOS_df["Study Treatment AdministeredEOS"] = DSEOS_df[
@@ -290,11 +331,9 @@ def DSMB15122(
     ] = ""
 
     # combine the data from IE and DSEOS
-    enrollment_df["Subject meets all study eligibility?"] = (
-        enrollment_df["Subject meets all study eligibility?IE"].fillna("")
-        + " "
-        + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
-    )
+    enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
+        "Subject meets all study eligibility?IE"
+    ].fillna("") + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
     enrollment_df["Subject meets all study eligibility?"].fillna(
         enrollment_df["Subject meets all study eligibility?"], inplace=True
     )
@@ -304,11 +343,9 @@ def DSMB15122(
             "Subject meets all study eligibility?EOS",
         ]
     )
-    enrollment_df["Reason for Screen Failure"] = (
-        enrollment_df["Reason for Screen FailureIE"].fillna("")
-        + " "
-        + enrollment_df["Reason for Screen FailureEOS"].fillna("")
-    )
+    enrollment_df["Reason for Screen Failure"] = enrollment_df[
+        "Reason for Screen FailureIE"
+    ].fillna("") + enrollment_df["Reason for Screen FailureEOS"].fillna("")
     enrollment_df["Reason for Screen Failure"].fillna(
         enrollment_df["Reason for Screen Failure"], inplace=True
     )
@@ -319,11 +356,9 @@ def DSMB15122(
         ]
     )
     # Combine the Infusion and EOS data for "Study Treatment Administered"
-    enrollment_df["Study Treatment Administered"] = (
-        enrollment_df["Study Treatment AdministeredINF"].fillna("")
-        + " "
-        + enrollment_df["Study Treatment AdministeredEOS"].fillna("")
-    )
+    enrollment_df["Study Treatment Administered"] = enrollment_df[
+        "Study Treatment AdministeredINF"
+    ].fillna("") + enrollment_df["Study Treatment AdministeredEOS"].fillna("")
     enrollment_df["Study Treatment Administered"].fillna(
         enrollment_df["Study Treatment Administered"], inplace=True
     )
@@ -360,7 +395,8 @@ def DSMB15122(
             "End of Study Date",
         ]
     )
-
+    enrollment_df = enrollment_df.replace([np.nan, np.inf, -np.inf], "")
+    enrollment_df = enrollment_df.fillna("")
     #     ### TODO: DSMB-Demographics Statistics
     #     # !Update this filter options to each cohort
     filter_options = [
@@ -387,6 +423,8 @@ def DSMB15122(
             (filtered_df["Consent Date"].notna())
             | (filtered_df["Main Consent Date"].notna())
         ]
+        # filtered_df = filtered_df.replace([np.nan, np.inf, -np.inf], "")
+        # filtered_df = filtered_df.fillna("")
         # Calculate the stats
         ## Total Consented
         TT_df = filtered_df.copy()
@@ -400,6 +438,7 @@ def DSMB15122(
             == "No"
         ].copy()
         SF = SF_df["Subject"].count()
+        #    print(SF_df["Subject"])
         ## Eligible, convert to str and strip the space
         EL_df = filtered_df[
             filtered_df["Subject meets all study eligibility?"]
@@ -456,8 +495,11 @@ def DSMB15122(
             "Date of Birth",
             "Main Consent Date",
             "Form Sequence Number",
+            "Race",
         ]
     )
+    update_race_column = {"Race1": "Race"}
+    enrollment_df = enrollment_df.rename(columns=update_race_column)
 
     ### TODO: DSMB-Study Tx & AE Listing
     # adding Target Cell Dose dictionary
@@ -577,7 +619,15 @@ def DSMB15122(
             "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)"
         ]
     )
-
+    infusion_df = add_rename_column_corelisting(
+        infusion_df,
+        data,
+        "EXINF",
+        "Total Volume Administered (mL) (IG_NS_NA_EXINF1.NM_NS_NH_TOTVOL)",
+        "Total Volume Administered",
+        "Subject",
+        "Event Label",
+    )
     # Adding Met Target Dose column based on the condition of Total Cell Dose Administered and Total huCART-meso CAR T Cell Dose Administered if 'Target Cell Dose' is integer
     infusion_df["Met Target Dose"] = infusion_df.apply(
         lambda row: "Y"
@@ -640,24 +690,161 @@ def DSMB15122(
         "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)": "Event Onset",
     }
     AE_df = AE_df.rename(columns=AE_new_col_name)
-    #  Only assign Y to AE/SAE for event onset is after study tx
-    filtered_AE_df = AE_df[
-        AE_df["Event Onset"] == "After huCART-meso cell Administration"
-    ]
+    # #  Only assign Y to AE/SAE for event onset is after study tx
+    # filtered_AE_df = AE_df[
+    #     AE_df["Event Onset"] == "After huCART-meso cell Administration"
+    # ]
 
-    # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
-    infusion_df["AE"] = infusion_df["Subject"].apply(
-        lambda x: "Y" if x in filtered_AE_df["Subject"].values else "N"
+    # # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
+    # infusion_df["AE"] = infusion_df["Subject"].apply(
+    #     lambda x: "Y" if x in filtered_AE_df["Subject"].values else "N"
+    # )
+    # # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
+    # infusion_df["SAE"] = infusion_df["Subject"].apply(
+    #     lambda x: "Y"
+    #     if x in filtered_AE_df[filtered_AE_df["AE or SAE?"] == "SAE"]["Subject"].values
+    #     else "N"
+    # )
+    # # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
+    # infusion_df["AE"] = infusion_df["Subject"].apply(
+    #     lambda x: "Y" if x in AE_df["Subject"].values else "N"
+    # )
+    # # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
+    # infusion_df["SAE"] = infusion_df["Subject"].apply(
+    #     lambda x: "Y"
+    #     if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values
+    #     else "N"
+    # )
+    # # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
+    # infusion_df = infusion_df.replace([np.nan, np.inf, -np.inf], "")
+    status_df = EL_df[["Subject", "Cohort Assignment"]]
+    # Check filtered_AE_df if the subject of status_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
+    status_df["AE"] = status_df["Subject"].apply(
+        lambda x: "Y" if x in AE_df["Subject"].values else "N"
     )
     # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
-    infusion_df["SAE"] = infusion_df["Subject"].apply(
+    status_df["SAE"] = status_df["Subject"].apply(
         lambda x: "Y"
-        if x in filtered_AE_df[filtered_AE_df["AE or SAE?"] == "SAE"]["Subject"].values
+        if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values
         else "N"
     )
-
     # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
-    infusion_df = infusion_df.replace([np.nan, np.inf, -np.inf], "")
+    status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
+
+    # Event Label Update dictionary for cohort 1
+    event_1_dict = {
+        "Primary Treatment and Follow Up": "Primary Follow-up",
+        "Pre-Treatment Safety Visit": "Pre-Treatment",
+        #   "Long-Term Follow-up (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
+        "LTFU (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
+        "LTFU (Loss of Persistence)": "LTFU (Loss of Persistence)",
+    }
+
+    # Add the pattern match as a separate key
+    def map_event(event):
+        if event in event_1_dict:
+            return event_1_dict[event]
+        elif "Loss of Persistence" in event:
+            return "LTFU (Loss of Persistence)"
+        elif "Ongoing Persistence" in event:
+            return "LTFU (Ongoing Persistence)"
+        else:
+            return event
+
+    # Getting Study Status dataframe from SV, column Subject, Event Label and Event Date
+    status_SV_df = data["DSSV"][["Subject", "Event Group Label", "Event Date"]]
+    # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
+    status_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+    #   print(status_DSSVLTFU_df)
+    status_DSSVLTFU_df["Event Group Label"] = status_DSSVLTFU_df["Event Label"].apply(
+        map_event
+    )
+    #   print(status_DSSVLTFU_df["Event Group Label"])
+    # Combine DSSVLTFU with SV dataframe vertically
+    status_SV_df = pd.concat([status_SV_df, status_DSSVLTFU_df])
+    # Sort the dataframe by Subject and Event Date
+    status_SV_df = status_SV_df.sort_values(by=["Subject", "Event Date"])
+    # For each unique subject, get the last row of the dataframe
+    status_SV_df = status_SV_df.groupby("Subject").tail(1)
+    #   print(status_SV_df["Event Group Label"])
+    # Merge left with the current response dataframe
+    status_df = pd.merge(
+        status_df,
+        status_SV_df[["Subject", "Event Group Label"]],
+        on="Subject",
+        how="left",
+    )
+    #  print(status_df)
+    # Rename the column Event Label to Event Label (Study Status)
+    status_df["Event Group Label"] = status_df["Event Group Label"].map(event_1_dict)
+    # status_df["Event Group Label"] = status_df["Event Group Label"].apply(map_event)
+    # status_df["Event Group Label2"] = status_df["Subject"].apply(
+    #     lambda x: "Screen Failure" if x in SF_df["Subject"].values else ""
+    # )
+    status_df["Event Group Label3"] = status_df["Subject"].apply(
+        lambda x: "Pre-Treatment"
+        if (
+            enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
+            .fillna("")
+            .str.strip()
+            .values[0]
+            == "Pending"
+        )
+        else ""
+    )
+    status_df["Event Group Label4"] = status_df["Subject"].apply(
+        lambda x: "Withdrawn Prior to Study Treatment"
+        if (
+            enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
+            .fillna("")
+            .str.strip()
+            .values[0]
+            == "No"
+        )
+        & (
+            enrollment_df[enrollment_df["Subject"] == x][
+                "Subject meets all study eligibility?"
+            ]
+            .fillna("")
+            .str.strip()
+            .values[0]
+            == "Yes"
+        )
+        else ""
+    )
+    # Merge all event group label into study status
+    status_df["Event Group Label"] = (
+        status_df["Event Group Label"].fillna("")
+        #    + status_df["Event Group Label2"].fillna("")
+        + status_df["Event Group Label3"].fillna("")
+        + status_df["Event Group Label4"].fillna("")
+    )
+    status_df["Event Group Label"].fillna(status_df["Event Group Label"], inplace=True)
+    status_df = status_df.drop(
+        columns=[
+            #     "Event Group Label2",
+            "Event Group Label3",
+            "Event Group Label4",
+        ]
+    )
+    filteredDSEOS_df = DSEOS_df[
+        (DSEOS_df["Last Study Visit"] != "Pre-Screening")
+        #  & (DSEOS_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
+    ].copy()
+    status_df["Event Group Label"] = status_df.apply(
+        lambda row: "Off Study/" + row["Event Group Label"]
+        if row["Subject"] in filteredDSEOS_df["Subject"].values
+        else "On Study/" + row["Event Group Label"],
+        axis=1,
+    )
+    status_df = pd.merge(
+        status_df,
+        filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
+        on="Subject",
+        how="left",
+    )
+    # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
+    status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
 
     if debug:
         print(infusion_df)
@@ -709,6 +896,7 @@ def DSMB15122(
     ## TODO: FORMATTING THE DATAFRAME
     # TODO: Day 0
     # Convert the columns to scientific notation if the value is not NaN
+
     infusion_df["Target Cell Dose"] = infusion_df["Target Cell Dose"].apply(
         lambda x: convert_float_2_sci_notation(x)
         if not isinstance(x, str) and pd.notna(x)
@@ -732,6 +920,7 @@ def DSMB15122(
     infusion_df["%scFv Flow"] = infusion_df.apply(
         lambda row: str(x) + "%" if pd.notna(x := row["%scFv Flow"]) else x, axis=1
     )
+    infusion_df = infusion_df.drop(columns=["Target Cell Dose"])
     if debug:
         print(infusion_df)
 
@@ -742,15 +931,24 @@ def DSMB15122(
     total_infused_df = total_infused_df[
         total_infused_df["Cohort Assignment"] == "Cohort 1"
     ]
+
+    # Gather all stats of each cohort (currently only has cohort 1)
+    total_status_df = status_df.copy()
+    total_status_df = total_status_df[
+        total_status_df["Cohort Assignment"] == "Cohort 1"
+    ]
+
     # # Total number of subjects
-    AE_total_count = get_stats_percentage("AE", total_infused_df).T
-    SAE_total_count = get_stats_percentage("SAE", total_infused_df).T
+    AE_total_count = get_stats_percentage("AE", total_status_df).T
+    SAE_total_count = get_stats_percentage("SAE", total_status_df).T
     # merge AE and SAE dataframes
     safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
 
     if export:
         with pd.ExcelWriter(
-            output_dir + "/" + output_file_name + ".xlsx", engine="xlsxwriter"
+            output_dir + "/" + output_file_name + ".xlsx",
+            engine="xlsxwriter",
+            engine_kwargs={"options": {"nan_inf_to_errors": True}},
         ) as writer:
             # TODO: - Add formatting and coloring
             # TODO: - for each tab: write data, format data, write header, format header
@@ -932,6 +1130,7 @@ def DSMB15122(
                     worksheet2 = writer.book.add_worksheet("DSMB-Enrollment Listing")
                     # * WRITING HEADER AND FORMATTING
                     # Assuming 'enrollment_df' is your DataFrame
+
                     enrollment_df.replace(
                         [np.inf, -np.inf], np.nan, inplace=True
                     )  # Replace INF with NaN
@@ -952,9 +1151,7 @@ def DSMB15122(
                     ## TODO: DSMB-New Infusion Statistics
                     # * WRITING DATA: new_infusion_df
                     # * WRITING DATA: enrollment_df
-                    worksheet3 = writer.book.add_worksheet(
-                        "DSMB-Study Tx & AE Statistics"
-                    )
+                    worksheet3 = writer.book.add_worksheet("DSMB-Study Tx Statistics")
 
                     # * FORMATING DATA
                     for i in range(0, len(infusion_statA)):
@@ -988,6 +1185,7 @@ def DSMB15122(
 
                     # Merge and format data
                     if infusion_df["Event Label"].count() > 0:
+                        infusion_df = infusion_df.drop(columns=["Event Label"])
                         # print(infusion_statA.shape)
                         if (
                             not infusion_statA.empty
@@ -1011,44 +1209,44 @@ def DSMB15122(
                         for i in range(0, len(stat_order)):
                             worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)
 
-                            # Safety Headers
-                        # number of subject of safety_total_df
-                        safety_total_df_subject_count = len(
-                            infusion_df["Subject"].unique()
-                        )
-                        worksheet3.merge_range(
-                            "I1:L1",
-                            "Safety Statistics (N="
-                            + str(safety_total_df_subject_count)
-                            + ")",
-                            bold_12_wrap_format,
-                        )
-                        worksheet3.merge_range(
-                            "I2:J2", "Adverse Events", bold_11_format
-                        )
-                        worksheet3.merge_range(
-                            "K2:L2", "Serious Adverse Events ", bold_11_format
-                        )
-                        worksheet3.write("I3", "Yes", bold_11_format)
-                        worksheet3.write("J3", "No", bold_11_format)
-                        worksheet3.write("K3", "Yes", bold_11_format)
-                        worksheet3.write("L3", "No", bold_11_format)
-                        worksheet3.write("H4", "Cohort 1", bold_11_format)
-                        # Safety Data
-                        for i in range(0, len(safety_total_df)):
-                            for j in range(0, len(safety_total_df.columns)):
-                                worksheet3.write(
-                                    i + 3,
-                                    j + 8,
-                                    safety_total_df.iloc[i, j],
-                                    normal_data_format,
-                                )
+                        #     # Safety Headers
+                        # # number of subject of safety_total_df
+                        # safety_total_df_subject_count = len(
+                        #     infusion_df["Subject"].unique()
+                        # )
+                        # worksheet3.merge_range(
+                        #     "I1:L1",
+                        #     "Safety Statistics (N="
+                        #     + str(safety_total_df_subject_count)
+                        #     + ")",
+                        #     bold_12_wrap_format,
+                        # )
+                        # worksheet3.merge_range(
+                        #     "I2:J2", "Adverse Events", bold_11_format
+                        # )
+                        # worksheet3.merge_range(
+                        #     "K2:L2", "Serious Adverse Events ", bold_11_format
+                        # )
+                        # worksheet3.write("I3", "Yes", bold_11_format)
+                        # worksheet3.write("J3", "No", bold_11_format)
+                        # worksheet3.write("K3", "Yes", bold_11_format)
+                        # worksheet3.write("L3", "No", bold_11_format)
+                        # worksheet3.write("H4", "Cohort 1", bold_11_format)
+                        # # Safety Data
+                        # for i in range(0, len(safety_total_df)):
+                        #     for j in range(0, len(safety_total_df.columns)):
+                        #         worksheet3.write(
+                        #             i + 3,
+                        #             j + 8,
+                        #             safety_total_df.iloc[i, j],
+                        #             normal_data_format,
+                        #         )
 
                     # * Autofit
                     worksheet3.autofit()
 
                     ## TODO: DSMB-Study Tx & AE Listing
-                    worksheet4 = writer.book.add_worksheet("DSMB-Study Tx & AE Listing")
+                    worksheet4 = writer.book.add_worksheet("DSMB-Study Tx Listing")
                     # * WRITING AND FORMATING DATA
                     for i in range(0, len(infusion_df)):
                         for j in range(0, len(infusion_df.columns)):
@@ -1058,43 +1256,108 @@ def DSMB15122(
 
                     # * WRITING HEADER AND FORMATTING
                     worksheet4.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
-                    worksheet4.merge_range("B1:B2", "Study Day", bold_12_wrap_format)
+                    #      worksheet4.merge_range("B1:B2", "Study Day", bold_12_wrap_format)
                     worksheet4.merge_range(
-                        "C1:C2", "Cohort Assignment", bold_12_wrap_format
+                        "B1:B2", "Cohort Assignment", bold_12_wrap_format
                     )
                     worksheet4.merge_range(
-                        "D1:D2", "Dose Level Assignment", bold_12_wrap_format
+                        "C1:C2", "Dose Level Assignment", bold_12_wrap_format
                     )
 
                     worksheet4.merge_range(
-                        "E1:E2",
+                        "D1:D2",
                         "Date Study Treatment Administered",
                         bold_12_wrap_format,
                     )
                     worksheet4.merge_range(
-                        "F1:I1", "Cells Administered", bold_12_wrap_format
+                        "E1:H1", "Cells Administered", bold_12_wrap_format
                     )
                     worksheet4.merge_range(
-                        "J1:K1", "Transduction Efficiency", bold_12_wrap_format
+                        "I1:J1", "Transduction Efficiency", bold_12_wrap_format
                     )
-                    worksheet4.write("F2", "Target Cell Dose", bold_12_wrap_format)
+                    #    worksheet4.write("F2", "Target Cell Dose", bold_12_wrap_format)
                     worksheet4.write(
-                        "G2",
-                        "Total huCART-meso Administered",
+                        "E2",
+                        "Total huCART-meso Dose Administered",
                         bold_12_wrap_format,
                     )
                     worksheet4.write(
-                        "H2", "Total Cell Dose Administered", bold_12_wrap_format
+                        "F2", "Total Cell Dose Administered", bold_12_wrap_format
                     )
-                    worksheet4.write("I2", "Met Target Dose", bold_12_wrap_format)
-                    worksheet4.write("J2", "%scFv Flow", bold_12_wrap_format)
-                    worksheet4.write("K2", "Met Target %scFv", bold_12_wrap_format)
-                    worksheet4.merge_range(
-                        "L1:L2", "Adverse Events (Y/N)", bold_12_wrap_format
+                    worksheet4.write(
+                        "G2", "Total Volume Administered", bold_12_wrap_format
                     )
-                    worksheet4.merge_range(
-                        "M1:M2", "Serious Adverse Events (Y/N)", bold_12_wrap_format
-                    )
+                    worksheet4.write("H2", "Met Target Dose", bold_12_wrap_format)
+                    worksheet4.write("I2", "%scFv Flow", bold_12_wrap_format)
+                    worksheet4.write("J2", "Met Target %scFv", bold_12_wrap_format)
+                    # worksheet4.merge_range(
+                    #     "L1:L2", "Adverse Events (Y/N)", bold_12_wrap_format
+                    # )
+                    # worksheet4.merge_range(
+                    #     "M1:M2", "Serious Adverse Events (Y/N)", bold_12_wrap_format
+                    # )
 
                     # Autofit
                     worksheet4.autofit()
+
+                    ## TODO: Summary of Protocol Status
+                    worksheet5 = writer.book.add_worksheet(
+                        "Status for Eligible Subjects"
+                    )
+                    # * WRITING AND FORMATING DATA
+                    for i in range(0, len(status_df)):
+                        for j in range(0, len(status_df.columns)):
+                            worksheet5.write(
+                                i + 2, j, status_df.iloc[i, j], normal_data_format
+                            )
+
+                    # * WRITING HEADER AND FORMATTING
+                    worksheet5.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+                    worksheet5.merge_range(
+                        "B1:B2", "Cohort Assignment", bold_12_wrap_format
+                    )
+                    worksheet5.merge_range(
+                        "C1:C2", "Adverse Events (Y/N)", bold_12_wrap_format
+                    )
+                    worksheet5.merge_range(
+                        "D1:D2", "Serious Adverse Events (Y/N)", bold_12_wrap_format
+                    )
+                    worksheet5.merge_range("E1:E2", "Study Status", bold_12_wrap_format)
+                    worksheet5.merge_range(
+                        "F1:F2", "Off-Study Reason", bold_12_wrap_format
+                    )
+                    worksheet5.merge_range(
+                        "G1:G2", "Last Study Visit Performed", bold_12_wrap_format
+                    )
+
+                    # Safety Headers
+                    # number of subject of safety_total_df
+                    safety_total_df_subject_count = len(status_df["Subject"].unique())
+                    worksheet5.merge_range(
+                        "K1:N1",
+                        "Safety Statistics (N="
+                        + str(safety_total_df_subject_count)
+                        + ")",
+                        bold_12_wrap_format,
+                    )
+                    worksheet5.merge_range("K2:L2", "Adverse Events", bold_11_format)
+                    worksheet5.merge_range(
+                        "M2:N2", "Serious Adverse Events ", bold_11_format
+                    )
+                    worksheet5.write("K3", "Yes", bold_11_format)
+                    worksheet5.write("L3", "No", bold_11_format)
+                    worksheet5.write("M3", "Yes", bold_11_format)
+                    worksheet5.write("N3", "No", bold_11_format)
+                    worksheet5.write("J4", "Cohort 1", bold_11_format)
+                    # Safety Data
+                    for i in range(0, len(safety_total_df)):
+                        for j in range(0, len(safety_total_df.columns)):
+                            worksheet5.write(
+                                i + 3,
+                                j + 10,
+                                safety_total_df.iloc[i, j],
+                                normal_data_format,
+                            )
+
+                    # Autofit
+                    worksheet5.autofit()

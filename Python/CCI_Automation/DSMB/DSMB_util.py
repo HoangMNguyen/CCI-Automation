@@ -204,14 +204,25 @@ def get_stats_percentage(column, *args):
         else:
             temp_df = arg.groupby(column).agg({"Subject": "count"})
         # combine the percentage and count column into 1 column for variables different than 0
+        # temp_df = temp_df.apply(
+        #     lambda x: x.astype(str)
+        #     + " ("
+        #     + (x / sum(x)).apply(lambda y: "{:.1%}".format(y))
+        #     + ")"
+        #     if x.sum() != 0
+        #     else x.astype(str) + " (0.0%)"
+        # )
         temp_df = temp_df.apply(
             lambda x: x.astype(str)
             + " ("
-            + (x / sum(x)).apply(lambda y: "{:.1%}".format(y))
+            + (x / sum(x))
+            .replace([float("inf"), float("-inf"), float("nan")], 0)
+            .apply(lambda y: "{:.1%}".format(y))
             + ")"
             if x.sum() != 0
             else x.astype(str) + " (0.0%)"
         )
+
         # merge the temp_df to the main df
         main_df = pd.concat([main_df, temp_df], axis=1)
     return main_df
@@ -337,44 +348,6 @@ def get_stats_perc_df(column, *dfs):
         main_df = pd.concat([main_df, stats_df])
     # Transpose the DataFrame to switch the axes
     main_df = main_df.T
-    return main_df
-
-    """
-
-    Returns:
-        dataframe: merged dataframe for Race stats
-    """
-    # create a dataframe to store the stats
-    main_df = pd.DataFrame()
-    # Define the order of Race categories
-    race_order = [
-        "African American",
-        "Alaska Native",
-        "American Indian",
-        "Asian",
-        "Caucasian",
-        "Multiple Races",
-        "Pacific Islander",
-        "Other",
-        "Unknown",
-    ]
-    for arg in args:
-        temp_df = (
-            arg.groupby("Race")
-            .agg({"Subject": "count"})
-            .reindex(race_order, fill_value=0)
-        )
-        # combine the percentage and count column into 1 column for variables different than 0
-        temp_df = temp_df.apply(
-            lambda x: x.astype(str)
-            + " ("
-            + (x / sum(x)).apply(lambda y: "{:.1%}".format(y))
-            + ")"
-            if x.sum() != 0
-            else x.astype(str)
-        )
-        # merge the temp_df to the main df
-        main_df = pd.concat([main_df, temp_df], axis=1)
     return main_df
 
 
