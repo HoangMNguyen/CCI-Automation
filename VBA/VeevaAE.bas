@@ -181,7 +181,7 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         Next i
     Else
         NewDeToxValue = DeToxArray
-        For j = 1 To UBound(CTCAEabbrev, 0)
+        For j = 0 To UBound(CTCAEabbrev, 1)
             index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
             If index2 > 0 Then
                 DeToxArray(1, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
