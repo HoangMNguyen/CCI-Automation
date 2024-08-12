@@ -113,7 +113,6 @@ def DSMB15122(
         enrollment_df.insert(
             index_reference, "Cohort Assignment", enrollment_df.pop("Cohort Assignment")
         )
-    #  status_df = enrollment_df[["Subject", "Cohort Assignment"]]
 
     # when 2 dose level assignment forms are entered, use the latest data
     if not data["DSDLA"].empty:
@@ -423,8 +422,7 @@ def DSMB15122(
             (filtered_df["Consent Date"].notna())
             | (filtered_df["Main Consent Date"].notna())
         ]
-        # filtered_df = filtered_df.replace([np.nan, np.inf, -np.inf], "")
-        # filtered_df = filtered_df.fillna("")
+
         # Calculate the stats
         ## Total Consented
         TT_df = filtered_df.copy()
@@ -438,8 +436,8 @@ def DSMB15122(
             == "No"
         ].copy()
         SF = SF_df["Subject"].count()
-        #    print(SF_df["Subject"])
-        ## Eligible, convert to str and strip the space
+
+        # Eligible, convert to str and strip the space
         EL_df = filtered_df[
             filtered_df["Subject meets all study eligibility?"]
             .fillna("")
@@ -448,7 +446,7 @@ def DSMB15122(
             == "Yes"
         ].copy()
         EL = EL_df["Subject"].count()
-        ## Study Treatment Administered, convert to str and strip the space
+        # Study Treatment Administered, convert to str and strip the space
         INF_df = filtered_df[
             filtered_df["Study Treatment Administered"]
             .fillna("")
@@ -690,10 +688,10 @@ def DSMB15122(
         "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)": "Event Onset",
     }
     AE_df = AE_df.rename(columns=AE_new_col_name)
-    # #  Only assign Y to AE/SAE for event onset is after study tx
-    # filtered_AE_df = AE_df[
-    #     AE_df["Event Onset"] == "After huCART-meso cell Administration"
-    # ]
+    #  Only assign Y to AE/SAE for event onset is after study tx
+    filtered_AE_df = AE_df[
+        AE_df["Event Onset"] == "After huCART-meso cell Administration"
+    ]
 
     # # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
     # infusion_df["AE"] = infusion_df["Subject"].apply(
@@ -777,10 +775,7 @@ def DSMB15122(
     #  print(status_df)
     # Rename the column Event Label to Event Label (Study Status)
     status_df["Event Group Label"] = status_df["Event Group Label"].map(event_1_dict)
-    # status_df["Event Group Label"] = status_df["Event Group Label"].apply(map_event)
-    # status_df["Event Group Label2"] = status_df["Subject"].apply(
-    #     lambda x: "Screen Failure" if x in SF_df["Subject"].values else ""
-    # )
+
     status_df["Event Group Label3"] = status_df["Subject"].apply(
         lambda x: "Pre-Treatment"
         if (
@@ -815,14 +810,12 @@ def DSMB15122(
     # Merge all event group label into study status
     status_df["Event Group Label"] = (
         status_df["Event Group Label"].fillna("")
-        #    + status_df["Event Group Label2"].fillna("")
         + status_df["Event Group Label3"].fillna("")
         + status_df["Event Group Label4"].fillna("")
     )
     status_df["Event Group Label"].fillna(status_df["Event Group Label"], inplace=True)
     status_df = status_df.drop(
         columns=[
-            #     "Event Group Label2",
             "Event Group Label3",
             "Event Group Label4",
         ]
@@ -939,10 +932,10 @@ def DSMB15122(
     ]
 
     # # Total number of subjects
-    AE_total_count = get_stats_percentage("AE", total_status_df).T
-    SAE_total_count = get_stats_percentage("SAE", total_status_df).T
-    # merge AE and SAE dataframes
-    safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
+    # AE_total_count = get_stats_percentage("AE", total_status_df).T
+    # SAE_total_count = get_stats_percentage("SAE", total_status_df).T
+    # # merge AE and SAE dataframes
+    # safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
 
     if export:
         with pd.ExcelWriter(
@@ -1209,39 +1202,6 @@ def DSMB15122(
                         for i in range(0, len(stat_order)):
                             worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)
 
-                        #     # Safety Headers
-                        # # number of subject of safety_total_df
-                        # safety_total_df_subject_count = len(
-                        #     infusion_df["Subject"].unique()
-                        # )
-                        # worksheet3.merge_range(
-                        #     "I1:L1",
-                        #     "Safety Statistics (N="
-                        #     + str(safety_total_df_subject_count)
-                        #     + ")",
-                        #     bold_12_wrap_format,
-                        # )
-                        # worksheet3.merge_range(
-                        #     "I2:J2", "Adverse Events", bold_11_format
-                        # )
-                        # worksheet3.merge_range(
-                        #     "K2:L2", "Serious Adverse Events ", bold_11_format
-                        # )
-                        # worksheet3.write("I3", "Yes", bold_11_format)
-                        # worksheet3.write("J3", "No", bold_11_format)
-                        # worksheet3.write("K3", "Yes", bold_11_format)
-                        # worksheet3.write("L3", "No", bold_11_format)
-                        # worksheet3.write("H4", "Cohort 1", bold_11_format)
-                        # # Safety Data
-                        # for i in range(0, len(safety_total_df)):
-                        #     for j in range(0, len(safety_total_df.columns)):
-                        #         worksheet3.write(
-                        #             i + 3,
-                        #             j + 8,
-                        #             safety_total_df.iloc[i, j],
-                        #             normal_data_format,
-                        #         )
-
                     # * Autofit
                     worksheet3.autofit()
 
@@ -1275,7 +1235,7 @@ def DSMB15122(
                     worksheet4.merge_range(
                         "I1:J1", "Transduction Efficiency", bold_12_wrap_format
                     )
-                    #    worksheet4.write("F2", "Target Cell Dose", bold_12_wrap_format)
+
                     worksheet4.write(
                         "E2",
                         "Total huCART-meso Dose Administered",
@@ -1290,12 +1250,6 @@ def DSMB15122(
                     worksheet4.write("H2", "Met Target Dose", bold_12_wrap_format)
                     worksheet4.write("I2", "%scFv Flow", bold_12_wrap_format)
                     worksheet4.write("J2", "Met Target %scFv", bold_12_wrap_format)
-                    # worksheet4.merge_range(
-                    #     "L1:L2", "Adverse Events (Y/N)", bold_12_wrap_format
-                    # )
-                    # worksheet4.merge_range(
-                    #     "M1:M2", "Serious Adverse Events (Y/N)", bold_12_wrap_format
-                    # )
 
                     # Autofit
                     worksheet4.autofit()
@@ -1332,32 +1286,32 @@ def DSMB15122(
 
                     # Safety Headers
                     # number of subject of safety_total_df
-                    safety_total_df_subject_count = len(status_df["Subject"].unique())
-                    worksheet5.merge_range(
-                        "K1:N1",
-                        "Safety Statistics (N="
-                        + str(safety_total_df_subject_count)
-                        + ")",
-                        bold_12_wrap_format,
-                    )
-                    worksheet5.merge_range("K2:L2", "Adverse Events", bold_11_format)
-                    worksheet5.merge_range(
-                        "M2:N2", "Serious Adverse Events ", bold_11_format
-                    )
-                    worksheet5.write("K3", "Yes", bold_11_format)
-                    worksheet5.write("L3", "No", bold_11_format)
-                    worksheet5.write("M3", "Yes", bold_11_format)
-                    worksheet5.write("N3", "No", bold_11_format)
-                    worksheet5.write("J4", "Cohort 1", bold_11_format)
-                    # Safety Data
-                    for i in range(0, len(safety_total_df)):
-                        for j in range(0, len(safety_total_df.columns)):
-                            worksheet5.write(
-                                i + 3,
-                                j + 10,
-                                safety_total_df.iloc[i, j],
-                                normal_data_format,
-                            )
+                    # safety_total_df_subject_count = len(status_df["Subject"].unique())
+                    # worksheet5.merge_range(
+                    #     "K1:N1",
+                    #     "Safety Statistics (N="
+                    #     + str(safety_total_df_subject_count)
+                    #     + ")",
+                    #     bold_12_wrap_format,
+                    # )
+                    # worksheet5.merge_range("K2:L2", "Adverse Events", bold_11_format)
+                    # worksheet5.merge_range(
+                    #     "M2:N2", "Serious Adverse Events ", bold_11_format
+                    # )
+                    # worksheet5.write("K3", "Yes", bold_11_format)
+                    # worksheet5.write("L3", "No", bold_11_format)
+                    # worksheet5.write("M3", "Yes", bold_11_format)
+                    # worksheet5.write("N3", "No", bold_11_format)
+                    # worksheet5.write("J4", "Cohort 1", bold_11_format)
+                    # # Safety Data
+                    # for i in range(0, len(safety_total_df)):
+                    #     for j in range(0, len(safety_total_df.columns)):
+                    #         worksheet5.write(
+                    #             i + 3,
+                    #             j + 10,
+                    #             safety_total_df.iloc[i, j],
+                    #             normal_data_format,
+                    #         )
 
                     # Autofit
                     worksheet5.autofit()
