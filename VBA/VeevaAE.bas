@@ -125,7 +125,6 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         WS2.Columns(derivedToxicityColumn).Insert Shift = xlToRight
         ' Define the derived toxicity range after the insert
         Set derivedToxicityRange = WS2.Range(WS2.Cells(2, derivedToxicityColumn), WS2.Cells(lastRow, derivedToxicityColumn)) ' Define the derived toxicity range
-        ' Prepare the derived toxicity array
         ReDim derivedToxicityArray(1 To UBound(toxicityArray, 1), 1 To 1)
         ' Perform the calculation
         For i = 1 To UBound(toxicityArray, 1)
@@ -168,15 +167,28 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     DeToxArray = DeToxRange.Value
     Dim NewDeToxValue As String
     Dim index2 As Long
-    For i = 1 To UBound(DeToxArray, 1)
-        For j = 1 To UBound(CTCAEabbrev, 1)
-            NewDeToxValue = DeToxArray(i, 1)
+    If IsArray(DeToxArray) Then
+        For i = 1 To UBound(DeToxArray, 1)
+            If Not IsEmpty(DeToxArray(i, 1)) Then
+                NewDeToxValue = CStr(DeToxArray(i, 1))
+                For j = 0 To UBound(CTCAEabbrev, 1)
+                    index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
+                    If index2 > 0 Then
+                        DeToxArray(i, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
+                    End If
+                Next j
+            End If
+        Next i
+    Else
+        NewDeToxValue = DeToxArray
+        For j = 1 To UBound(CTCAEabbrev, 0)
             index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
             If index2 > 0 Then
-                DeToxArray(i, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
+                DeToxArray(1, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
             End If
         Next j
-    Next i
+    End If
+            
     ' Write the results back to the worksheet
     DeToxRange.Value = DeToxArray
     DeToxRange.EntireColumn.Font.Color = RGB(102, 102, 255)
