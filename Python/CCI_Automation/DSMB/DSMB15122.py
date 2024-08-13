@@ -48,7 +48,7 @@ def DSMB15122(
             "Event Date": "Event Date DM",
         }
         DM_df = DM_df.rename(columns=DM_new_col_name)
-
+        # replace race with "Specify Other or Multiple Races" field when race selected "Other" or "Multiple Races" option
         DM_df["Race1"] = DM_df["Race"]
         DM_df.loc[
             (DM_df["Race"] == "Other") | (DM_df["Race"] == "Multiple Races"),
@@ -68,7 +68,7 @@ def DSMB15122(
                 "Race other",
             ]
         )
-
+        # Replace "Gender Identity" with "Specify Other Gender Identity" when "Other" is selected
         DM_df.loc[
             DM_df["Gender Identity"] == "Other",
             "Gender Identity",
@@ -159,6 +159,7 @@ def DSMB15122(
         MHDIAG_df = MHDIAG_df.drop(columns=["Event Date DIAG"])
         MHDIAG_df = MHDIAG_df.drop_duplicates()
         MHDIAG_df["Disease Type"] = None
+        # Replace ""Primary Diagnosis" with "Specify Other Diagnosis" when "Other" is selected
         MHDIAG_df.loc[
             MHDIAG_df["Disease"] == "Other",
             "Disease",
@@ -215,6 +216,7 @@ def DSMB15122(
             "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)": "Main Consent Date",
         }
         IE_df = IE_df.rename(columns=IE_new_col_name)
+        # Combine "Reason for Screen FailureIE" from 4 different fields: screen failure reason, other screen failure reason, primary inclusion criteria excluding the subject, and primary excluding criteria excluding the subject
         IE_df["Reason for Screen FailureIE"] = None
         IE_df.loc[
             IE_df["SF1"] == "Other",
@@ -391,7 +393,7 @@ def DSMB15122(
     enrollment_df = enrollment_df.drop(
         columns=[
             "Last Study Visit",
-            "End of Study Date",
+            #   "End of Study Date",
         ]
     )
     enrollment_df = enrollment_df.replace([np.nan, np.inf, -np.inf], "")
@@ -491,7 +493,7 @@ def DSMB15122(
         columns=[
             "Consent Date",
             "Date of Birth",
-            "Main Consent Date",
+            #   "Main Consent Date",
             "Form Sequence Number",
             "Race",
         ]
@@ -689,30 +691,10 @@ def DSMB15122(
     }
     AE_df = AE_df.rename(columns=AE_new_col_name)
     #  Only assign Y to AE/SAE for event onset is after study tx
-    filtered_AE_df = AE_df[
-        AE_df["Event Onset"] == "After huCART-meso cell Administration"
-    ]
+    # filtered_AE_df = AE_df[
+    #     AE_df["Event Onset"] == "After huCART-meso cell Administration"
+    # ]
 
-    # # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
-    # infusion_df["AE"] = infusion_df["Subject"].apply(
-    #     lambda x: "Y" if x in filtered_AE_df["Subject"].values else "N"
-    # )
-    # # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
-    # infusion_df["SAE"] = infusion_df["Subject"].apply(
-    #     lambda x: "Y"
-    #     if x in filtered_AE_df[filtered_AE_df["AE or SAE?"] == "SAE"]["Subject"].values
-    #     else "N"
-    # )
-    # # Check filtered_AE_df if the subject of infusion_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
-    # infusion_df["AE"] = infusion_df["Subject"].apply(
-    #     lambda x: "Y" if x in AE_df["Subject"].values else "N"
-    # )
-    # # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
-    # infusion_df["SAE"] = infusion_df["Subject"].apply(
-    #     lambda x: "Y"
-    #     if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values
-    #     else "N"
-    # )
     # # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
     # infusion_df = infusion_df.replace([np.nan, np.inf, -np.inf], "")
     status_df = EL_df[["Subject", "Cohort Assignment"]]
@@ -820,13 +802,20 @@ def DSMB15122(
             "Event Group Label4",
         ]
     )
+    # filter the data frame to only include subjects whose end of study date is later than or equal to main consent date
+    filteredemrollment_df = enrollment_df[
+        enrollment_df["End of Study Date"] >= enrollment_df["Main Consent Date"]
+    ]
     filteredDSEOS_df = DSEOS_df[
         (DSEOS_df["Last Study Visit"] != "Pre-Screening")
         #  & (DSEOS_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
+        & (DSEOS_df["Subject"].isin(filteredemrollment_df["Subject"].values))
     ].copy()
+
     status_df["Event Group Label"] = status_df.apply(
         lambda row: "Off Study/" + row["Event Group Label"]
-        if row["Subject"] in filteredDSEOS_df["Subject"].values
+        if (row["Subject"] in filteredDSEOS_df["Subject"].values)
+        | (row["Event Group Label"] == "Withdrawn Prior to Study Treatment")
         else "On Study/" + row["Event Group Label"],
         axis=1,
     )
@@ -1123,6 +1112,13 @@ def DSMB15122(
                     worksheet2 = writer.book.add_worksheet("DSMB-Enrollment Listing")
                     # * WRITING HEADER AND FORMATTING
                     # Assuming 'enrollment_df' is your DataFrame
+                    enrollment_df = enrollment_df.drop(
+                        columns=[
+                            "Off-Study Reason",
+                            "End of Study Date",
+                            "Main Consent Date",
+                        ]
+                    )
 
                     enrollment_df.replace(
                         [np.inf, -np.inf], np.nan, inplace=True
@@ -1281,7 +1277,9 @@ def DSMB15122(
                         "F1:F2", "Off-Study Reason", bold_12_wrap_format
                     )
                     worksheet5.merge_range(
-                        "G1:G2", "Last Study Visit Performed", bold_12_wrap_format
+                        "G1:G2",
+                        "Last Study Visit Performed for Off-Study Subject",
+                        bold_12_wrap_format,
                     )
 
                     # Safety Headers
