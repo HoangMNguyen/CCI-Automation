@@ -124,9 +124,7 @@ def clockify_get_list_projects(api_key, workspace_id):
     projects_data = response.json()
 
     # Create a dictionary mapping project names to project IDs
-    projects_list = [
-        project["name"] for project in projects_data if project["archived"] == False
-    ]
+    projects_list = [project["name"] for project in projects_data if project["archived"] == False]
 
     return projects_list
 
@@ -161,19 +159,13 @@ def clockify_get_detailed_report(api_key, workspace_id, project_name):
         DataFrame: A pandas DataFrame containing the detailed report.
     """
     headers = {"content-type": "application/json", "X-Api-Key": api_key}
-    url = (
-        f"https://reports.api.clockify.me/v1/workspaces/{workspace_id}/reports/detailed"
-    )
+    url = f"https://reports.api.clockify.me/v1/workspaces/{workspace_id}/reports/detailed"
 
     # Set the start date to the earliest possible date and the end date to today
-    start_date = (datetime.utcnow() - timedelta(days=365)).strftime(
-        "%Y-%m-%dT%H:%M:%S.%f"
-    )[:-3] + "Z"
+    start_date = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     end_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     project_id = None
-    project_id = clockify_get_project_id(
-        clockify_get_api_key(), clockify_get_workplace_id(), project_name
-    )
+    project_id = clockify_get_project_id(clockify_get_api_key(), clockify_get_workplace_id(), project_name)
 
     data = {
         "dateRangeEnd": end_date,
@@ -205,10 +197,7 @@ def clockify_get_detailed_report(api_key, workspace_id, project_name):
         report_df["tags"] = report_df["tags"].apply(
             lambda x: (
                 x[0]["name"]
-                if isinstance(x, list)
-                and len(x) > 0
-                and isinstance(x[0], dict)
-                and "name" in x[0]
+                if isinstance(x, list) and len(x) > 0 and isinstance(x[0], dict) and "name" in x[0]
                 else None
             )
         )
@@ -226,13 +215,11 @@ def clockify_get_detailed_report(api_key, workspace_id, project_name):
     # print(report_df['tags'].dtypes)
     report_df["timeInterval.start"] = pd.to_datetime(report_df["timeInterval.start"])
     report_df["timeInterval.end"] = pd.to_datetime(report_df["timeInterval.end"])
-    report_df["Duration (decimal)"] = (
-        report_df["timeInterval.end"] - report_df["timeInterval.start"]
-    ) / pd.Timedelta(hours=1)  # type: ignore
+    report_df["Duration (decimal)"] = (report_df["timeInterval.end"] - report_df["timeInterval.start"]) / pd.Timedelta(
+        hours=1
+    )  # type: ignore
 
-    report_df["Duration (h)"] = pd.to_timedelta(
-        report_df["Duration (decimal)"], unit="h"
-    ).apply(format_timedelta)
+    report_df["Duration (h)"] = pd.to_timedelta(report_df["Duration (decimal)"], unit="h").apply(format_timedelta)
     report_df["Duration (decimal)"] = report_df["Duration (decimal)"].round(2)
     new_report_columns_name = {
         "projectName": "Project",
@@ -281,9 +268,7 @@ def clockify_create_tasks(api_key, workspace_id, project_name):
     template_tasks = pd.read_csv(os.path.join(current_dir, "Clockify/Tasks.csv"))
     task_list = template_tasks["Task"].tolist()
     # print(task_list)
-    project_id = clockify_get_project_id(
-        clockify_get_api_key(), clockify_get_workplace_id(), project_name
-    )
+    project_id = clockify_get_project_id(clockify_get_api_key(), clockify_get_workplace_id(), project_name)
     headers = {"content-type": "application/json", "X-Api-Key": api_key}
     url = f"https://api.clockify.me/api/v1/workspaces/{workspace_id}/projects/{project_id}/tasks"
     for task_name in task_list:
@@ -322,12 +307,10 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                 with z.open(file_name) as f:
                     df = pd.read_csv(f)
                     # check if df has Event Date column and none of the data is blank
-                    if "Event Date" in df.columns and df[
-                        "Event Date"
-                    ].isnull().sum() != len(df["Event Date"]):
+                    if "Event Date" in df.columns and df["Event Date"].isnull().sum() != len(df["Event Date"]):
                         df["Event Date"] = pd.to_datetime(df["Event Date"])
                         # if cut_off_date is not None, then filter the data based on the cut_off_date
-                        if cut_off_date is not None:
+                        if cut_off_date is not None and "EOS" not in file_name_noCSV.split("_")[-1]:
                             df = df[df["Event Date"] <= cut_off_date]
 
                     # Replace '100-' prefix with an empty string
@@ -444,12 +427,7 @@ def get_stats_df(column, *dfs):
             std = 0
 
         # Create a DataFrame for the current stats if non of the stats are NaN
-        if (
-            not np.isnan(mean)
-            and not np.isnan(median)
-            and not np.isnan(minimum)
-            and not np.isnan(maximum)
-        ):
+        if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
             # Format the mean and standard deviation
             if mean < 100:
                 mean_std = f"{mean:.2f} ({std:.2f})"
@@ -461,9 +439,7 @@ def get_stats_df(column, *dfs):
                 range = f"{minimum:.2f} - {maximum:.2f}"
             else:
                 range = f"{convert_float_2_sci_notation(int(minimum))} - {convert_float_2_sci_notation(int(maximum))}"
-            stats_df = pd.DataFrame(
-                {"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i]
-            )
+            stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
         else:
             stats_df = pd.DataFrame(index=[i])
         # Append the stats DataFrame to the main DataFrame if it is not empty
@@ -504,12 +480,7 @@ def get_stats_perc_df(column, *dfs):
             std = 0
 
         # Create a DataFrame for the current stats if non of the stats are NaN
-        if (
-            not np.isnan(mean)
-            and not np.isnan(median)
-            and not np.isnan(minimum)
-            and not np.isnan(maximum)
-        ):
+        if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
             # Format the mean and standard deviation
             if mean < 100:
                 mean_std = f"{mean:.2f}% ({std:.2f}%)"
@@ -523,9 +494,7 @@ def get_stats_perc_df(column, *dfs):
                 range = f"{minimum:.2f}% - {maximum:.2f}%"
             else:
                 range = f"{convert_float_2_sci_notation(int(minimum))}% - {convert_float_2_sci_notation(int(maximum))}%"
-            stats_df = pd.DataFrame(
-                {"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i]
-            )
+            stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
         else:
             stats_df = pd.DataFrame(index=[i])
         # Append the stats DataFrame to the main DataFrame if it is not empty
@@ -603,9 +572,7 @@ def convert_integers_to_strings(df, column_name):
         raise ValueError(f"Column '{column_name}' does not exist in the dataframe")
 
     # Convert integers to strings
-    df[column_name] = df[column_name].apply(
-        lambda x: str(x) if isinstance(x, int) else x
-    )
+    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else x)
 
     return df
 
@@ -630,9 +597,9 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
             collected_data = data[key][input_keys].copy()
             collected_data.rename(columns=input_dict[key], inplace=True)
             # if there are more than one row for the same subject, keep the one with the last 'Event Date'
-            collected_data = collected_data.sort_values(
-                ["Subject", "Event Date"]
-            ).drop_duplicates(subset=["Subject"], keep="last")
+            collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
+                subset=["Subject"], keep="last"
+            )
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
                 if "Date" in col:
@@ -643,9 +610,7 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
             if key == "DM":
                 merged_df = collected_data
             else:
-                merged_df = pd.merge(
-                    merged_df, collected_data, on="Subject", how="left"
-                )
+                merged_df = pd.merge(merged_df, collected_data, on="Subject", how="left")
     return merged_df
 
 
@@ -674,9 +639,7 @@ def age_calculation(merged_df, output_column, DOB: str, CS1: str, CS2: str = "")
         if (CS2 in merged_df) and CS2 != "":
             # for rows that CS1 isnull but CS2 is not null, then use CS2 instead to calculate age
             if not merged_df[CS2].empty:
-                merged_df.loc[
-                    (merged_df[CS1].isnull() & merged_df[CS2].notnull()), output_column
-                ] = merged_df.loc[
+                merged_df.loc[(merged_df[CS1].isnull() & merged_df[CS2].notnull()), output_column] = merged_df.loc[
                     (merged_df[CS1].isnull() & merged_df[CS2].notnull())
                 ].apply(lambda x: relativedelta(x[CS2], x[DOB]).years, axis=1)
     return merged_df
