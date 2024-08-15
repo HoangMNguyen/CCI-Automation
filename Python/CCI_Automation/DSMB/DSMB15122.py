@@ -716,12 +716,13 @@ def DSMB15122(
     ].copy()
 
     status_df["Event Group Label"] = status_df.apply(
-        lambda row: "Off Study/" + row["Event Group Label"]
+        lambda row: "Off Study"
         if (row["Subject"] in filteredDSEOS_df["Subject"].values)
-        | (row["Event Group Label"] == "Withdrawn Prior to Study Treatment")
+        & (row["Event Group Label"] != "Withdrawn Prior to Study Treatment")
         else "On Study/" + row["Event Group Label"],
         axis=1,
     )
+    status_df = status_df.replace("On Study/Withdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment")
     status_df = pd.merge(
         status_df,
         filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
