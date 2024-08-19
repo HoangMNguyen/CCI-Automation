@@ -5,6 +5,7 @@ from DSMB.DSMB_util import (
     add_rename_column_corelisting,
     get_stats_df,
     get_stats_percentage,
+    get_stats_percentage2,
     get_stats_perc_df,
     convert_float_2_sci_notation,
 )
@@ -57,9 +58,11 @@ class DSMB12423:
                 "Legal Sex (IG_NS_NA_DM1.CL_NS_YH_SEX_cl_NS_DMSEX1)": "Legal Sex",
                 "Sex Assigned at Birth (IG_NS_NA_DM1.CL_NS_NH_BRTHSEX_cl_NS_DMSEX3)": "Sex Assigned at Birth",
                 "Gender Identity (IG_NS_NA_DM1.CL_NS_NH_GENDERID_cl_NS_DMSEX2)": "Gender Identity",
+                "Specify Other Gender Identity (IG_NS_NA_DM1.TX_NS_NH_GENDERIDOTH)": "Other Gender",
                 "Date of Birth (IG_NS_NA_DM1.DT_NS_NH_BRTHDAT)": "Date of Birth",
                 "Apheresis Consent Date (IG_NS_NA_DM1.DT_NS_YH_RFICDAT)": "Consent Date",
                 "Race (IG_NS_NA_DM1.CL_NS_YH_RACE_cl_NS_DMRACE1)": "Race",
+                "Specify Other or Multiple Races (IG_NS_NA_DM1.TX_NS_NH_RACEOTH)": "Other Race",
                 "Ethnicity (IG_NS_NA_DM1.CL_NS_NH_ETHNIC_cl_NS_DMETHNIC1)": "Ethnicity",
             },
             "DSCA": {"Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)": "Cohort Assignment"},
@@ -67,16 +70,20 @@ class DSMB12423:
             "IE": {
                 "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)": "Main Consent Date",
                 "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?",
-                "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "Reason for Screen Failure",
-                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "SF1",
-                "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)": "SF2",
-                "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)": "SF3",
+                "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF3",
+                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "Reason for Screen Failure",
+                "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)": "SF1",
+                "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)": "SF2",
             },
             "EXINF": {
                 "Event Group Label": "Event Group Label",
                 "Was infusion administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)": "Infused",
             },
-            "DSEOS": {"End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date"},
+            "DSEOS": {
+                "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
+                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)": "End of Study Reason",
+                "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Supportive Information",
+            },
             "NHLMHDIAG": {
                 "Primary Diagnosis of NHL (IG_NS_NA_NHLMHDIAG1.CL_NS_YH_NHLDIAG_cl_NS_NHLDIAG1)": "Disease NHL",
                 "Specify Other Diagnosis (IG_NS_NA_NHLMHDIAG1.TX_NS_NH_NHLDIAGOTH)": "Disease NHL2",
@@ -91,12 +98,65 @@ class DSMB12423:
             "Consent Date",
             "Main Consent Date",
         )
-        enrollment_df["Disease Type"] = enrollment_df["Disease NHL"].fillna(enrollment_df["Disease NHL2"])
-        for column in ["SF1", "SF2", "SF3"]:
-            enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].fillna(
-                enrollment_df[column],
-            )
-            enrollment_df = enrollment_df.drop(columns=[column])
+        # fill NaN with empty string
+        enrollment_df = enrollment_df.fillna("")
+        enrollment_df.loc[
+            enrollment_df["Disease NHL"] == "Other",
+            "Disease NHL",
+        ] = ""
+        enrollment_df["Disease Type"] = (
+            enrollment_df["Disease NHL"].fillna("") + " " + enrollment_df["Disease NHL2"].fillna("")
+        )
+        enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
+
+        # Convert the entire column to string to avoid data type issues
+        enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].astype(str)
+
+        # if "Reason for Screen Failure" in enrollment_df.columns equal "Other", replace the value with SF3
+        mask = enrollment_df["Reason for Screen Failure"] == "Other"
+        # Replace "Other" with the corresponding values from the "SF3" column
+        enrollment_df.loc[mask, "Reason for Screen Failure"] = enrollment_df.loc[mask, "SF3"]
+
+        # if "Reason for Screen Failure" in enrollment_df.columns equal "Inclusion Criteria", concat the value of the column with "SF1"
+        # Create a mask for rows where "Reason for Screen Failure" is "Inclusion Criteria"
+        mask = (enrollment_df["Reason for Screen Failure"] == "Inclusion Criteria") & (enrollment_df["SF1"] != "")
+        # Use the mask to update the "Reason for Screen Failure" column
+        enrollment_df.loc[mask, "Reason for Screen Failure"] = (
+            enrollment_df.loc[mask, "Reason for Screen Failure"] + " " + enrollment_df.loc[mask, "SF1"].astype(str)
+        )
+
+        # Create a mask for rows where "Reason for Screen Failure" is "Exclusion Criteria" and "SF2" is not empty
+        mask = (enrollment_df["Reason for Screen Failure"] == "Exclusion Criteria") & (enrollment_df["SF2"] != "")
+
+        # Use the mask to update the "Reason for Screen Failure" column
+        enrollment_df.loc[mask, "Reason for Screen Failure"] = (
+            enrollment_df.loc[mask, "Reason for Screen Failure"] + " " + enrollment_df.loc[mask, "SF2"].astype(str)
+        )
+
+        # if subject does not have IE data, check if the subject has DSEOS "End of Study Date" data. If yes, then the subject is "No" for "Subject meets all study eligibility?"
+
+        enrollment_df.loc[
+            (enrollment_df["Subject meets all study eligibility?"] != "Yes")
+            & (enrollment_df["End of Study Date"].notna()),
+            "Subject meets all study eligibility?",
+        ] = "No"
+        enrollment_df.loc[
+            (enrollment_df["Subject meets all study eligibility?"] != "Yes")
+            & (enrollment_df["End of Study Date"].notna()),
+            "Reason for Screen Failure",
+        ] = enrollment_df["Supportive Information"]
+        # drop the columns that are not needed
+        enrollment_df = enrollment_df.drop(
+            columns=[
+                "Disease NHL",
+                "Disease NHL2",
+                "SF1",
+                "SF2",
+                "SF3",
+                "Supportive Information",
+                "End of Study Reason",
+            ]
+        )
         # Remove the rows with Event Group Label is Day 0-R
         enrollment_df = enrollment_df[enrollment_df["Event Group Label"] != "Day 0-R"]
         enrollment_df = enrollment_df.drop(columns=["Event Group Label"])
@@ -112,11 +172,22 @@ class DSMB12423:
         enrollment_df = enrollment_df.drop(columns=["End of Study Date"])
         # Sort
         enrollment_df = enrollment_df.sort_values(["Subject"])
+
         # prepare the output dataframe
         enrollment_output_df = enrollment_df.copy()
         for col in enrollment_output_df.columns:
             if "Date" in col:
                 enrollment_output_df[col] = enrollment_output_df[col].dt.strftime("%m/%d/%Y")
+        # If Gender is "Other", replace the value with "Other Gender"
+        enrollment_output_df.loc[
+            enrollment_output_df["Gender Identity"] == "Other",
+            "Gender Identity",
+        ] = enrollment_output_df["Other Gender"]
+        # If Race is "Other", replace the value with "Other Race"
+        enrollment_output_df.loc[
+            enrollment_output_df["Race"] == "Other",
+            "Race",
+        ] = enrollment_output_df["Other Race"]
         # *Re-order the columns and remove the columns that are not needed
         enrollment_output_df = enrollment_output_df[
             [
@@ -181,7 +252,10 @@ class DSMB12423:
             )
 
             # Calculate the stats for the filtered dataframe
-            self.LegalSex_list.append(get_stats_percentage("Legal Sex", TT_df, SF_df, EL_df, INF_df))
+            Legal_Sex_Codelist = ["Male", "Female", "X (Nonbinary)", "Not Reported"]
+            self.LegalSex_list.append(
+                get_stats_percentage2("Legal Sex", Legal_Sex_Codelist, TT_df, SF_df, EL_df, INF_df)
+            )
             self.Age_at_Consent_list.append(get_stats_df("Age at Consent", TT_df, SF_df, EL_df, INF_df))
             self.Race_list.append(get_stats_percentage("Race", TT_df, SF_df, EL_df, INF_df))
             self.Ethnicity_list.append(get_stats_percentage("Ethnicity", TT_df, SF_df, EL_df, INF_df))
@@ -892,6 +966,9 @@ class DSMB12423:
             responseA_primary_SV_df = data["DSSV"][["Subject", "Event Label", "Event Date"]]
             # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
             responseA_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+            # Drop all-NA columns from both DataFrames
+            responseA_primary_SV_df = responseA_primary_SV_df.dropna(axis=1, how="all")
+            responseA_primary_DSSVLTFU_df = responseA_primary_DSSVLTFU_df.dropna(axis=1, how="all")
             # Combine DSSVLTFU with SV dataframe vertically
             responseA_primary_SV_df = pd.concat([responseA_primary_SV_df, responseA_primary_DSSVLTFU_df])
             # Sort the dataframe by Subject and Event Date
@@ -1281,7 +1358,6 @@ class DSMB12423:
                 "Subject",
                 "Form ILB Status",
                 "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)",
-                "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
             ]
         ].copy()
         # Check responseA_primary_AE_df if the subject of responseA_primary_df is in the AE dataframe. If yes, then add 'Y' to the column 'AE' in responseA_primary_df, else add 'N'
@@ -1453,7 +1529,7 @@ class DSMB12423:
                     # worksheet1.set_column('B:I', None, normal_data_format)
 
                     # * WRITING HEADER AND FORMATTING
-                    Sex_order = ["Male", "Female", "Nonbinary (X)", "Not Reported"]
+                    Sex_order = ["Male", "Female", "X (Nonbinary)", "Not Reported"]
                     Age_order = ["Mean SD", "Median", "Range"]
                     Race_order = [
                         "African American",

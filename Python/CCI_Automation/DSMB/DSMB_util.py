@@ -1,12 +1,8 @@
 import pandas as pd
-import requests
-import json
-from datetime import datetime, timedelta
 import numpy as np
-import os
 import math
-import zipfile
 from typing import Optional, List, Dict, Tuple, Union
+
 
 # TODO: implement type hints for all functions
 
@@ -114,13 +110,12 @@ def get_stats_percentage(column, *args):
         groupby = ["Y", "N"]
     elif column == "SAE":
         groupby = ["Y", "N"]
-    # NHL for 15420
+    # NHL
     elif column == "PET-Based Response" or column == "PET-Based ORR":
         groupby = [
             "Complete Metabolic Response (CMR)",
             "Partial Metabolic Response (PMR)",
             "No Metabolic Response (NMR)",
-            "Indeterminate Response (IR)",
             "Progressive Metabolic Disease (PMD)",
             "Not Reported",
         ]
@@ -129,26 +124,6 @@ def get_stats_percentage(column, *args):
             "Complete Radiologic Response (CR)",
             "Partial Response (PR)",
             "Stable Disease (SD)",
-            "Indeterminate Response (IR)",
-            "Progressive Disease (PD)",
-            "Not Reported",
-        ]
-    # NHL for 12423
-    elif column == "PET-Based NHL Response" or column == "PET-Based NHL ORR":
-        groupby = [
-            "Complete Metabolic Response (CMR)",
-            "Partial Metabolic Response (PMR)",
-            "No Metabolic Response (NMR)",
-            #     "Indeterminate Response (IR)",
-            "Progressive Metabolic Disease (PMD)",
-            "Not Reported",
-        ]
-    elif column == "CT-Based NHL Response" or column == "CT-Based NHL ORR":
-        groupby = [
-            "Complete Radiologic Response (CR)",
-            "Partial Response (PR)",
-            "Stable Disease (SD)",
-            #     "Indeterminate Response (IR)",
             "Progressive Disease (PD)",
             "Not Reported",
         ]
@@ -196,33 +171,55 @@ def get_stats_percentage(column, *args):
 
     for arg in args:
         if groupby != None:
-            temp_df = (
-                arg.groupby(column)
-                .agg({"Subject": "count"})
-                .reindex(groupby, fill_value=0)
-            )
+            temp_df = arg.groupby(column).agg({"Subject": "count"}).reindex(groupby, fill_value=0)
         else:
             temp_df = arg.groupby(column).agg({"Subject": "count"})
         # combine the percentage and count column into 1 column for variables different than 0
-        # temp_df = temp_df.apply(
-        #     lambda x: x.astype(str)
-        #     + " ("
-        #     + (x / sum(x)).apply(lambda y: "{:.1%}".format(y))
-        #     + ")"
-        #     if x.sum() != 0
-        #     else x.astype(str) + " (0.0%)"
-        # )
         temp_df = temp_df.apply(
-            lambda x: x.astype(str)
-            + " ("
-            + (x / sum(x))
-            .replace([float("inf"), float("-inf"), float("nan")], 0)
-            .apply(lambda y: "{:.1%}".format(y))
-            + ")"
+            lambda x: x.astype(str) + " (" + (x / sum(x)).apply(lambda y: "{:.1%}".format(y)) + ")"
             if x.sum() != 0
             else x.astype(str) + " (0.0%)"
         )
+        # merge the temp_df to the main df
+        main_df = pd.concat([main_df, temp_df], axis=1)
+    return main_df
 
+
+def get_stats_percentage2(column: str, groupby: list, *args: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate the percentage of each unique value in a specified column of a DataFrame, grouped by another column.
+
+    This function takes a column name, a groupby column name, and one or more DataFrames. It returns a new DataFrame
+    containing the unique values in the specified column, their corresponding percentages of the total count within
+    each group defined by the groupby column.
+
+    Args:
+        column (str): The name of the column for which to calculate the percentages.
+        groupby (list): The unique values in the groupby column to group the data by.
+        *args (pd.DataFrame): One or more DataFrames containing the data.
+
+    Returns:
+        pd.DataFrame: A DataFrame with three columns: 'Group', 'Value', and 'Percentage'. The 'Group' column
+                      contains the unique values from the groupby column, the 'Value' column contains the unique
+                      values from the specified column, and the 'Percentage' column contains the percentage of each
+                      value relative to the total count within each group.
+    """
+    # Your function implementation here
+
+    # create a dataframe to store the stats
+    main_df = pd.DataFrame()
+
+    for arg in args:
+        if groupby != None:
+            temp_df = arg.groupby(column).agg({"Subject": "count"}).reindex(groupby, fill_value=0)
+        else:
+            temp_df = arg.groupby(column).agg({"Subject": "count"})
+        # combine the percentage and count column into 1 column for variables different than 0
+        temp_df = temp_df.apply(
+            lambda x: x.astype(str) + " (" + (x / sum(x)).apply(lambda y: "{:.1%}".format(y)) + ")"
+            if x.sum() != 0
+            else x.astype(str) + " (0.0%)"
+        )
         # merge the temp_df to the main df
         main_df = pd.concat([main_df, temp_df], axis=1)
     return main_df
@@ -258,12 +255,7 @@ def get_stats_df(column, *dfs):
             std = 0
 
         # Create a DataFrame for the current stats if non of the stats are NaN
-        if (
-            not np.isnan(mean)
-            and not np.isnan(median)
-            and not np.isnan(minimum)
-            and not np.isnan(maximum)
-        ):
+        if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
             # Format the mean and standard deviation
             if mean < 100:
                 mean_std = f"{mean:.2f} ({std:.2f})"
@@ -275,9 +267,7 @@ def get_stats_df(column, *dfs):
                 range = f"{minimum:.2f} - {maximum:.2f}"
             else:
                 range = f"{convert_float_2_sci_notation(int(minimum))} - {convert_float_2_sci_notation(int(maximum))}"
-            stats_df = pd.DataFrame(
-                {"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i]
-            )
+            stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
         else:
             stats_df = pd.DataFrame(index=[i])
         # Append the stats DataFrame to the main DataFrame if it is not empty
@@ -320,12 +310,7 @@ def get_stats_perc_df(column, *dfs):
             std = 0
 
         # Create a DataFrame for the current stats if non of the stats are NaN
-        if (
-            not np.isnan(mean)
-            and not np.isnan(median)
-            and not np.isnan(minimum)
-            and not np.isnan(maximum)
-        ):
+        if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
             # Format the mean and standard deviation
             if mean < 100:
                 mean_std = f"{mean:.2f}% ({std:.2f}%)"
@@ -339,9 +324,7 @@ def get_stats_perc_df(column, *dfs):
                 range = f"{minimum:.2f}% - {maximum:.2f}%"
             else:
                 range = f"{convert_float_2_sci_notation(int(minimum))}% - {convert_float_2_sci_notation(int(maximum))}%"
-            stats_df = pd.DataFrame(
-                {"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i]
-            )
+            stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
         else:
             stats_df = pd.DataFrame(index=[i])
         # Append the stats DataFrame to the main DataFrame if it is not empty
