@@ -571,8 +571,8 @@ def convert_integers_to_strings(df, column_name):
     if column_name not in df.columns:
         raise ValueError(f"Column '{column_name}' does not exist in the dataframe")
 
-    # Convert integers to strings
-    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else x)
+    # Convert integers to strings, if the value is an integer, else return Nan
+    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else np.NaN)
 
     return df
 
@@ -591,6 +591,9 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
         pandas.DataFrame: A DataFrame containing the collected and processed data.
 
     """
+    # Convert dict_keys to a list to use index method
+    keys_list = list(input_dict.keys())
+
     for key in input_dict.keys():
         if key in data:
             input_keys = ["Subject", "Event Date"] + list(input_dict[key].keys())
@@ -603,11 +606,11 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
                 if "Date" in col:
-                    collected_data[col] = pd.to_datetime(collected_data[col], errors='coerce')
+                    collected_data[col] = pd.to_datetime(collected_data[col], errors="coerce")
             # drop 'Event Date' column
             collected_data = collected_data.drop("Event Date", axis=1)
             # merge dataframes
-            if key == "DM":
+            if keys_list.index(key) == 0:
                 merged_df = collected_data
             else:
                 merged_df = pd.merge(merged_df, collected_data, on="Subject", how="left")
