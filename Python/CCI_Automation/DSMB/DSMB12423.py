@@ -1377,15 +1377,35 @@ class DSMB12423:
         # merge AE and SAE dataframes
         self.safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
 
+        PET_Response_Codelist = [
+            "Complete Metabolic Response (CMR)",
+            "Partial Metabolic Response (PMR)",
+            "No Metabolic Response (NMR)",
+            "Progressive Metabolic Disease (PMD)",
+            "Not Reported",
+        ]
+
+        CT_Response_Codelist = [
+            "Complete Radiologic Response (CR)",
+            "Partial Response (PR)",
+            "Stable Disease (SD)",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+
         # TODO: RESPONSE STATS
         if self.subject_A_prim_count > 0:
             responseA_stat = self.responseA_primary_df.copy()
             # replace 'Not Assessed' with 'Not Reported' for all columns in responseA_stat
             responseA_stat = responseA_stat.replace("Not Assessed", "Not Reported")
-            self.response_stat_A_BOR_PET = get_stats_percentage("PET-Based Response", responseA_stat)
-            self.response_stat_A_BOR_CT = get_stats_percentage("CT-Based Response", responseA_stat)
-            self.response_stat_A_ORR_PET = get_stats_percentage("PET-Based ORR", responseA_stat)
-            self.response_stat_A_ORR_CT = get_stats_percentage("CT-Based ORR", responseA_stat)
+            self.response_stat_A_BOR_PET = get_stats_percentage2(
+                "PET-Based Response", PET_Response_Codelist, responseA_stat
+            )
+            self.response_stat_A_BOR_CT = get_stats_percentage2(
+                "CT-Based Response", CT_Response_Codelist, responseA_stat
+            )
+            self.response_stat_A_ORR_PET = get_stats_percentage2("PET-Based ORR", PET_Response_Codelist, responseA_stat)
+            self.response_stat_A_ORR_CT = get_stats_percentage2("CT-Based ORR", CT_Response_Codelist, responseA_stat)
 
         # TODO: UPDATE FORMAT for cohort A after getting the stats
 

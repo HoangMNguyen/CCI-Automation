@@ -15,7 +15,6 @@ def DSMB15122(
     export,
     output_dir,
     output_file_name,
-    debug,
 ):
     # TODO: DEMO ENROLLMENT LISTING
     if not data["DM"].empty:
@@ -371,12 +370,6 @@ def DSMB15122(
     Race_list = []
     Ethnicity_list = []
 
-    if debug:
-        print(len(enrollment_df), enrollment_df.index)
-        for filter_option in filter_options:
-            print(len(filter_option), filter_option.index)
-            print(filter_option.equals(enrollment_df.index))
-
     for filter_index, filter_option in enumerate(filter_options):
         # Apply the filter to the dataframe
         filtered_df = enrollment_df[filter_option].copy()
@@ -418,14 +411,6 @@ def DSMB15122(
         Age_at_Consent_list.append(get_stats_df("Age at Consent", TT_df, SF_df, EL_df, INF_df))
         Race_list.append(get_stats_percentage("Race", TT_df, SF_df, EL_df, INF_df))
         Ethnicity_list.append(get_stats_percentage("Ethnicity", TT_df, SF_df, EL_df, INF_df))
-
-    if debug:
-        # 0: All Cohorts, 1: Cohort 1
-        print(status_list)
-        print(LegalSex_list)
-        print(Age_at_Consent_list)
-        print(Race_list)
-        print(Ethnicity_list)
 
     # *: remove after calculating the stats
     enrollment_df = enrollment_df.drop(
@@ -732,9 +717,6 @@ def DSMB15122(
     # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
     status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
 
-    if debug:
-        print(infusion_df)
-
     # TODO: DSMB-Study Tx & AE STATISTICS
     infusion_count = []
     # * Cohort 1
@@ -763,10 +745,6 @@ def DSMB15122(
     infusion_statA = infusion_statA.fillna("")
     infusion_count.append(total_subject_count)
 
-    if debug:
-        print(infusion_statA)
-        print(infusion_count)
-
     ## TODO: FORMATTING THE DATAFRAME
     # TODO: Day 0
     # Convert the columns to scientific notation if the value is not NaN
@@ -785,8 +763,6 @@ def DSMB15122(
         lambda row: str(x) + "%" if pd.notna(x := row["%scFv Flow"]) else x, axis=1
     )
     infusion_df = infusion_df.drop(columns=["Target Cell Dose"])
-    if debug:
-        print(infusion_df)
 
     # TODO: SAFETY STATS
 

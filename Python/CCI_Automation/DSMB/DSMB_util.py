@@ -116,6 +116,7 @@ def get_stats_percentage(column, *args):
             "Complete Metabolic Response (CMR)",
             "Partial Metabolic Response (PMR)",
             "No Metabolic Response (NMR)",
+            "Indeterminate Response (IR)",
             "Progressive Metabolic Disease (PMD)",
             "Not Reported",
         ]
@@ -124,6 +125,7 @@ def get_stats_percentage(column, *args):
             "Complete Radiologic Response (CR)",
             "Partial Response (PR)",
             "Stable Disease (SD)",
+            "Indeterminate Response (IR)",
             "Progressive Disease (PD)",
             "Not Reported",
         ]
