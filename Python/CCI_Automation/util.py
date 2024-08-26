@@ -307,11 +307,20 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                 with z.open(file_name) as f:
                     df = pd.read_csv(f)
                     # check if df has Event Date column and none of the data is blank
-                    if "Event Date" in df.columns and df["Event Date"].isnull().sum() != len(df["Event Date"]):
+                    if (
+                        "Event Date" in df.columns and df["Event Date"].isnull().sum() != len(df["Event Date"])
+                    ) or "EOS" in file_name_noCSV.split("_")[-1]:
                         df["Event Date"] = pd.to_datetime(df["Event Date"])
                         # if cut_off_date is not None, then filter the data based on the cut_off_date
                         if cut_off_date is not None and "EOS" not in file_name_noCSV.split("_")[-1]:
                             df = df[df["Event Date"] <= cut_off_date]
+                        elif cut_off_date is not None and "EOS" in file_name_noCSV.split("_")[-1]:
+                            # find the column header that contains "End of Study Date"
+                            column_name = df.columns[df.columns.str.contains("End of Study Date", case=False)][0]
+                            # Convert the relevant column to datetime
+                            df[column_name] = pd.to_datetime(df[column_name])
+                            # filter out the data that is after the cut off date. If the date is null, keep it
+                            df = df[(df[column_name] <= cut_off_date) | (df[column_name].isnull())]
 
                     # Replace '100-' prefix with an empty string
                     df["Subject"] = df["Subject"].str.replace("^100-", "", regex=True)
