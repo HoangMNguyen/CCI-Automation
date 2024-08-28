@@ -244,8 +244,8 @@ Sub FormProgressListingFormat()
     WS2.Range("B2").Value = CountPerColumnName(WS1, "Form Status", "Blank")
     WS2.Range("A3").Value = "In Progress"
     WS2.Range("B3").Value = CountPerColumnName(WS1, "Form Status", "In Progress")
-    WS2.Range("A4").Value = "In Progress Post Submit"
-    WS2.Range("B4").Value = CountPerColumnName(WS1, "Form Status", "In Progress Post Submit")
+    WS2.Range("A4").Value = "In Edit"
+    WS2.Range("B4").Value = CountPerColumnName(WS1, "Form Status", "In Edit")
     WS2.Range("A5").Value = "Submitted"
     WS2.Range("B5").Value = CountPerColumnName(WS1, "Form Status", "Submitted")
     
@@ -402,7 +402,7 @@ Sub FormProgressListingFormat()
     
     'Filter values
     Dim FilterValues() As Variant
-    FilterValues = Array("In Progress", "In Progress Post Submit", "Submitted")
+    FilterValues = Array("In Progress", "In Edit", "Submitted")
     Call FilterColumn(WS1, "Form Status", FilterValues)
     
     Application.ScreenUpdating = True
