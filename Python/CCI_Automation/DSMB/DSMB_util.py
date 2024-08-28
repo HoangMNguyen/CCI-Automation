@@ -245,39 +245,47 @@ def get_stats_df(column, *dfs):
     main_df = pd.DataFrame()
 
     for i, df in enumerate(dfs):
-        # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
-        df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
-        mean = df[column].mean()
-        std = df[column].std()
-        median = df[column].median()
-        minimum = df[column].min()
-        maximum = df[column].max()
+        if df.count()[column] != 0:
+            # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
+            df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
+            mean = df[column].mean()
+            std = df[column].std()
+            median = df[column].median()
+            minimum = df[column].min()
+            maximum = df[column].max()
 
-        if np.isnan(std):
-            std = 0
+            if np.isnan(std):
+                std = 0
 
-        # Create a DataFrame for the current stats if non of the stats are NaN
-        if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
-            # Format the mean and standard deviation
-            if mean < 100:
-                mean_std = f"{mean:.2f} ({std:.2f})"
+            # Create a DataFrame for the current stats if non of the stats are NaN
+            if not np.isnan(mean) and not np.isnan(median) and not np.isnan(minimum) and not np.isnan(maximum):
+                # Format the mean and standard deviation
+                if mean < 100:
+                    mean_std = f"{mean:.2f} ({std:.2f})"
+                else:
+                    mean_std = f"{convert_float_2_sci_notation(int(mean))} ({convert_float_2_sci_notation(int(std))})"
+                if median > 100:
+                    median = f"{convert_float_2_sci_notation(int(median))}"
+                if minimum < 100 and maximum < 100:
+                    range = f"{minimum:.2f} - {maximum:.2f}"
+                else:
+                    range = (
+                        f"{convert_float_2_sci_notation(int(minimum))} - {convert_float_2_sci_notation(int(maximum))}"
+                    )
+                stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
             else:
-                mean_std = f"{convert_float_2_sci_notation(int(mean))} ({convert_float_2_sci_notation(int(std))})"
-            if median > 100:
-                median = f"{convert_float_2_sci_notation(int(median))}"
-            if minimum < 100 and maximum < 100:
-                range = f"{minimum:.2f} - {maximum:.2f}"
-            else:
-                range = f"{convert_float_2_sci_notation(int(minimum))} - {convert_float_2_sci_notation(int(maximum))}"
-            stats_df = pd.DataFrame({"Mean ± SD": mean_std, "Median": median, "Range": range}, index=[i])
+                stats_df = pd.DataFrame(index=[i])
+            # Append the stats DataFrame to the main DataFrame if it is not empty
+            main_df = pd.concat([main_df, stats_df])
         else:
-            stats_df = pd.DataFrame(index=[i])
-        # Append the stats DataFrame to the main DataFrame if it is not empty
-        main_df = pd.concat([main_df, stats_df])
+            # if the column is empty, fill the stats with '0 (0.0)'
+            stats_df = pd.DataFrame({"Mean ± SD": "0 (0.0)", "Median": 0, "Range": "0 - 0"}, index=[i])
+            # Append the stats DataFrame to the main DataFrame if it is not empty
+            main_df = pd.concat([main_df, stats_df])
     # Transpose the DataFrame to switch the axes
     main_df = main_df.T
-    # if NaN, replace with '0 (0.0%)'
-    main_df = main_df.fillna("0 (0.0%)")
+    # if NaN, replace with '0 (0.0)'
+    main_df = main_df.fillna("0 (0.0)")
     return main_df
 
 
