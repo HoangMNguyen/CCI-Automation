@@ -77,7 +77,7 @@ class Widget(QWidget):
             default_dir = os.path.join(os.path.expanduser("~"), "Downloads")
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
-                "Select the raw file of Clockify Dashboard",
+                "Select the Corelisting zip file",
                 default_dir,
                 "Zip files (*.zip)",
             )

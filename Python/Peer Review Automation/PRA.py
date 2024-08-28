@@ -6,7 +6,7 @@ import os
 
 class SDSData():
     def __init__(self,nameCheck, SDS_file_path = None, val_file_path = None):    
-        if SDS_file_path == None:
+        if SDS_file_path is None:
             print("No file selected!")
             return
         file_name = os.path.split(SDS_file_path)[1]
@@ -18,7 +18,7 @@ class SDSData():
         self.df1 = self.SDSAllData['Codelists']
         self.APR(nameCheck)
         self.val_file_path = val_file_path
-        if val_file_path != None:
+        if val_file_path is not None:
             self.validation(val_file_path)
         
     def validation(self, val_file_path):
@@ -67,11 +67,11 @@ class SDSData():
                                            df.loc[i, "Item Group Label"],
                                            df.loc[i, "Label"],
                                            "Item Name and External ID not matching", 
-                                           "Item Name:" +  df.loc[i, "Item Name"] + " | " + "External ID:" + df.loc[i, "External ID"]])
+                                           "Item Name:" +  str(df.loc[i, "Item Name"]) + " | " + "External ID:" + str(df.loc[i, "External ID"])])
                 
                 if df.loc[i, "Data Type"] == "Codelist":
                 # check display of codelist
-                    count_options = len(df1[(df1['Name'].str.contains(df.loc[i, "Codelist"] + '$', na=False)) & (df1['Hidden'] == False)])
+                    count_options = len(df1[(df1['Name'].str.contains(df.loc[i, "Codelist"] + '$', na=False)) & (df1['Hidden'] is False)])
                     # print(str(df.loc[i, "Form Label"]) + str(df.loc[i, "Label"]) + " Codelist display type is picklist " + df.loc[i, "Codelist"] +  str(count_options))
                     if (count_options == 1 or count_options == 2) and df.loc[i, "Control Type"] == "Picklist":
                         self.errorList.append([df.loc[i, "Form Label"],
@@ -86,7 +86,7 @@ class SDSData():
                                                df.loc[i, "Label"],
                                                "Codelist display type is not picklist", 
                                                "Item name: " +  df.loc[i, "Item Name"] + " | " + df.loc[i, "Codelist"] + " with display type of {} but has {} options".format(df.loc[i, "Control Type"], count_options)])
-                if nameCheck == True:
+                if nameCheck is True:
                     self.itemNameCheck(i)
 
             ## check if item name is null but Item Group Name is not null
@@ -102,17 +102,18 @@ class SDSData():
 
                 if df.loc[i, "Visual Group"] != "Yes":
                     self.errorList.append([df.loc[i, "Form Label"],
-                                           df.loc[i, "Item Group Label"],
-                                           "n/a",
-                                           "Item Group does not have Visual Group selected Yes", 
-                                           "Item Group Name: " +  df.loc[i, "Item Group Name"]  + " Visual Group should be Yes"])
-                    
+                                        df.loc[i, "Item Group Label"],
+                                        "n/a",
+                                        "Item Group does not have Visual Group selected Yes", 
+                                        "Item Group Name: " + str(df.loc[i, "Item Group Name"]) + " Visual Group should be Yes"])
+
                 if df.loc[i, "Header Visible"] != "Yes":
                     self.errorList.append([df.loc[i, "Form Label"],
-                                           df.loc[i, "Item Group Label"],
-                                           "n/a",
-                                           "Item Group does not have Header Visible selected Yes", 
-                                           "Item Group Name: " +  df.loc[i, "Item Group Name"]  + " Header Visible should be Yes"])
+                                        df.loc[i, "Item Group Label"],
+                                        "n/a",
+                                        "Item Group does not have Header Visible selected Yes", 
+                                        "Item Group Name: " + str(df.loc[i, "Item Group Name"]) + " Header Visible should be Yes"])
+
 
                 if nameCheck == True:
                     self.itemGroupNameCheck(i)

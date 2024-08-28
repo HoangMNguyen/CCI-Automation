@@ -5,6 +5,9 @@
 		}
 	],
 	"settings": {
-		"CodeGPT.apiKey": "OpenAI"
+		"CodeGPT.apiKey": "OpenAI",
+		"editor.rulers": [
+			120
+		]
 	}
 }
