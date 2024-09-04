@@ -327,7 +327,7 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                     # only get data that is submitted status
                     df = df[df["Form Status"] == "Submitted"]
                     # only get data that is not ILB status
-                    df = df[df["Form ILB Status"] is False]
+                    df = df[df["Form ILB Status"] == False]
                 data[file_name_noCSV.split("_")[-1]] = df
 
     return data
