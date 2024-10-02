@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from itertools import count
 import pandas as pd
 import numpy as np
 from DSMB.DSMB_util import (
@@ -2603,43 +2604,6 @@ class DSMB16321:
 
                     worksheet7 = writer.book.add_worksheet("Response Listing for Treated")
 
-                    self.response_df = self.response_df.replace([np.inf, -np.inf], np.nan)  # Replace INF with NaN
-                    unique_subject_list = self.response_df["Subject"].unique()
-                    self.subject_prim_count = len(unique_subject_list)
-                    for unique_subject in unique_subject_list:
-                        count_number = self.response_df["Subject"].value_counts().get(unique_subject, 0)
-                        # print(f"{unique_subject}: {count_number}")
-                        # find the first row of unique_subject within self.response_df and get the index
-                        # for each column within the range of self.response_df -1 (minus the unscheduled column)
-                        # merger the rows starting from the index of the first row all the way to the row with index = first row index + count_number - 1
-
-                    # for i in range(0, len(self.response_df)):
-                    #     subject_value = self.response_df.iloc[i, 0]  # Adjust the column index as needed
-                    #     # count_number = self.response_df["Subject"].value_counts().get(subject_value, 0)
-                    #     # for unique_subject in unique_subject_list:
-                    #     count_number = self.response_df["Subject"].value_counts().get(subject_value, 0)
-                    #     # print(f"{subject_value}: {count_number}")
-
-                    #     for j in range(0, len(self.response_df.columns) - 1):
-                    #         if j == 0:  # Assuming you want to merge based on the first column
-                    #             if count_number > 0:
-                    #                 # Merge the cells vertically based on the count_number
-                    #                 worksheet7.write(
-                    #                     i + 3,  # Start row
-                    #                     j,  # Start column
-                    #                     self.response_df.iloc[i, j],
-                    #                     normal_data_format,
-                    #                 )
-                    #                 # Skip the next rows that have the same subject
-                    #                 i += count_number - 1  # Adjust `i` to skip merged rows
-                    #         else:
-                    #             worksheet7.write(i + 3, j, self.response_df.iloc[i, j], normal_data_format)
-                    # worksheet7.merge_range(
-                    #     "A1:S1",
-                    #     "Disease Response for Treated Subjects \nN=" + str(self.subject_prim_count),
-                    #     bold_12_format,
-                    # )
-
                     worksheet7.merge_range("A2:A3", "Subject ID", bold_11_format)
                     worksheet7.merge_range("B2:B3", "Measurable vs. Non-Measurable Disease", bold_11_format)
                     worksheet7.merge_range("C2:D2", "Day 1", bold_11_format)
@@ -2670,6 +2634,10 @@ class DSMB16321:
                     worksheet7.write("R3", "% Change is SPD", bold_11_format)
                     worksheet7.write("S3", "Timepoint: Overall Objective Status/% Change in SPD", bold_11_format)
 
+                    # sort the response_df by Subject
+                    self.response_df = self.response_df.sort_values(by=["Subject"])
+                    # reset index
+                    self.response_df = self.response_df.reset_index(drop=True)
                     for i in range(0, len(self.response_df)):
                         for j in range(0, len(self.response_df.columns)):
                             worksheet7.write(
@@ -2678,6 +2646,27 @@ class DSMB16321:
                                 self.response_df.iloc[i, j],
                                 normal_data_format,
                             )
+
+                    self.response_df = self.response_df.replace([np.inf, -np.inf], np.nan)  # Replace INF with NaN
+                    unique_subject_list = self.response_df["Subject"].unique()
+                    self.subject_prim_count = len(unique_subject_list)
+                    for unique_subject in unique_subject_list:
+                        count_number = self.response_df["Subject"].value_counts().get(unique_subject, 0)
+                        if count_number > 1:
+                            # print(f"{unique_subject}: {count_number}")
+                            # find the first row of unique_subject within self.response_df and get the index
+                            first_row_index = self.response_df[self.response_df["Subject"] == unique_subject].index[0]
+                            # for each column within the range of self.response_df -1 (minus the unscheduled column)
+                            for column in range(0, len(self.response_df.columns) - 1):
+                                # merger the rows starting from the index of the first row all the way to the row with index = first row index + count_number - 1
+                                worksheet7.merge_range(
+                                    first_row_index + 3,
+                                    column,
+                                    first_row_index + count_number + 2,
+                                    column,
+                                    self.response_df.iloc[first_row_index, column],
+                                    normal_data_format,
+                                )
 
                     # Autofit
                     worksheet7.autofit()
