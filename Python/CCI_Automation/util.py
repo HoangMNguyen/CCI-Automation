@@ -628,7 +628,7 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
     return merged_df
 
 
-def get_EXINF_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
+def get_data_from_dict_first(data: dict, input_dict: dict) -> pd.DataFrame:
     """
     Retrieves and processes data from a dictionary based on specified keys.
     Subject and Event Date columns are always included in the output DataFrame.
