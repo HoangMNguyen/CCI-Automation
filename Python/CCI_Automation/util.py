@@ -326,6 +326,8 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                     df["Subject"] = df["Subject"].str.replace("^100-", "", regex=True)
                     # only get data that is submitted status
                     df = df[df["Form Status"] == "Submitted"]
+                    # only get data that is not ILB status
+                    df = df[df["Form ILB Status"] == False]
                 data[file_name_noCSV.split("_")[-1]] = df
 
     return data
@@ -611,6 +613,46 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
             # if there are more than one row for the same subject, keep the one with the last 'Event Date'
             collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
                 subset=["Subject"], keep="last"
+            )
+            # check if value contains 'Date' in the column name, then convert to datetime
+            for col in collected_data.columns:
+                if "Date" in col:
+                    collected_data[col] = pd.to_datetime(collected_data[col], errors="coerce")
+            # drop 'Event Date' column
+            collected_data = collected_data.drop("Event Date", axis=1)
+            # merge dataframes
+            if keys_list.index(key) == 0:
+                merged_df = collected_data
+            else:
+                merged_df = pd.merge(merged_df, collected_data, on="Subject", how="left")
+    return merged_df
+
+
+def get_EXINF_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
+    """
+    Retrieves and processes data from a dictionary based on specified keys.
+    Subject and Event Date columns are always included in the output DataFrame.
+    For each subject, only the row with the earliest 'Event Date' is kept for infusion CRF for primary treatment (Day 0).
+
+    Args:
+        data (dict): A dictionary containing the data.
+        input_dict (dict): A dictionary specifying the keys to retrieve from `data`.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the collected and processed data.
+
+    """
+    # Convert dict_keys to a list to use index method
+    keys_list = list(input_dict.keys())
+
+    for key in input_dict.keys():
+        if key in data:
+            input_keys = ["Subject", "Event Date"] + list(input_dict[key].keys())
+            collected_data = data[key][input_keys].copy()
+            collected_data.rename(columns=input_dict[key], inplace=True)
+            # if there are more than one row for the same subject, keep the one with the last 'Event Date'
+            collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
+                subset=["Subject"], keep="first"
             )
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
