@@ -1,0 +1,567 @@
+#!/usr/bin/env python3
+import warnings
+import pandas as pd
+import xlsxwriter
+from util import get_study_name, read_data_dict_zip_corelisting, get_dose_level
+import numpy as np
+import datetime  # Import datetime module
+
+
+class AECoreListing:
+    warnings.filterwarnings("ignore")
+
+    def __init__(self, input_dir, output_dir, output_file_name):
+        if input_dir == None:
+            print("No dir selected!")
+            return
+        else:
+            self.study_name = get_study_name(input_dir)
+            self.input_dir = input_dir
+            self.output_dir = output_dir
+            self.output_file_name = output_file_name
+            self.data = read_data_dict_zip_corelisting(self.input_dir)
+            self.output_df = self.calculate_output_df(self.data)
+            self.output(self.output_df, self.output_dir, self.output_file_name)
+
+    def get_cohort_value_dict(self, study_name):
+        # initialize cohort_value_dict
+        cohort_value_dict = {}
+
+        if study_name == "16321":
+            cohort_value_dict = {
+                "Cohort -1": -1,
+                "Cohort 1": 1,
+                "Cohort 2": 2,
+                "Cohort 3": 3,
+                "Not Assigned": "Not Assigned",
+            }
+        elif study_name == "12423":
+            cohort_value_dict = {
+                "Cohort A: Non-Hodgkin Lymphoma": "A",
+                "Not Assigned": "Not Assigned",
+            }
+        return cohort_value_dict
+
+    def get_dose_level_assignment_value_dict(self, study_name):
+        # initialize dose_level_assignment_value_dict
+        dose_level_assignment_value_dict = {}
+        if study_name == "12423":
+            dose_level_assignment_value_dict = {
+                "Dose Level -1 (DL-1)": "DL-1",
+                "Dose Level 1 (DL1)": "DL1",
+                "Dose Level 2 (DL2)": "DL2",
+                "Dose Level 3 (DL3)": "DL3",
+                "Not Assigned": "Not Assigned",
+            }
+        return dose_level_assignment_value_dict
+
+    def get_dose_level_mapping(self, study_name):
+        if study_name == "12423":
+            dose_level_mapping = {
+                "DL-1": (2, 6),
+                "DL1": (7, 6),
+                "DL2": (2, 7),
+                "DL3": (6, 7),
+            }
+        return dose_level_mapping
+
+    def get_AE_header_list(self, study_name):
+        if study_name == "16321":
+            header = [
+                "Subject",
+                "AE or SAE? (ig_AE2.AESEV)",
+                "T-cell Attribution (ig_AE1.AEREL)",
+                "T-cell Expectedness (ig_AE1.AETRTINTP)",
+                "Specify Other Attribution (ig_AE1.AERELSPOTH)",
+                "Other Attribution (ig_AE1.AERELOTH)",
+                "Other Expectedness (ig_AE1.AETRTINTPOTH)",
+                "CTCAE Category (ig_AE1.AECAT)",
+                "Derived Toxicity (ig_AE1.AETOXDV)",
+                "Toxicity (ig_AE1.AETOX)",
+                "Grade (ig_AE1.AETOXGR)",
+                "Start Date (ig_AE1.AESTDAT)",
+                "Stop Date (ig_AE1.AEENDAT)",
+                "Event Onset (ig_AE1.AEONSET)",
+                "Additional Toxicity Details (ig_AE1.AETOXTERM)",
+                "Event Ongoing (ig_AE1.AEONGO)",
+            ]
+        elif study_name == "12423":
+            header = [
+                "Subject",
+                "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)",
+                "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)",
+                "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)",
+                "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)",
+                "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)",
+                "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)",
+                "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)",
+                "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)",
+                "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)",
+                "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)",
+                "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)",
+                "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
+                "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)",
+                "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)",
+            ]
+
+        return header
+
+    def get_DSCA_header_list(self, study_name):
+        if study_name == "16321":
+            header = [
+                "Subject",
+                "Cohort Assignment (ig_DSCA1.CACHASCOD)",
+            ]
+        elif study_name == "12423":
+            header = ["Subject", "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)"]
+
+        return header
+
+    def get_DSDLA_header_list(self, study_name):
+        if study_name == "12423":
+            header = ["Subject", "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)"]
+        return header
+
+    def get_EXINF_DLA_header_list(self, study_name):
+        if study_name == "12423":
+            header = [
+                "Subject",
+                "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TDOS)",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+            ]
+        return header
+
+    def get_EXINF_header_list(self, study_name):
+        if study_name == "16321":
+            header = [
+                "Subject",
+                "Study Treatment Date (ig_EXINF1.INFDAT)",
+                "Study Day (ig_EXINF1.CL_NS_NH_STUDYDAY_cl_NS_STUYDAY1)",
+            ]
+
+        elif study_name == "12423":
+            header = [
+                "Subject",
+                "Infusion Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
+                "Study Day (IG_NS_NA_EXINF1.CL_NS_NH_STUDYDAY_cl_NS_STUDYD1)",
+            ]
+
+        return header
+
+    def get_DSEOS_header_list(self, study_name):
+        if study_name == "12423":
+            header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
+        return header
+
+    def get_infusion_details(self, study_name):
+        if study_name == "16321":
+            return ["Day 0", "Day 0-R1", "Day 0-R2"]
+        elif study_name == "12423":
+            return ["Day 0", "Day 0-R"]
+
+    # Define a function to compute DLT Duration based on the rules
+    def compute_dlt_duration(self, row):
+        start_date = row["Start Date"]
+        stop_date = row["Stop Date"]
+        infusion_date = row["Infusion Date #1"]
+        d_plus_28 = row["D+28"]
+
+        # Rule 1: If start date before infusion = N/A
+        if pd.isna(start_date) or pd.isna(infusion_date) or start_date < infusion_date:
+            return "N/A"
+
+        # Rule 2: If start date after D+28 = N/A
+        if start_date > d_plus_28:
+            return "N/A"
+
+        # Rule 3: If no stop date, duration is [D+28 - Start Date] + 1
+        if pd.isna(stop_date):
+            return (d_plus_28 - start_date).days + 1
+
+        # Rule 4: If stop date exists
+        if stop_date < d_plus_28:
+            return (stop_date - start_date).days + 1
+        else:
+            return (d_plus_28 - start_date).days + 1
+
+    def calculate_output_df(self, data):
+        # Things to do:
+        output_df = pd.DataFrame()
+        # for each element in the header list, check if it is in the data["AE"] columns. If it is, then copy over the data to the output_df but without the part with parentheses
+        AE_header_list = self.get_AE_header_list(self.study_name)
+        for header in AE_header_list:
+            if header in data["AE"].columns:
+                # copy over the column
+                output_df[header] = data["AE"][header]
+        # remove rows that second column of AE_header_list is blank (for when every field is ILB instead of form)
+        output_df = output_df[output_df[AE_header_list[1]].notna()]
+        output_df.columns = output_df.columns.str.replace(r"\s*\([^)]*\)\s*$", "", regex=True)
+        # for the rest of the column within the data["AE"] columns, copy over to the output_df
+        for column in data["AE"].columns:
+            if column not in AE_header_list:
+                output_df[column] = data["AE"][column].copy()
+
+        # Calculating the "Duration" column based on "Start Date" and "Stop Date"
+        # Convert the "Start Date" and "Stop Date" columns to datetime
+        output_df["Start Date"] = pd.to_datetime(output_df["Start Date"], errors="coerce")
+        output_df["Stop Date"] = pd.to_datetime(output_df["Stop Date"], errors="coerce")
+        # Calculate the "Duration" column
+        output_df["Duration"] = (output_df["Stop Date"] - output_df["Start Date"]) + pd.Timedelta(days=1)
+        # Replace NaN values with an empty string
+        output_df["Duration"] = output_df["Duration"].dt.days
+        output_df["Duration"] = output_df["Duration"].replace(np.nan, "")
+
+        # Insert the "Duration" column after the "Stop Date" column
+        stop_date_index = output_df.columns.get_loc("Stop Date")  # Get the index of the "Stop Date" column
+        output_df.insert(stop_date_index + 1, "Duration", output_df.pop("Duration"))
+
+        CTCAEabbrev = ["COVID", "GGT ", "INR ", "CD4 ", "CPK ", " I ", " II ", " T ", " QT ", " NOS", "CAR ", "HLH"]
+        # if CTCAEabbrev is in the "Derived Toxicity" column (case insensitive), then replace it with the uppercase version
+        for abbrev in CTCAEabbrev:
+            output_df["Derived Toxicity"] = output_df["Derived Toxicity"].str.replace(
+                abbrev, abbrev.upper(), case=False
+            )
+
+        # get data from DSCA
+        DSCA_header_list = self.get_DSCA_header_list(self.study_name)
+        DSCA_df = data["DSCA"][DSCA_header_list]
+        # rename the second column of DSCA to "Cohort"
+        DSCA_df = DSCA_df.rename(columns={DSCA_df.columns[1]: "Cohort"})
+        # map the cohort values to the cohort names
+        cohort_value_dict = self.get_cohort_value_dict(self.study_name)
+        DSCA_df["Cohort"] = DSCA_df["Cohort"].map(cohort_value_dict)
+        # fill blank values with "pending"
+        DSCA_df["Cohort"] = DSCA_df["Cohort"].fillna("Pending")
+        output_df = output_df.merge(DSCA_df, on="Subject", how="left")
+
+        # inset the "Cohort" column after the "Subject" column
+        subject_index = output_df.columns.get_loc("Subject")
+        output_df.insert(subject_index + 1, "Cohort", output_df.pop("Cohort"))
+
+        if "DSDLA" in data.keys():
+            # get data from Dose Level Assignment
+            DSDLA_header_list = self.get_DSDLA_header_list(self.study_name)
+            DSDLA_df = data["DSDLA"][DSDLA_header_list]
+            # rename the second column of DSDLA to "Dose Level Assignment"
+            DSDLA_df = DSDLA_df.rename(columns={DSDLA_df.columns[1]: "Dose Level Assignment"})
+            # map the dose level assignment values to the dose level assignment names
+            dose_level_assignment_value_dict = self.get_dose_level_assignment_value_dict(self.study_name)
+            DSDLA_df["Dose Level Assignment"] = DSDLA_df["Dose Level Assignment"].map(dose_level_assignment_value_dict)
+            # fill blank values with "pending"
+            DSDLA_df["Dose Level Assignment"] = DSDLA_df["Dose Level Assignment"].fillna("Pending")
+            output_df = output_df.merge(DSDLA_df, on="Subject", how="left")
+            # inset the "Dose Level Assignment" column after the "Cohort" column
+            cohort_index = output_df.columns.get_loc("Cohort")
+            output_df.insert(cohort_index + 1, "Dose Level Assignment", output_df.pop("Dose Level Assignment"))
+
+            # get data from EXINF
+            EXINF_DLA_header_list = self.get_EXINF_DLA_header_list(self.study_name)
+            EXINF_DLA_df = data["EXINF"][EXINF_DLA_header_list]
+            # get the dose level mapping
+            dose_level_mapping = self.get_dose_level_mapping(self.study_name)
+            # calculate the dose level based on the dose and power using function get_dose_level, with first argument as dose (second column), second argument as power (third column), and third argument as dose_level_mapping
+            EXINF_DLA_df["Dose Level As Treated"] = EXINF_DLA_df.apply(
+                lambda row: get_dose_level(
+                    row[EXINF_DLA_header_list[1]], row[EXINF_DLA_header_list[2]], dose_level_mapping
+                ),
+                axis=1,
+            )
+            # remove the second and third columns
+            EXINF_DLA_df = EXINF_DLA_df.drop(columns=[EXINF_DLA_header_list[1], EXINF_DLA_header_list[2]])
+            # merge
+            output_df = output_df.merge(EXINF_DLA_df, on="Subject", how="left")
+            # insert the "Dose Level As Treated" column after the "Dose Level Assignment" column
+            dla_index = output_df.columns.get_loc(
+                "Dose Level Assignment"
+            )  # Get the index of the "Dose Level Assignment" column
+            output_df.insert(dla_index + 1, "Dose Level As Treated", output_df.pop("Dose Level As Treated"))
+
+        # Initialize an empty list to hold the dataframes
+        infusion_dfs = []
+        # Define the infusion details in a list
+        infusion_details = self.get_infusion_details(self.study_name)
+
+        # Loop through each infusion detail
+        for infusion_num, study_day in enumerate(infusion_details):
+            # Get the data from EXINF for columns listed in the header list
+            EXINF_header_list = self.get_EXINF_header_list(self.study_name)
+            infusion_df = data["EXINF"][EXINF_header_list]
+            # Rename the second column of EXINF to "Infusion Date"
+            infusion_df = infusion_df.rename(columns={infusion_df.columns[1]: f"Infusion Date #{infusion_num + 1}"})
+            # Rename the third column of EXINF to "Study Day"
+            infusion_df = infusion_df.rename(columns={infusion_df.columns[2]: "Study Day"})
+            # Filter to the specific infusion
+            infusion_df = infusion_df[infusion_df["Study Day"] == study_day]
+            # Remove the "Study Day" column
+            infusion_df = infusion_df.drop(columns=["Study Day"])
+            # Append the prepared dataframe to the list
+            infusion_dfs.append(infusion_df)
+
+        # Merge the 3 infusion dataframes together based on the "Subject" column
+        EXINF_df = infusion_dfs[0]
+        for df in infusion_dfs[1:]:
+            EXINF_df = EXINF_df.merge(df, on="Subject", how="left")
+
+        output_df = output_df.merge(EXINF_df, on="Subject", how="left")
+        # new empty column for in "Infusion Date"
+        output_df["Infusion Date"] = pd.NaT
+        output_df["Infusion Date"] = pd.to_datetime(output_df["Infusion Date"], errors="coerce")
+        # select the Infusion Date that is the last infusion prior to the Start Date
+        for i in range(1, len(infusion_details) + 1):
+            # convert 3 infusion dates to datetime
+            output_df[f"Infusion Date #{i}"] = pd.to_datetime(output_df[f"Infusion Date #{i}"], errors="coerce")
+            output_df["Infusion Date"] = output_df["Infusion Date"].mask(
+                (output_df["Start Date"] >= output_df[f"Infusion Date #{i}"])
+                & (output_df[f"Infusion Date #{i}"] != pd.NaT),
+                output_df[f"Infusion Date #{i}"],
+            )
+        # Insert the "Infusion Date" column after the "Duration" column
+        duration_index = output_df.columns.get_loc("Duration")  # Get the index of the "Stop Date" column
+        output_df.insert(duration_index + 1, "Infusion Date", output_df.pop("Infusion Date"))
+        # column "Onset Post Infusion" is the difference between "Start Date" and "Infusion Date"
+        output_df["Onset Post Infusion"] = (output_df["Start Date"] - output_df["Infusion Date"]).dt.days.fillna("N/A")
+        # inset the "Onset Post Infusion" column after the "Infusion Date" column
+        output_df.insert(duration_index + 2, "Onset Post Infusion", output_df.pop("Onset Post Infusion"))
+        # calculate D+28 based on the first infusion date
+        output_df["D+28"] = output_df["Infusion Date #1"] + pd.Timedelta(days=28)
+        # insert the "D+28" column after the "Infusion Date" column
+        output_df.insert(duration_index + 3, "D+28", output_df.pop("D+28"))
+        # TODO: calculate "DLT duration" based on the following rules:
+        # -if start date before infusion = N/A
+        # -if start date after D+28 = N/A
+        # -if no stop date, then duration of [D+28 - start date] + 1
+        # -if stop date, then:
+        #     -if stop date <D+28, then [stop date - start date] + 1
+        #     -else [D+28 - start date] + 1
+        # Apply the function to each row
+        output_df["DLT Duration"] = output_df.apply(self.compute_dlt_duration, axis=1)
+        # insert the "DLT Duration" column after the "D+28" column
+        d28_index = output_df.columns.get_loc("D+28")  # Get the index of the "D+28" column
+        output_df.insert(d28_index + 1, "DLT Duration", output_df.pop("DLT Duration"))
+
+        # convert the "Infusion Date" rows that have data not "N/A"
+        output_df["Infusion Date"] = output_df["Infusion Date"].fillna("N/A")
+        output_df["Stop Date"] = output_df["Stop Date"].fillna("N/A")
+        # output_df["Start Date"] = output_df["Start Date"].dt.date
+        output_df["D+28"] = output_df["D+28"].fillna("N/A")
+        # drop the "Infusion Date" columns
+        output_df = output_df.drop(columns=[f"Infusion Date #{i}" for i in range(1, len(infusion_details) + 1)])
+        # sort the columns based on Subject, Start Date
+        output_df = output_df.sort_values(by=["Subject", "Start Date"])
+        # print(output_df)
+
+        # TODO: Format with pending and N/A
+        # # get DSEOS data
+        # if "DSEOS" in data.keys():
+        #     DSEOS_header_list = self.get_DSEOS_header_list(self.study_name)
+        #     DSEOS_df = data["DSEOS"][DSEOS_header_list]
+        #     # rename the second column of DSEOS to "End of Study Date"
+        #     DSEOS_df = DSEOS_df.rename(columns={DSEOS_df.columns[1]: "End of Study Date"})
+        #     # merge
+        #     output_df = output_df.merge(DSEOS_df, on="Subject", how="left")
+
+        # fill Stop Date with "pending" if it is blank
+        output_df["Stop Date"] = output_df["Stop Date"].fillna("Pending")
+        # fill Duration with "pending" where Stop Date is blank
+        output_df["Duration"] = output_df["Duration"].mask(output_df["Stop Date"] == "Pending", "Pending")
+        # fill DLT Duration with "pending" if it is blank
+        output_df["DLT Duration"] = output_df["DLT Duration"].fillna("Pending")
+        if "DSCA" in data.keys():
+            # fill Cohort with "pending" if it is blank
+            output_df["Cohort"] = output_df["Cohort"].fillna("Pending")
+        if "DSDLA" in data.keys():
+            # fill Dose Level Assignment with "pending" if it is blank
+            output_df["Dose Level Assignment"] = output_df["Dose Level Assignment"].fillna("Pending")
+            # fill Dose Level As Treated with "pending" if it is blank
+            output_df["Dose Level As Treated"] = output_df["Dose Level As Treated"].fillna("Pending")
+
+        return output_df
+
+    def output(self, output_df, output_dir, output_file_name):
+        # Create an Excel writer object using xlsxwriter engine
+        with pd.ExcelWriter(
+            output_dir + "/" + output_file_name + ".xlsx",
+            engine="xlsxwriter",
+        ) as writer:
+            date_format = writer.book.add_format(
+                {
+                    "num_format": "mm/dd/yyyy",
+                    "align": "center",
+                    "valign": "vcenter",
+                    "border": 1,
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                }
+            )
+            blue_date_format = writer.book.add_format(
+                {
+                    "num_format": "mm/dd/yyyy",
+                    "align": "center",
+                    "valign": "vcenter",
+                    "border": 1,
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                    "font_color": "blue",
+                }
+            )
+            border_format = writer.book.add_format({"border": 1, "text_wrap": True, "align": "left"})
+            normal_data_format = writer.book.add_format(
+                {
+                    "bg_color": "#FFFFFF",
+                    "text_wrap": False,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": False,
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                    "border": 1,
+                }
+            )
+            blue_normal_data_format = writer.book.add_format(
+                {
+                    "bg_color": "#FFFFFF",
+                    "text_wrap": False,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": False,
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                    "border": 1,
+                    "font_color": "blue",
+                }
+            )
+            bold_12_format = writer.book.add_format(
+                {
+                    "bg_color": "#FFFFFF",
+                    "text_wrap": False,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": True,
+                    "font_name": "Calibri",
+                    "font_size": 12,
+                    "border": 1,
+                }
+            )
+            blue_bold_12_format = writer.book.add_format(
+                {
+                    "bg_color": "#FFFFFF",
+                    "text_wrap": True,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": True,
+                    "font_name": "Calibri",
+                    "font_size": 12,
+                    "border": 1,
+                    "font_color": "blue",
+                }
+            )
+
+            writer.book.add_worksheet("Reformated AE Report")
+            writer.book.add_worksheet("AE Corelisting")
+            if "DSDLA" in self.data.keys():
+                writer.book.add_worksheet("DSDLA Corelisting")
+            writer.book.add_worksheet("DSCA Corelisting")
+            writer.book.add_worksheet("EXINF Corelisting")
+
+            # Apply the format to each worksheet
+            for worksheet_name in writer.sheets:
+                ws = writer.sheets[worksheet_name]
+
+                # Determine the number of columns and rows for the current worksheet
+                if worksheet_name.startswith("Reformated AE Report"):
+                    df = self.output_df
+                elif worksheet_name == "AE Corelisting":
+                    df = self.data["AE"]
+                elif worksheet_name == "DSCA Corelisting":
+                    df = self.data["DSCA"]
+                elif worksheet_name == "EXINF Corelisting":
+                    df = self.data["EXINF"]
+                elif worksheet_name == "DSDLA Corelisting":
+                    df = self.data["DSDLA"]
+
+                # Replace NaN and Inf values with an empty string
+                df = df.replace([np.NAN, pd.NaT, float("inf"), float("-inf")], "")
+
+                num_cols = len(df.columns)
+                num_rows = len(df)
+
+                # Autofit column widths
+                for col_num, col in enumerate(df.columns):
+                    max_len = (
+                        max(
+                            df[col].astype(str).map(len).max(),
+                            len(str(col)),
+                        )
+                        + 2
+                    )  # Add some extra space for padding
+                    ws.set_column(col_num, col_num, max_len)  # Set the column width
+
+                # update column names of Infusion Date, Onset Post Infusion, D+28, DLT duration
+                updated_columns = {
+                    "Infusion Date": "Infusion Date \n(last infusion prior to the event start date)",
+                    "Onset Post Infusion": "Onset Post Infusion \n(related to last infusion)",
+                    "D+28": "D+28 \n(based on FIRST infusion)",
+                    "DLT Duration": "DLT Duration\n(if DLT, using FIRST infusion)",
+                }
+                df = df.rename(columns=updated_columns)
+
+                blue_columns = [
+                    "Cohort",
+                    "Duration",
+                    "Infusion Date \n(last infusion prior to the event start date)",
+                    "D+28 \n(based on FIRST infusion)",
+                    "DLT Duration\n(if DLT, using FIRST infusion)",
+                    "Onset Post Infusion \n(related to last infusion)",
+                    "Derived Toxicity",
+                ]
+                if "DSDLA" in self.data.keys():
+                    # add Dose Level Assignment to blue_columns
+                    blue_columns.append("Dose Level Assignment")
+                    blue_columns.append("Dose Level As Treated")
+
+                # Define date columns
+                date_columns = [
+                    "Start Date",
+                    "Stop Date",
+                    "Infusion Date \n(last infusion prior to the event start date)",
+                    "D+28 \n(based on FIRST infusion)",
+                ]  # Add other date columns if needed
+
+                # Apply format to each cell in the DataFrame range
+                for row in range(1, num_rows + 1):  # Start from row 1 to skip header
+                    for col in range(num_cols):
+                        cell_value = df.iloc[row - 1, col]
+                        col_name = df.columns[col]
+
+                        # Choose the appropriate cell format
+                        if col_name in blue_columns:
+                            cell_format = blue_normal_data_format
+                        else:
+                            cell_format = normal_data_format
+
+                        # Apply date format if the column is a date column
+                        if col_name in date_columns:
+                            if col_name in blue_columns:
+                                # add blue to the date format
+                                cell_format = blue_date_format
+                            else:
+                                cell_format = date_format
+
+                            if isinstance(cell_value, pd.Timestamp) and not pd.isnull(cell_value):
+                                ws.write_datetime(row, col, cell_value.to_pydatetime(), cell_format)
+                            elif isinstance(cell_value, datetime.datetime) and not pd.isnull(cell_value):
+                                ws.write_datetime(row, col, cell_value, cell_format)
+                            elif isinstance(cell_value, str):
+                                ws.write(row, col, cell_value, cell_format)
+                            else:
+                                ws.write_blank(row, col, None, cell_format)
+                        else:
+                            ws.write(row, col, cell_value, cell_format)
+
+                for col_num, value in enumerate(df.columns.values):
+                    if df.columns[col_num] in blue_columns:
+                        ws.write(0, col_num, value, blue_bold_12_format)
+                    else:
+                        ws.write(0, col_num, value, bold_12_format)  # Apply format to the header row
+
+                ws.autofit()
