@@ -101,6 +101,9 @@ class DSMB16321:
         }
 
         enrollment_df = get_data_from_dict(data, input_dict)
+        # Replace missing values in the "Cohort" column with "Pending"
+        enrollment_df["Cohort"] = enrollment_df["Cohort"].fillna("Pending")
+
         enrollment_df = age_calculation(
             enrollment_df,
             "Age at Consent",
@@ -114,7 +117,7 @@ class DSMB16321:
             enrollment_df["Disease"] == "Other",
             "Disease",
         ] = ""
-        enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + " " + enrollment_df["Disease"].fillna("")
+        enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + " " + enrollment_df["Disease2"].fillna("")
         enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
 
         # Convert the entire column to string to avoid data type issues
@@ -214,11 +217,10 @@ class DSMB16321:
             enrollment_output_df["Gender Identity"] == "Other",
             "Gender Identity",
         ] = enrollment_output_df["Other Gender"]
-        # If Race is "Other", replace the value with "Other Race"
-        enrollment_output_df.loc[
-            enrollment_output_df["Race"] == "Other",
-            "Race",
-        ] = enrollment_output_df["Other Race"]
+        # Use `.loc` to filter where Race is "Other" and update it with the value in "Other Race"
+        enrollment_output_df.loc[enrollment_output_df["Race"] == "Other", "Race"] = (
+            "Other- " + enrollment_output_df.loc[enrollment_output_df["Race"] == "Other", "Other Race"].astype(str)
+        )
         # *Re-order the columns and remove the columns that are not needed
         enrollment_output_df = enrollment_output_df[
             [
@@ -226,8 +228,8 @@ class DSMB16321:
                 "Cohort",
                 "Disease Type",
                 "Legal Sex",
-                "Sex Assigned at Birth",
                 "Gender Identity",
+                "Sex Assigned at Birth",
                 "Age at Consent",
                 "Race",
                 "Ethnicity",
@@ -305,6 +307,7 @@ class DSMB16321:
         EGFR_subject_df = Eligible_df["Subject"].copy()
         EGFR1_df = EGFR_subject_df
         EGFR1_df = add_rename_column_corelisting(EGFR1_df, data, "LBEGFR", "Event Group Label", "Event Group Label")
+
         EGFR1_df = EGFR1_df[(EGFR1_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")].copy()
 
         EGFR_collectionDT_df = data["LBEGFR"][
@@ -328,16 +331,107 @@ class DSMB16321:
         EGFR_collectionDT_df = EGFR_collectionDT_df.rename(columns=EGFR_new_col_name)
 
         # Filter the DataFrame based on the conditions
-        filtered_df = EGFR_collectionDT_df[
+        filtered_INIT_df = EGFR_collectionDT_df[
             (EGFR_collectionDT_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")
             & (EGFR_collectionDT_df["Was EGFR Amplification testing performed?"] == "Yes")
             & (EGFR_collectionDT_df["Collection Date"].notna())
         ].copy()
-        EGFR_collectionDT2_df = filtered_df
+        # Sort and get the last row for each subject, need test result from last collection date
+        filtered_INIT_df = filtered_INIT_df.sort_values(["Collection Date"])
+        # same collection date will have 2 rows with different labs
+        filtered_INIT_df = filtered_INIT_df.groupby("Subject").tail(2)
+        # filtered_INIT_df = filtered_INIT_df.groupby("Subject").head(2)
+        filtered_INIT_df = filtered_INIT_df.sort_values(["Subject"])
+
+        replacement_date = pd.Timestamp("1900-01-01")
+
+        # Replace missing dates with the specified value
+        filtered_INIT_df["Collection Date"] = filtered_INIT_df["Collection Date"].fillna(replacement_date)
+        # filtered_INIT_df["Collection Date"] = pd.to_datetime(filtered_INIT_df["Collection Date"])
+
+        # List of columns to concatenate
+        columns_to_concatenate_init = [
+            "Amplification of EGFR",
+            "EGFRvIII Mutation",
+            "EGFR Extracellular Domain Mutation",
+        ]
+
+        # Group by "Collection Date" and concatenate strings within each group, when some tests are performed twice by different labs, there will be duplicate results in one cell
+        # Perform the groupby operation and aggregation
+        agg_init_df = (
+            filtered_INIT_df.groupby(["Collection Date"])[columns_to_concatenate_init]
+            .apply(lambda group: group.fillna("").astype(str).agg(" ".join))
+            .reset_index()
+        )
+
+        # Rename the aggregated columns if needed
+        agg_init_df.columns = ["Collection Date"] + columns_to_concatenate_init
+
+        # # Replace missing dates with the specified value
+        agg_init_df["Collection Date"] = agg_init_df["Collection Date"].fillna(replacement_date)
+
+        # Merge aggregated data back to the original DataFrame
+        filtered_INIT_df = pd.merge(
+            filtered_INIT_df[["Subject", "Collection Date"]].drop_duplicates(),
+            agg_init_df,
+            on="Collection Date",
+            how="left",
+        )
+        # Corrected lambda function to replace duplcate values entered twice in different labs based on condition and handle missing values
+        filtered_INIT_df["Amplification of EGFR"] = filtered_INIT_df.apply(
+            lambda row: "Detected"
+            if row["Amplification of EGFR"] == "Detected Detected"
+            else "Not Detected"
+            if row["Amplification of EGFR"] == "Not Detected Not Detected"
+            else "Indeterminant"
+            if row["Amplification of EGFR"] == "Indeterminant Indeterminant"
+            else row["Amplification of EGFR"],
+            axis=1,
+        )
+
+        # print(filtered_INIT_df)
+        # Some EGFR data were entered into unscheduled disease assessment event, need to be combined with the EGFR data from Initial Study Enrollment/Apheresis
+        filtered_UNS_df = EGFR_collectionDT_df[
+            (EGFR_collectionDT_df["Event Group Label"] == "Unscheduled Disease Assessments")
+            & (EGFR_collectionDT_df["Was EGFR Amplification testing performed?"] == "Yes")
+            & (EGFR_collectionDT_df["Collection Date"].notna())
+        ].copy()
+        EGFR_collectionDT2_df = pd.merge(
+            filtered_INIT_df, filtered_UNS_df, on=["Subject", "Collection Date"], how="outer", suffixes=("", "_UNS")
+        )
+
+        # Convert the entire column to string to avoid data type issues
+        EGFR_collectionDT2_df["Amplification of EGFR"] = (
+            EGFR_collectionDT2_df["Amplification of EGFR"].fillna("").astype(str)
+        )
+        EGFR_collectionDT2_df["EGFRvIII Mutation"] = EGFR_collectionDT2_df["EGFRvIII Mutation"].fillna("").astype(str)
+        EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"] = (
+            EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"].fillna("").astype(str)
+        )
+        # if "Amplification of EGFR" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
+        mask = EGFR_collectionDT2_df["Amplification of EGFR"] == ""
+        EGFR_collectionDT2_df.loc[mask, "Amplification of EGFR"] = EGFR_collectionDT2_df.loc[
+            mask, "Amplification of EGFR_UNS"
+        ]
+
+        # if "EGFRvIII Mutation" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
+        mask = EGFR_collectionDT2_df["EGFRvIII Mutation"] == ""
+        EGFR_collectionDT2_df.loc[mask, "EGFRvIII Mutation"] = EGFR_collectionDT2_df.loc[mask, "EGFRvIII Mutation_UNS"]
+
+        # if "EGFR Extracellular Domain Mutation" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
+        mask = EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"] == ""
+        EGFR_collectionDT2_df.loc[mask, "EGFR Extracellular Domain Mutation"] = EGFR_collectionDT2_df.loc[
+            mask, "EGFR Extracellular Domain Mutation_UNS"
+        ]
+
+        # print(EGFR_collectionDT2_df)
+
         EGFR_collectionDT2_df = EGFR_collectionDT2_df.drop(
             columns=[
                 "Event Group Label",
                 "Was EGFR Amplification testing performed?",
+                # "Event Group Label_UNS",
+                # "Was EGFR Amplification testing performed?_UNS",
             ]
         )
         EGFR2_df = pd.merge(
@@ -345,15 +439,15 @@ class DSMB16321:
             EGFR_collectionDT2_df,
             on=["Subject"],
             how="left",
-        ).drop_duplicates()
+        )
 
-        # Sort and get the last row for each subject
+        # Sort and get the first row of unscheudled test which is the same collection date as "Initial Study Enrollment/Apheresis" for each subject
         EGFR2_df = EGFR2_df.sort_values(["Collection Date"])
-        EGFR_df = EGFR2_df.groupby("Subject").tail(2)  # same collection date will have 2 rows with different labs
+        EGFR_df = EGFR2_df.groupby("Subject").head(1)
         EGFR_df = EGFR_df.sort_values(["Subject"])
         # print(EGFR_df)
 
-        replacement_date = pd.Timestamp("1900-01-01")
+        #  replacement_date = pd.Timestamp("1900-01-01")
 
         # Replace missing dates with the specified value
         EGFR_df["Collection Date"] = EGFR_df["Collection Date"].fillna(replacement_date)
@@ -372,7 +466,6 @@ class DSMB16321:
             EGFR_df.groupby(["Collection Date"])[columns_to_concatenate]
             .apply(lambda group: group.fillna("").astype(str).agg(" ".join))
             .reset_index()
-            .drop_duplicates()
         )
 
         # Rename the aggregated columns if needed
@@ -402,7 +495,7 @@ class DSMB16321:
             MHDIAG_df,
             on=["Subject"],
             how="left",
-        ).drop_duplicates()
+        )
         # Merge EGFR data with MHDIAG data, keep eligible subjects even EGFR was not tested
         EGFR_final2_df = pd.merge(EGFR_final_df, MHDIAG_df, on="Subject", how="right")
         EGFR_final2_df["Collection Date"] = EGFR_final2_df["Collection Date"].fillna(replacement_date)
@@ -415,8 +508,6 @@ class DSMB16321:
         EGFR_output_df = EGFR_output_df[
             [
                 "Subject",
-                #   "Collection Date",
-                #  "Laboratory Name",
                 "Amplification of EGFR",
                 "EGFRvIII Mutation",
                 "EGFR Extracellular Domain Mutation",
@@ -2667,7 +2758,11 @@ class DSMB16321:
                                     self.response_df.iloc[first_row_index, column],
                                     normal_data_format,
                                 )
-
+                    worksheet7.merge_range(
+                        "A1:S1",
+                        "Disease Response for Treated Subjects \nN=" + str(self.subject_prim_count),
+                        bold_12_format,
+                    )
                     # Autofit
                     worksheet7.autofit()
 
@@ -2722,6 +2817,25 @@ class DSMB16321:
                                 self.responseR_df.iloc[i, j],
                                 normal_data_format,
                             )
+                    for unique_subjectR in unique_subjectR_list:
+                        count_numberR = self.responseR_df["Subject"].value_counts().get(unique_subjectR, 0)
+                        if count_numberR > 1:
+                            # print(f"{unique_subject}: {count_number}")
+                            # find the first row of unique_subject within self.response_df and get the index
+                            first_row_index = self.responseR_df[self.responseR_df["Subject"] == unique_subjectR].index[
+                                0
+                            ]
+                            # for each column within the range of self.response_df -1 (minus the unscheduled column)
+                            for column in range(0, len(self.responseR_df.columns) - 1):
+                                # merger the rows starting from the index of the first row all the way to the row with index = first row index + count_number - 1
+                                worksheet8.merge_range(
+                                    first_row_index + 3,
+                                    column,
+                                    first_row_index + count_numberR + 2,
+                                    column,
+                                    self.responseR_df.iloc[first_row_index, column],
+                                    normal_data_format,
+                                )
 
                     # Autofit
                     worksheet8.autofit()
