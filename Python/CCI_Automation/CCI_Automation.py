@@ -69,10 +69,7 @@ class Widget(QWidget):
         """Open a file dialog when the user clicks the button.
         Options: DSMB Report, Enrollment Log, Clockify Dashboard
         """
-        if (
-            self.selected_option == "DSMB Report"
-            or self.selected_option == "Enrollment Log"
-        ):
+        if self.selected_option == "DSMB Report" or self.selected_option == "Enrollment Log":
             # point to the default download directory
             default_dir = os.path.join(os.path.expanduser("~"), "Downloads")
             file_path, _ = QFileDialog.getOpenFileName(
@@ -112,9 +109,7 @@ class Widget(QWidget):
                 self.input_file_path = file_path
 
             # update the changed line edit to the new file name
-            self.ui.lineEdit.setText(
-                os.path.basename(file_path).split(".")[0] + "_formatted"
-            )
+            self.ui.lineEdit.setText(os.path.basename(file_path).split(".")[0] + "_formatted")
             # make it editable
             self.ui.lineEdit.setEnabled(True)
 
@@ -130,9 +125,7 @@ class Widget(QWidget):
     def clicker_output_folder(self):
         # self.ui.label.setText("You Clicked")
         default_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        output_folder_name = QFileDialog.getExistingDirectory(
-            self, "Select Output Folder", default_dir
-        )
+        output_folder_name = QFileDialog.getExistingDirectory(self, "Select Output Folder", default_dir)
         # output filename to screen
         if output_folder_name:
             self.ui.label_3.setText(output_folder_name)
@@ -145,22 +138,13 @@ class Widget(QWidget):
         # Clear comboBox_2 and update based on the selected option
         self.ui.comboBox_2.clear()
         if self.selected_option == "Enrollment Log":
-            self.ui.comboBox_2.addItems(
-                ["03821", "11823", "12423", "15122", "15420", "16321"]
-            )
+            self.ui.comboBox_2.addItems(["03821", "11823", "12423", "15122", "15420", "16321"])
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "DSMB Report":
             self.ui.comboBox_2.addItems(["15420", "12423", "15122", "03821"])
             self.ui.comboBox_2.setVisible(True)
-        elif (
-            self.selected_option == "Clockify Dashboard"
-            or self.selected_option == "Add templated tasks"
-        ):
-            self.ui.comboBox_2.addItems(
-                clockify_get_list_projects(
-                    clockify_get_api_key(), clockify_get_workplace_id()
-                )
-            )
+        elif self.selected_option == "Clockify Dashboard" or self.selected_option == "Add templated tasks":
+            self.ui.comboBox_2.addItems(clockify_get_list_projects(clockify_get_api_key(), clockify_get_workplace_id()))
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "Format .csv to .xlsx for lab range issue":
             # Hide comboBox_2
@@ -170,10 +154,7 @@ class Widget(QWidget):
         if self.selected_option == "Enrollment Log":
             self.ui.checkBox.setVisible(True)
             self.ui.lineEdit.setText(
-                datetime.now().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + " Enrollment Log"
+                datetime.now().strftime("%y%m%d") + "-" + self.selected_option2 + " Enrollment Log"
             )
             self.ui.lineEdit.setEnabled(True)
             self.ui.lineEdit.show()
@@ -181,12 +162,7 @@ class Widget(QWidget):
             self.ui.pushButton_2.setEnabled(True)
         elif self.selected_option == "DSMB Report":
             self.ui.checkBox.setVisible(True)
-            self.ui.lineEdit.setText(
-                datetime.now().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + " DSMB Report"
-            )
+            self.ui.lineEdit.setText(datetime.now().strftime("%y%m%d") + "-" + self.selected_option2 + " DSMB Report")
             self.ui.lineEdit.setEnabled(True)
             self.ui.pushButton.setEnabled(True)
             self.ui.pushButton_2.setEnabled(True)
@@ -194,10 +170,7 @@ class Widget(QWidget):
             self.ui.checkBox.setVisible(False)
             self.ui.dateEdit.setVisible(False)
             self.ui.lineEdit.setText(
-                date.today().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + "-Clockify Dashboard"
+                date.today().strftime("%y%m%d") + "-" + self.selected_option2 + "-Clockify Dashboard"
             )
             self.ui.lineEdit.setEnabled(False)
             self.ui.pushButton.setEnabled(True)
@@ -222,28 +195,15 @@ class Widget(QWidget):
         # Get the selected item text
         self.selected_option2 = self.ui.comboBox_2.currentText()
         if self.selected_option == "Enrollment Log":
-            self.ui.lineEdit.setText(
-                date.today().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + " Enrollment Log"
-            )
+            self.ui.lineEdit.setText(date.today().strftime("%y%m%d") + "-" + self.selected_option2 + " Enrollment Log")
         elif self.selected_option == "Clockify Dashboard":
             self.ui.lineEdit.setText(
-                date.today().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + "-Clockify Dashboard"
+                date.today().strftime("%y%m%d") + "-" + self.selected_option2 + "-Clockify Dashboard"
             )
         elif self.selected_option == "Add templated tasks":
             self.ui.lineEdit.setText("")
         elif self.selected_option == "DSMB Report":
-            self.ui.lineEdit.setText(
-                datetime.now().strftime("%y%m%d")
-                + "-"
-                + self.selected_option2
-                + " DSMB Report"
-            )
+            self.ui.lineEdit.setText(datetime.now().strftime("%y%m%d") + "-" + self.selected_option2 + " DSMB Report")
             self.ui.lineEdit.setEnabled(True)
 
     def on_lineEdit_changed(self, text=None):
@@ -292,11 +252,7 @@ class Widget(QWidget):
             from DSMB.DSMB import DSMB
 
             # option for enrollment log
-            if (
-                not self.selected_option2
-                or not self.input_file_path
-                or not self.output_folder_name
-            ):
+            if not self.selected_option2 or not self.input_file_path or not self.output_folder_name:
                 QMessageBox.warning(
                     self,
                     "Warning",
@@ -360,26 +316,21 @@ class Widget(QWidget):
                 )
             else:
                 try:
+                    from Clockify.Clockify import clockify_create_tasks
+
                     clockify_create_tasks(
                         clockify_get_api_key(),
                         clockify_get_workplace_id(),
                         self.selected_option2,
                     )
-                    self.ui.label_5.setText(
-                        "Confirmed: template task has been added to "
-                        + self.selected_option2
-                    )
+                    self.ui.label_5.setText("Confirmed: template task has been added to " + self.selected_option2)
                 except Exception as e:
                     self.ui.label_5.setText("Error encountered.")
                     QMessageBox.warning(self, "Error", str(e) + traceback.format_exc())
         elif self.selected_option == "Format .csv to .xlsx for lab range issue":
             from Format.change_type import change_type
 
-            if (
-                not self.input_file_path
-                or not self.output_folder_name
-                or not self.output_file_name
-            ):
+            if not self.input_file_path or not self.output_folder_name or not self.output_file_name:
                 QMessageBox.warning(
                     self,
                     "Warning",
@@ -393,9 +344,7 @@ class Widget(QWidget):
                         self.output_file_name,
                     )
                     self.ui.label_5.setText(
-                        "Confirmed: File has been formatted and saved as "
-                        + self.output_file_name
-                        + ".xlsx"
+                        "Confirmed: File has been formatted and saved as " + self.output_file_name + ".xlsx"
                     )
                 except Exception as e:
                     self.ui.label_5.setText("Error encountered.")
