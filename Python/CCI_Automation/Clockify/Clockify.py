@@ -2,10 +2,31 @@
 from datetime import date
 import pandas as pd
 import numpy as np
-
+import requests
 import os
-
+import sys
 from util import *
+from Clockify.tasks import task_list
+from Clockify.tags import tags_list  # Import tags_list from tags.py
+from Clockify.roles import roles_list  # Import roles_list from roles.py
+
+
+def clockify_create_tasks(api_key, workspace_id, project_name):
+    """
+    Create tasks in Clockify for a given project using the shared task list.
+    """
+    # task_list is now imported from tasks.py
+    # Get the project ID
+    project_id = clockify_get_project_id(api_key, workspace_id, project_name)
+
+    headers = {"Content-Type": "application/json", "X-Api-Key": api_key}
+    url = f"https://api.clockify.me/api/v1/workspaces/{workspace_id}/projects/{project_id}/tasks"
+
+    # Create tasks in Clockify using the shared task list
+    for task_name in task_list:
+        data = {"name": task_name}
+        response = requests.post(url, headers=headers, json=data)
+        print(response.json())
 
 
 class ClockifyDashboard:
@@ -23,7 +44,7 @@ class ClockifyDashboard:
             self.raw_data = clockify_get_detailed_report(
                 clockify_get_api_key(), clockify_get_workplace_id(), project_name
             )
-        self.read_input_list()
+        self.define_input_lists()
         self.sorted_tasks = clockify_sort_tasks(self.tasks, self.template_tasks)
         sorted_tasks_new_col_name = {"Task ID": "Task"}
         self.sorted_tasks = self.sorted_tasks.rename(columns=sorted_tasks_new_col_name)
@@ -35,11 +56,13 @@ class ClockifyDashboard:
         # Read data to self.data using read_csv for raw data
         self.raw_data = pd.read_csv(self.input_file_path)
 
-    def read_input_list(self):
-        # Read data to self.data using read_csv for raw data
-        self.template_tasks = pd.read_csv(os.path.join(self.current_dir, "Clockify", "Tasks.csv"))
-        self.tags = pd.read_csv(os.path.join(self.current_dir, "Clockify", "Tags.csv"))
-        self.roles = pd.read_csv(os.path.join(self.current_dir, "Clockify", "Roles.csv"))
+    def define_input_lists(self):
+        """
+        Define tasks, tags, and roles using the imported lists.
+        """
+        self.template_tasks = pd.DataFrame({"Task": task_list})
+        self.tags = pd.DataFrame({"Tags": tags_list})
+        self.roles = pd.DataFrame({"Roles": roles_list})
 
     def collect_data(self):
         ### Filter data
@@ -132,6 +155,8 @@ class ClockifyDashboard:
         ### DF5 validation tab
         self.df5 = self.filter_data.copy()
         self.df5 = self.df5[self.df5["Tags"].isna() | (self.df5["Tags"] == "")]
+        df5_new_col_name = {"Task": "Tasks with no tags selected."}
+        self.df5 = self.df5.rename(columns=df5_new_col_name)
         # print(self.df5)
 
         ### DF6 validation tab
