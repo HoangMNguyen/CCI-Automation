@@ -89,696 +89,715 @@ def DSMB15122(
             lambda x: relativedelta(x["Consent Date"], x["Date of Birth"]).years, axis=1
         )
         sorted_DM_df = DM_df.sort_values(["Subject"])
-    # DSCA, assuming only one cohort assignment form will be entered.
-    if not data["DSCA"].empty:
-        DSCA_df = data["DSCA"][
-            [
-                "Subject",
-                "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)",
-            ]
-        ].copy()
-        DSCA_new_col_name = {"Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)": "Cohort Assignment"}
-        DSCA_df = DSCA_df.rename(columns=DSCA_new_col_name)
-        enrollment_df = pd.merge(sorted_DM_df, DSCA_df, on="Subject", how="left")
-        index_reference = enrollment_df.columns.get_loc("Legal Sex")
-        enrollment_df.insert(index_reference, "Cohort Assignment", enrollment_df.pop("Cohort Assignment"))
-
-    # when 2 dose level assignment forms are entered, use the latest data
-    if not data["DSDLA"].empty:
-        DSDLA_df = data["DSDLA"][
-            [
-                "Subject",
-                "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)",
-                "Form Sequence Number",
-            ]
-        ].copy()
-        DSDLA_new_col_name = {
-            "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)": "Dose Level Assignment"
-        }
-        DSDLA_df = DSDLA_df.rename(columns=DSDLA_new_col_name)
-        DSDLA_df = DSDLA_df.sort_values(["Form Sequence Number"])
-        DSDLA_df = DSDLA_df.drop_duplicates(subset=["Subject"], keep="last")
-        enrollment_df = pd.merge(enrollment_df, DSDLA_df, on="Subject", how="left")
-        index_reference = enrollment_df.columns.get_loc("Legal Sex")
-        enrollment_df.insert(
-            index_reference,
-            "Dose Level Assignment",
-            enrollment_df.pop("Dose Level Assignment"),
-        )
-
-    if not data["MHDIAG"].empty:
-        MHDIAG_df = data["MHDIAG"][
-            [
-                "Subject",
-                "Primary Diagnosis (IG_NS_NA_MHDIAG1.CL_NS_YH_PRMDIAG_cl_NS_PRMDIAG)",
-                "Specify Other Diagnosis (IG_NS_NA_MHDIAG1.TX_NS_NH_PRMDIAGOTH)",
-                "Event Date",
-            ]
-        ].copy()
-        MHDIAG_new_col_name = {
-            "Primary Diagnosis (IG_NS_NA_MHDIAG1.CL_NS_YH_PRMDIAG_cl_NS_PRMDIAG)": "Disease",
-            "Specify Other Diagnosis (IG_NS_NA_MHDIAG1.TX_NS_NH_PRMDIAGOTH)": "Disease other",
-            "Event Date": "Event Date DIAG",
-        }
-        MHDIAG_df = MHDIAG_df.rename(columns=MHDIAG_new_col_name)
-        # when there are two diagnosis entered, use the latest
-        MHDIAG_df["Event Date DIAG"] = pd.to_datetime(MHDIAG_df["Event Date DIAG"])
-        MHDIAG_df = MHDIAG_df.sort_values(["Event Date DIAG"])
-        MHDIAG_df = MHDIAG_df.drop_duplicates(subset=["Subject"], keep="last")
-        MHDIAG_df = MHDIAG_df.drop(columns=["Event Date DIAG"])
-        MHDIAG_df = MHDIAG_df.drop_duplicates()
-        MHDIAG_df["Disease Type"] = None
-        # Replace ""Primary Diagnosis" with "Specify Other Diagnosis" when "Other" is selected
-        MHDIAG_df.loc[
-            MHDIAG_df["Disease"] == "Other",
-            "Disease",
-        ] = ""
-
-        MHDIAG_df["Disease"] = MHDIAG_df[MHDIAG_df["Disease"].notna()]["Disease"].astype(str)
-        MHDIAG_df["Disease other"] = MHDIAG_df[MHDIAG_df["Disease other"].notna()]["Disease other"].astype(str)
-
-        enrollment_df = pd.merge(enrollment_df, MHDIAG_df, on="Subject", how="left")
-        index_reference = enrollment_df.columns.get_loc("Legal Sex")
-        enrollment_df.insert(
-            index_reference,
-            "Disease Type",
-            enrollment_df.pop("Disease Type"),
-        )
-
-        # combine disease and disease other into disease type
-        enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + enrollment_df["Disease other"].fillna("")
-        enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
-        enrollment_df = enrollment_df.drop(
-            columns=[
-                "Disease",
-                "Disease other",
-            ]
-        )
-
-    # Subject meets all study eligibility? Only get data eligibility data from IE when IE is entered, otherwise check DSEOS
-    if not data["IE"].empty:
-        IE_df = data["IE"][
-            [
-                "Subject",
-                "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)",
-                "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)",
-                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)",
-                "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)",
-                "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)",
-                "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)",
-            ]
-        ].copy()
-        IE_new_col_name = {
-            "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?IE",
-            "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF4",
-            "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "SF1",
-            "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)": "SF2",
-            "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)": "SF3",
-            "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)": "Main Consent Date",
-        }
-        IE_df = IE_df.rename(columns=IE_new_col_name)
-        # Combine "Reason for Screen FailureIE" from 4 different fields: screen failure reason, other screen failure reason, primary inclusion criteria excluding the subject, and primary excluding criteria excluding the subject
-        IE_df["Reason for Screen FailureIE"] = None
-        IE_df.loc[
-            IE_df["SF1"] == "Other",
-            "SF1",
-        ] = ""
-        IE_df["SF2"] = IE_df[IE_df["SF2"].notna()]["SF2"].astype(str)
-        IE_df["SF3"] = IE_df[IE_df["SF3"].notna()]["SF3"].astype(str)
-        IE_df["SF4"] = IE_df[IE_df["SF4"].notna()]["SF4"].astype(str)
-
-        IE_df.insert(
-            index_reference,
-            "Reason for Screen FailureIE",
-            IE_df.pop("Reason for Screen FailureIE"),
-        )
-        IE_df["Reason for Screen FailureIE"] = (
-            IE_df["SF1"].fillna("") + IE_df["SF2"].fillna("") + IE_df["SF3"].fillna("") + IE_df["SF4"].fillna("")
-        )
-
-        IE_df["Reason for Screen FailureIE"].fillna(IE_df["Reason for Screen FailureIE"], inplace=True)
-        IE_df = IE_df.drop(columns=["SF1", "SF2", "SF3", "SF4"])
-
-        # for two IEs, use the latest IE
-        IE_df["Main Consent Date"] = pd.to_datetime(IE_df["Main Consent Date"])
-        IE_df = IE_df.sort_values(["Main Consent Date", "Subject"])
-        IE_df = IE_df.drop_duplicates(subset=["Subject"], keep="last")
-        IE_df = IE_df.drop_duplicates()
-
-        enrollment_df = pd.merge(enrollment_df, IE_df, on="Subject", how="left")
-
-        # for rows that 'Pre-Screening Consent Date' isnull but 'Main Consent Date' is not null, then use 'Main Consent Date' instead to calculate age
-        enrollment_df.loc[
-            (enrollment_df["Consent Date"].isnull() & enrollment_df["Main Consent Date"].notnull()),
-            "Age at Consent",
-        ] = enrollment_df.loc[
-            (enrollment_df["Consent Date"].isnull() & enrollment_df["Main Consent Date"].notnull())
-        ].apply(
-            lambda x: relativedelta(x["Main Consent Date"], x["Date of Birth"]).years,
-            axis=1,
-        )
-
-        # get study treatment administered data from EXINF for subjects did not end of study before infusion
-    #    if not data["EXINF"].empty:
-    EXINF_df = data["EXINF"][
-        [
-            "Subject",
-            "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)",
-        ]
-    ].copy()
-    EXINF_new_col_name = {
-        "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)": "Study Treatment AdministeredINF"
-    }
-    EXINF_df = EXINF_df.rename(columns=EXINF_new_col_name)
-    enrollment_df = pd.merge(enrollment_df, EXINF_df, on="Subject", how="left")
-
-    if not data["DSEOS"].empty:
-        DSEOS_df = data["DSEOS"][
-            [
-                "Subject",
-                "Did the Subject receive the investigational product? (IG_NS_NA_DSEOS1.CL_NS_NH_EOSRIP_cl_YS_YN1)",
-                "Did the Subject sign the main consent form? (IG_NS_NA_DSEOS1.CL_NS_NH_MCNSNT_cl_YS_YN1)",
-                "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)",
-                "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)",
-                "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)",
-                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)",
-            ]
-        ].copy()
-        DSEOS_new_col_name = {
-            "Did the Subject receive the investigational product? (IG_NS_NA_DSEOS1.CL_NS_NH_EOSRIP_cl_YS_YN1)": "Study Treatment AdministeredEOS",
-            "Did the Subject sign the main consent form? (IG_NS_NA_DSEOS1.CL_NS_NH_MCNSNT_cl_YS_YN1)": "Subject meets all study eligibility?EOS",  # if subject did not sign main consent form, implies subject screen failured before IE is entered
-            "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Reason for Screen FailureEOS",
-            "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
-            "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)": "Last Study Visit",
-            "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)": "Off-Study Reason",
-        }
-        DSEOS_df = DSEOS_df.rename(columns=DSEOS_new_col_name)
-        DSEOS_df["Study Treatment AdministeredEOS"] = DSEOS_df[DSEOS_df["Study Treatment AdministeredEOS"].notna()][
-            "Study Treatment AdministeredEOS"
-        ].astype(str)
-        # for two DSEOSs, use the latest DSEOS
-        DSEOS_df["End of Study Date"] = pd.to_datetime(DSEOS_df["End of Study Date"])
-        DSEOS_df = DSEOS_df.sort_values(["End of Study Date", "Subject"])
-        DSEOS_df = DSEOS_df.drop_duplicates(subset=["Subject"], keep="last")
-        DSEOS_df = DSEOS_df.drop_duplicates()
-
-        enrollment_df = pd.merge(enrollment_df, DSEOS_df, on="Subject", how="left")
-
-    # when subject sign main consent is not "No" in DSEOS or subject is eligible in IE, set the following 2 data from DSEOS to ""
-    enrollment_df.loc[
-        (enrollment_df["Subject meets all study eligibility?EOS"] != "No")
-        | (enrollment_df["Subject meets all study eligibility?IE"] == "Yes"),
-        "Subject meets all study eligibility?EOS",
-    ] = ""
-    enrollment_df.loc[
-        (enrollment_df["Subject meets all study eligibility?EOS"] != "No")
-        | (enrollment_df["Subject meets all study eligibility?IE"] == "Yes"),
-        "Reason for Screen FailureEOS",
-    ] = ""
-    # If infusion CRF is entered, set the "Study Treatment AdministeredEOS" to blank
-    enrollment_df.loc[
-        enrollment_df["Study Treatment AdministeredINF"] == "Yes",
-        "Study Treatment AdministeredEOS",
-    ] = ""
-
-    # combine the data from IE and DSEOS
-    enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
-        "Subject meets all study eligibility?IE"
-    ].fillna("") + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
-    enrollment_df["Subject meets all study eligibility?"].fillna(
-        enrollment_df["Subject meets all study eligibility?"], inplace=True
-    )
-    enrollment_df = enrollment_df.drop(
-        columns=[
-            "Subject meets all study eligibility?IE",
-            "Subject meets all study eligibility?EOS",
-        ]
-    )
-    enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen FailureIE"].fillna(
-        ""
-    ) + enrollment_df["Reason for Screen FailureEOS"].fillna("")
-    enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["Reason for Screen Failure"], inplace=True)
-    enrollment_df = enrollment_df.drop(
-        columns=[
-            "Reason for Screen FailureIE",
-            "Reason for Screen FailureEOS",
-        ]
-    )
-    # Combine the Infusion and EOS data for "Study Treatment Administered"
-    enrollment_df["Study Treatment Administered"] = enrollment_df["Study Treatment AdministeredINF"].fillna(
-        ""
-    ) + enrollment_df["Study Treatment AdministeredEOS"].fillna("")
-    enrollment_df["Study Treatment Administered"].fillna(enrollment_df["Study Treatment Administered"], inplace=True)
-    enrollment_df = enrollment_df.drop(
-        columns=[
-            "Study Treatment AdministeredINF",
-            "Study Treatment AdministeredEOS",
-        ]
-    )
-
-    # When EOS is not entered and "Study Treatment Administered" is not Yes, set "Study Treatment Administered" to pending
-    enrollment_df.loc[
-        (enrollment_df["Study Treatment Administered"].fillna("").astype(str).str.strip() != "Yes")
-        & (enrollment_df["End of Study Date"].isnull()),
-        "Study Treatment Administered",
-    ] = "Pending"
-    # when subject EOS after screening visit, and study tx admin is blank, set it to No
-    enrollment_df.loc[
-        (enrollment_df["Study Treatment Administered"] == "")
-        & (enrollment_df["Last Study Visit"] != "Pre-Screening")
-        & (enrollment_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
-        & (~enrollment_df["End of Study Date"].isnull()),
-        "Study Treatment Administered",
-    ] = "No"
-    enrollment_df = enrollment_df.drop(
-        columns=[
-            "Last Study Visit",
-            #   "End of Study Date",
-        ]
-    )
-    enrollment_df = enrollment_df.replace([np.nan, np.inf, -np.inf], "")
-    enrollment_df = enrollment_df.fillna("")
-    #     ### TODO: DSMB-Demographics Statistics
-    #     # !Update this filter options to each cohort
-    filter_options = [
-        enrollment_df["Consent Date"].notna() | enrollment_df["Main Consent Date"].notna(),
-        enrollment_df["Cohort Assignment"] == "Cohort 1",
-    ]
-    status_list = []
-    LegalSex_list = []
-    Age_at_Consent_list = []
-    Race_list = []
-    Ethnicity_list = []
-
-    for filter_index, filter_option in enumerate(filter_options):
-        # Apply the filter to the dataframe
-        filtered_df = enrollment_df[filter_option].copy()
-        filtered_df = filtered_df[(filtered_df["Consent Date"].notna()) | (filtered_df["Main Consent Date"].notna())]
-
-        # Calculate the stats
-        ## Total Consented
-        TT_df = filtered_df.copy()
-        TT = filtered_df["Subject"].count()
-        ## Screen Failed, convert to str and strip the space
-        SF_df = filtered_df[
-            filtered_df["Subject meets all study eligibility?"].fillna("").astype(str).str.strip() == "No"
-        ].copy()
-        SF = SF_df["Subject"].count()
-
-        # Eligible, convert to str and strip the space
-        EL_df = filtered_df[
-            filtered_df["Subject meets all study eligibility?"].fillna("").astype(str).str.strip() == "Yes"
-        ].copy()
-        EL = EL_df["Subject"].count()
-        # Study Treatment Administered, convert to str and strip the space
-        INF_df = filtered_df[
-            filtered_df["Study Treatment Administered"].fillna("").astype(str).str.strip() == "Yes"
-        ].copy()
-        INF = INF_df["Subject"].count()
-
-        # Define a dictionary containing the status of each variable
-        status_list.append(
-            {
-                "Total Consented": TT,
-                "Screen Failed": SF,
-                "Eligible": EL,
-                "Study Treatment Administered": INF,
+        # DSCA, assuming only one cohort assignment form will be entered.
+        if not data["DSCA"].empty:
+            DSCA_df = data["DSCA"][
+                [
+                    "Subject",
+                    "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)",
+                ]
+            ].copy()
+            DSCA_new_col_name = {
+                "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)": "Cohort Assignment"
             }
-        )
+            DSCA_df = DSCA_df.rename(columns=DSCA_new_col_name)
+            enrollment_df = pd.merge(sorted_DM_df, DSCA_df, on="Subject", how="left")
+            index_reference = enrollment_df.columns.get_loc("Legal Sex")
+            enrollment_df.insert(index_reference, "Cohort Assignment", enrollment_df.pop("Cohort Assignment"))
 
-        # Calculate the stats for the filtered dataframe
-        LegalSex_list.append(get_stats_percentage("Legal Sex", TT_df, SF_df, EL_df, INF_df))
-        Age_at_Consent_list.append(get_stats_df("Age at Consent", TT_df, SF_df, EL_df, INF_df))
-        Race_list.append(get_stats_percentage("Race", TT_df, SF_df, EL_df, INF_df))
-        Ethnicity_list.append(get_stats_percentage("Ethnicity", TT_df, SF_df, EL_df, INF_df))
+        # when 2 dose level assignment forms are entered, use the latest data
+        if not data["DSDLA"].empty:
+            DSDLA_df = data["DSDLA"][
+                [
+                    "Subject",
+                    "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)",
+                    "Form Sequence Number",
+                ]
+            ].copy()
+            DSDLA_new_col_name = {
+                "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)": "Dose Level Assignment"
+            }
+            DSDLA_df = DSDLA_df.rename(columns=DSDLA_new_col_name)
+            DSDLA_df = DSDLA_df.sort_values(["Form Sequence Number"])
+            DSDLA_df = DSDLA_df.drop_duplicates(subset=["Subject"], keep="last")
+            enrollment_df = pd.merge(enrollment_df, DSDLA_df, on="Subject", how="left")
+            index_reference = enrollment_df.columns.get_loc("Legal Sex")
+            enrollment_df.insert(
+                index_reference,
+                "Dose Level Assignment",
+                enrollment_df.pop("Dose Level Assignment"),
+            )
 
-    # *: remove after calculating the stats
-    enrollment_df = enrollment_df.drop(
-        columns=[
-            "Consent Date",
-            "Date of Birth",
-            #   "Main Consent Date",
-            "Form Sequence Number",
-            "Race",
-        ]
-    )
-    update_race_column = {"Race1": "Race"}
-    enrollment_df = enrollment_df.rename(columns=update_race_column)
+        if not data["MHDIAG"].empty:
+            MHDIAG_df = data["MHDIAG"][
+                [
+                    "Subject",
+                    "Primary Diagnosis (IG_NS_NA_MHDIAG1.CL_NS_YH_PRMDIAG_cl_NS_PRMDIAG)",
+                    "Specify Other Diagnosis (IG_NS_NA_MHDIAG1.TX_NS_NH_PRMDIAGOTH)",
+                    "Event Date",
+                ]
+            ].copy()
+            MHDIAG_new_col_name = {
+                "Primary Diagnosis (IG_NS_NA_MHDIAG1.CL_NS_YH_PRMDIAG_cl_NS_PRMDIAG)": "Disease",
+                "Specify Other Diagnosis (IG_NS_NA_MHDIAG1.TX_NS_NH_PRMDIAGOTH)": "Disease other",
+                "Event Date": "Event Date DIAG",
+            }
+            MHDIAG_df = MHDIAG_df.rename(columns=MHDIAG_new_col_name)
+            # when there are two diagnosis entered, use the latest
+            MHDIAG_df["Event Date DIAG"] = pd.to_datetime(MHDIAG_df["Event Date DIAG"])
+            MHDIAG_df = MHDIAG_df.sort_values(["Event Date DIAG"])
+            MHDIAG_df = MHDIAG_df.drop_duplicates(subset=["Subject"], keep="last")
+            MHDIAG_df = MHDIAG_df.drop(columns=["Event Date DIAG"])
+            MHDIAG_df = MHDIAG_df.drop_duplicates()
+            MHDIAG_df["Disease Type"] = None
+            # Replace ""Primary Diagnosis" with "Specify Other Diagnosis" when "Other" is selected
+            MHDIAG_df.loc[
+                MHDIAG_df["Disease"] == "Other",
+                "Disease",
+            ] = ""
 
-    ### TODO: DSMB-Study Tx & AE Listing
-    # adding Target Cell Dose dictionary
-    # !: Update this dictionary when new dose level and their dose are added
-    TCD_dict = {
-        "Dose Level -1 (DL-1)": 3000000,
-        "Dose Level 1 (DL1)": 30000000,
-        #  "Dose Level 2 (DL2)": 20000000,
-        #  "Dose Level 3 (DL3)": 60000000,
-        "Not Assigned": "Not Assigned",
-    }
+            MHDIAG_df["Disease"] = MHDIAG_df[MHDIAG_df["Disease"].notna()]["Disease"].astype(str)
+            MHDIAG_df["Disease other"] = MHDIAG_df[MHDIAG_df["Disease other"].notna()]["Disease other"].astype(str)
 
-    # TODO: Study Tx & AE Listing Day 0
-    # Subject: get subject from enrollment_df instead of data["DM"] because enrollment_df already removed duplicate DM if more than 1 DM is entered.
-    infusion_df = enrollment_df["Subject"].copy()
-    infusion_df = add_rename_column_corelisting(infusion_df, data, "EXINF", "Event Label", "Event Label")
-    infusion_df = infusion_df[infusion_df["Event Label"] == "Day 0"]
-    # Cohort Assignment, use DSCA_df above
-    infusion_df = pd.merge(infusion_df, DSCA_df, on="Subject", how="left")
+            enrollment_df = pd.merge(enrollment_df, MHDIAG_df, on="Subject", how="left")
+            index_reference = enrollment_df.columns.get_loc("Legal Sex")
+            enrollment_df.insert(
+                index_reference,
+                "Disease Type",
+                enrollment_df.pop("Disease Type"),
+            )
 
-    # Dose Level, use the DSDLA_df from above that dropped duplicate and using the latest data
-    DSDLA_df = DSDLA_df.drop(
-        columns=[
-            "Form Sequence Number",
-        ]
-    )
-    infusion_df = pd.merge(infusion_df, DSDLA_df, on="Subject", how="left")
+            # combine disease and disease other into disease type
+            enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + enrollment_df["Disease other"].fillna(
+                ""
+            )
+            enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Disease",
+                    "Disease other",
+                ]
+            )
 
-    # Fill NaN with
-    # Infusion Date
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "Date Study Treatment Administered (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
-        "Date Study Treatment Administered",
-        "Subject",
-        "Event Label",
-    )
-    # convert the date to datetime object and format it to MM-DD-YYYY
-    infusion_df["Date Study Treatment Administered"] = infusion_df["Date Study Treatment Administered"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
-    )
+        # Subject meets all study eligibility? Only get data eligibility data from IE when IE is entered, otherwise check DSEOS
+        if not data["IE"].empty:
+            IE_df = data["IE"][
+                [
+                    "Subject",
+                    "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)",
+                    "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)",
+                    "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)",
+                    "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)",
+                    "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)",
+                    "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)",
+                ]
+            ].copy()
+            IE_new_col_name = {
+                "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?IE",
+                "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF4",
+                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "SF1",
+                "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)": "SF2",
+                "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)": "SF3",
+                "Main Consent Date (IG_NS_NA_IE1.DT_NS_NH_MAINCDAT)": "Main Consent Date",
+            }
+            IE_df = IE_df.rename(columns=IE_new_col_name)
+            # Combine "Reason for Screen FailureIE" from 4 different fields: screen failure reason, other screen failure reason, primary inclusion criteria excluding the subject, and primary excluding criteria excluding the subject
+            IE_df["Reason for Screen FailureIE"] = None
+            IE_df.loc[
+                IE_df["SF1"] == "Other",
+                "SF1",
+            ] = ""
+            IE_df["SF2"] = IE_df[IE_df["SF2"].notna()]["SF2"].astype(str)
+            IE_df["SF3"] = IE_df[IE_df["SF3"].notna()]["SF3"].astype(str)
+            IE_df["SF4"] = IE_df[IE_df["SF4"].notna()]["SF4"].astype(str)
 
-    # adding Target Cell Dose using TCD_dict
-    infusion_df["Target Cell Dose"] = infusion_df["Dose Level Assignment"].map(TCD_dict)
+            IE_df.insert(
+                index_reference,
+                "Reason for Screen FailureIE",
+                IE_df.pop("Reason for Screen FailureIE"),
+            )
+            IE_df["Reason for Screen FailureIE"] = (
+                IE_df["SF1"].fillna("") + IE_df["SF2"].fillna("") + IE_df["SF3"].fillna("") + IE_df["SF4"].fillna("")
+            )
 
-    # Total huCart19-IL18 Cell Dose
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TDOS)",
-        "Total huCART-meso Administered",
-        "Subject",
-        "Event Label",
-    )
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
-        "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
-        "Subject",
-        "Event Label",
-    )
-    # combine Total huCART-meso CAR T Cell Dose Administered and x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1) columns, compare the new value with 'Target Cell Dose', and convert the Total huCART-meso CAR T Cell Dose Administered column to string
-    infusion_df["Total huCART-meso Administered"] = infusion_df["Total huCART-meso Administered"].multiply(
-        10 ** infusion_df["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)"]
-    )
-    infusion_df = infusion_df.drop(columns=["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)"])
+            IE_df["Reason for Screen FailureIE"].fillna(IE_df["Reason for Screen FailureIE"], inplace=True)
+            IE_df = IE_df.drop(columns=["SF1", "SF2", "SF3", "SF4"])
 
-    # Total Cell Dose Administered column
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "Total Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TOTDOS)",
-        "Total Cell Dose Administered",
-        "Subject",
-        "Event Label",
-    )
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)",
-        "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)",
-        "Subject",
-        "Event Label",
-    )
-    infusion_df["Total Cell Dose Administered"] = infusion_df["Total Cell Dose Administered"].multiply(
-        10 ** infusion_df["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)"]
-    )
-    infusion_df = infusion_df.drop(columns=["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)"])
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "Total Volume Administered (mL) (IG_NS_NA_EXINF1.NM_NS_NH_TOTVOL)",
-        "Total Volume Administered",
-        "Subject",
-        "Event Label",
-    )
-    # Adding Met Target Dose column based on the condition of Total Cell Dose Administered and Total huCART-meso CAR T Cell Dose Administered if 'Target Cell Dose' is integer
-    infusion_df["Met Target Dose"] = infusion_df.apply(
-        lambda row: "Y"
-        if isinstance(row["Target Cell Dose"], int) and row["Total huCART-meso Administered"] >= row["Target Cell Dose"]
-        else "",
-        axis=1,
-    )
-    infusion_df["Met Target Dose"] = infusion_df.apply(
-        lambda row: "N"
-        if isinstance(row["Target Cell Dose"], int) and row["Total huCART-meso Administered"] < row["Target Cell Dose"]
-        else row["Met Target Dose"],
-        axis=1,
-    )
+            # for two IEs, use the latest IE
+            IE_df["Main Consent Date"] = pd.to_datetime(IE_df["Main Consent Date"])
+            IE_df = IE_df.sort_values(["Main Consent Date", "Subject"])
+            IE_df = IE_df.drop_duplicates(subset=["Subject"], keep="last")
+            IE_df = IE_df.drop_duplicates()
 
-    # %scFv Flow
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "Transduction Efficiency (%) (IG_NS_NA_EXINF1.NM_NS_NH_TRANSEFFP)",
-        "%scFv Flow",
-        "Subject",
-        "Event Label",
-    )
+            enrollment_df = pd.merge(enrollment_df, IE_df, on="Subject", how="left")
 
-    # adding Met Target %scFv
-    infusion_df = add_rename_column_corelisting(
-        infusion_df,
-        data,
-        "EXINF",
-        "Transduction Efficiency (%) (IG_NS_NA_EXINF1.NM_NS_NH_TRANSEFFP)",
-        "Met Target %scFv",
-        "Subject",
-        "Event Label",
-    )
-    # fillter out the rows that have NaN in Met Target %scFv
-    infusion_df["Met Target %scFv"] = infusion_df[infusion_df["Met Target %scFv"].notna()]["Met Target %scFv"].apply(
-        lambda x: "Y" if x >= 2 else "N"
-    )
-    # fill NaN with empty string
-    pd.set_option("future.no_silent_downcasting", True)
-    infusion_df = infusion_df.fillna("").infer_objects(copy=False)
+            # for rows that 'Pre-Screening Consent Date' isnull but 'Main Consent Date' is not null, then use 'Main Consent Date' instead to calculate age
+            enrollment_df.loc[
+                (enrollment_df["Consent Date"].isnull() & enrollment_df["Main Consent Date"].notnull()),
+                "Age at Consent",
+            ] = enrollment_df.loc[
+                (enrollment_df["Consent Date"].isnull() & enrollment_df["Main Consent Date"].notnull())
+            ].apply(
+                lambda x: relativedelta(x["Main Consent Date"], x["Date of Birth"]).years,
+                axis=1,
+            )
 
-    # Only keep the rows that have Event Group Label
-    infusion_df = infusion_df[infusion_df["Event Label"] != ""]
+            # get study treatment administered data from EXINF for subjects did not end of study before infusion
+        #    if not data["EXINF"].empty:
+        EXINF_df = data["EXINF"][
+            [
+                "Subject",
+                "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)",
+            ]
+        ].copy()
+        EXINF_new_col_name = {
+            "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)": "Study Treatment AdministeredINF"
+        }
+        EXINF_df = EXINF_df.rename(columns=EXINF_new_col_name)
+        enrollment_df = pd.merge(enrollment_df, EXINF_df, on="Subject", how="left")
 
-    # AE and SAE data
-    #    if not data["AE"].empty:
-    AE_df = data["AE"][
-        [
-            "Subject",
-            "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)",
-            "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
-        ]
-    ].copy()
-    AE_new_col_name = {
-        "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)": "AE or SAE?",
-        "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)": "Event Onset",
-    }
-    AE_df = AE_df.rename(columns=AE_new_col_name)
-    #  Only assign Y to AE/SAE for event onset is after study tx
-    # filtered_AE_df = AE_df[
-    #     AE_df["Event Onset"] == "After huCART-meso cell Administration"
-    # ]
+        if not data["DSEOS"].empty:
+            DSEOS_df = data["DSEOS"][
+                [
+                    "Subject",
+                    "Did the Subject receive the investigational product? (IG_NS_NA_DSEOS1.CL_NS_NH_EOSRIP_cl_YS_YN1)",
+                    "Did the Subject sign the main consent form? (IG_NS_NA_DSEOS1.CL_NS_NH_MCNSNT_cl_YS_YN1)",
+                    "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)",
+                    "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)",
+                    "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)",
+                    "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)",
+                ]
+            ].copy()
+            DSEOS_new_col_name = {
+                "Did the Subject receive the investigational product? (IG_NS_NA_DSEOS1.CL_NS_NH_EOSRIP_cl_YS_YN1)": "Study Treatment AdministeredEOS",
+                "Did the Subject sign the main consent form? (IG_NS_NA_DSEOS1.CL_NS_NH_MCNSNT_cl_YS_YN1)": "Subject meets all study eligibility?EOS",  # if subject did not sign main consent form, implies subject screen failured before IE is entered
+                "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Reason for Screen FailureEOS",
+                "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
+                "Last Study Visit Completed in Primary Treatment (IG_NS_NA_DSEOS1.CL_NS_YH_EOSLSVPR_cl_NS_EOSTP1)": "Last Study Visit",
+                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_NH_EOSCOD1_cl_NS_EOSREAS1)": "Off-Study Reason",
+            }
+            DSEOS_df = DSEOS_df.rename(columns=DSEOS_new_col_name)
+            DSEOS_df["Study Treatment AdministeredEOS"] = DSEOS_df[DSEOS_df["Study Treatment AdministeredEOS"].notna()][
+                "Study Treatment AdministeredEOS"
+            ].astype(str)
+            # for two DSEOSs, use the latest DSEOS
+            DSEOS_df["End of Study Date"] = pd.to_datetime(DSEOS_df["End of Study Date"])
+            DSEOS_df = DSEOS_df.sort_values(["End of Study Date", "Subject"])
+            DSEOS_df = DSEOS_df.drop_duplicates(subset=["Subject"], keep="last")
+            DSEOS_df = DSEOS_df.drop_duplicates()
 
-    # # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
-    # infusion_df = infusion_df.replace([np.nan, np.inf, -np.inf], "")
-    status_df = EL_df[["Subject", "Cohort Assignment"]]
-    # Check filtered_AE_df if the subject of status_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
-    status_df["AE"] = status_df["Subject"].apply(lambda x: "Y" if x in AE_df["Subject"].values else "N")
-    # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
-    status_df["SAE"] = status_df["Subject"].apply(
-        lambda x: "Y" if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values else "N"
-    )
-    # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
-    status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
+            enrollment_df = pd.merge(enrollment_df, DSEOS_df, on="Subject", how="left")
 
-    # Event Label Update dictionary for cohort 1
-    event_1_dict = {
-        "Primary Treatment and Follow Up": "Primary Follow-up",
-        "Pre-Treatment Safety Visit": "Pre-Treatment",
-        #   "Long-Term Follow-up (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
-        "LTFU (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
-        "LTFU (Loss of Persistence)": "LTFU (Loss of Persistence)",
-    }
+            # when subject sign main consent is not "No" in DSEOS or subject is eligible in IE, set the following 2 data from DSEOS to ""
+            enrollment_df.loc[
+                (enrollment_df["Subject meets all study eligibility?EOS"] != "No")
+                | (enrollment_df["Subject meets all study eligibility?IE"] == "Yes"),
+                "Subject meets all study eligibility?EOS",
+            ] = ""
+            enrollment_df.loc[
+                (enrollment_df["Subject meets all study eligibility?EOS"] != "No")
+                | (enrollment_df["Subject meets all study eligibility?IE"] == "Yes"),
+                "Reason for Screen FailureEOS",
+            ] = ""
+            # If infusion CRF is entered, set the "Study Treatment AdministeredEOS" to blank
+            enrollment_df.loc[
+                enrollment_df["Study Treatment AdministeredINF"] == "Yes",
+                "Study Treatment AdministeredEOS",
+            ] = ""
 
-    # Add the pattern match as a separate key
-    def map_event(event):
-        if event in event_1_dict:
-            return event_1_dict[event]
-        elif "Loss of Persistence" in event:
-            return "LTFU (Loss of Persistence)"
-        elif "Ongoing Persistence" in event:
-            return "LTFU (Ongoing Persistence)"
-        else:
-            return event
+            # combine the data from IE and DSEOS
+            enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
+                "Subject meets all study eligibility?IE"
+            ].fillna("") + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
+            enrollment_df["Subject meets all study eligibility?"].fillna(
+                enrollment_df["Subject meets all study eligibility?"], inplace=True
+            )
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Subject meets all study eligibility?IE",
+                    "Subject meets all study eligibility?EOS",
+                ]
+            )
+            enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen FailureIE"].fillna(
+                ""
+            ) + enrollment_df["Reason for Screen FailureEOS"].fillna("")
+            enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["Reason for Screen Failure"], inplace=True)
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Reason for Screen FailureIE",
+                    "Reason for Screen FailureEOS",
+                ]
+            )
+            # Combine the Infusion and EOS data for "Study Treatment Administered"
+            enrollment_df["Study Treatment Administered"] = enrollment_df["Study Treatment AdministeredINF"].fillna(
+                ""
+            ) + enrollment_df["Study Treatment AdministeredEOS"].fillna("")
+            enrollment_df["Study Treatment Administered"].fillna(
+                enrollment_df["Study Treatment Administered"], inplace=True
+            )
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Study Treatment AdministeredINF",
+                    "Study Treatment AdministeredEOS",
+                ]
+            )
 
-    # Getting Study Status dataframe from SV, column Subject, Event Label and Event Date
-    status_SV_df = data["DSSV"][["Subject", "Event Group Label", "Event Date"]]
-    # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
-    status_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
-    #   print(status_DSSVLTFU_df)
-    status_DSSVLTFU_df["Event Group Label"] = status_DSSVLTFU_df["Event Label"].apply(map_event)
-    #   print(status_DSSVLTFU_df["Event Group Label"])
-    # Combine DSSVLTFU with SV dataframe vertically
-    status_SV_df = pd.concat([status_SV_df, status_DSSVLTFU_df])
-    # Sort the dataframe by Subject and Event Date
-    status_SV_df = status_SV_df.sort_values(by=["Subject", "Event Date"])
-    # For each unique subject, get the last row of the dataframe
-    status_SV_df = status_SV_df.groupby("Subject").tail(1)
-    #   print(status_SV_df["Event Group Label"])
-    # Merge left with the current response dataframe
-    status_df = pd.merge(
-        status_df,
-        status_SV_df[["Subject", "Event Group Label"]],
-        on="Subject",
-        how="left",
-    )
-    #  print(status_df)
-    # Rename the column Event Label to Event Label (Study Status)
-    status_df["Event Group Label"] = status_df["Event Group Label"].map(event_1_dict)
+            # When EOS is not entered and "Study Treatment Administered" is not Yes, set "Study Treatment Administered" to pending
+            enrollment_df.loc[
+                (enrollment_df["Study Treatment Administered"].fillna("").astype(str).str.strip() != "Yes")
+                & (enrollment_df["End of Study Date"].isnull()),
+                "Study Treatment Administered",
+            ] = "Pending"
+            # when subject EOS after screening visit, and study tx admin is blank, set it to No
+            enrollment_df.loc[
+                (enrollment_df["Study Treatment Administered"] == "")
+                & (enrollment_df["Last Study Visit"] != "Pre-Screening")
+                & (enrollment_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
+                & (~enrollment_df["End of Study Date"].isnull()),
+                "Study Treatment Administered",
+            ] = "No"
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Last Study Visit",
+                    #   "End of Study Date",
+                ]
+            )
+        enrollment_df = enrollment_df.replace([np.nan, np.inf, -np.inf], "")
+        enrollment_df = enrollment_df.fillna("")
+        #     ### TODO: DSMB-Demographics Statistics
+        #     # !Update this filter options to each cohort
+        if not (data["IE"].empty | data["DM"].empty):
+            filter_options = [
+                enrollment_df["Consent Date"].notna() | enrollment_df["Main Consent Date"].notna(),
+                enrollment_df["Cohort Assignment"] == "Cohort 1",
+            ]
+            status_list = []
+            LegalSex_list = []
+            Age_at_Consent_list = []
+            Race_list = []
+            Ethnicity_list = []
 
-    status_df["Event Group Label3"] = status_df["Subject"].apply(
-        lambda x: "Pre-Treatment"
-        if (
-            enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
-            .fillna("")
-            .str.strip()
-            .values[0]
-            == "Pending"
-        )
-        else ""
-    )
-    status_df["Event Group Label4"] = status_df["Subject"].apply(
-        lambda x: "Withdrawn Prior to Study Treatment"
-        if (
-            enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
-            .fillna("")
-            .str.strip()
-            .values[0]
-            == "No"
-        )
-        & (
-            enrollment_df[enrollment_df["Subject"] == x]["Subject meets all study eligibility?"]
-            .fillna("")
-            .str.strip()
-            .values[0]
-            == "Yes"
-        )
-        else ""
-    )
-    # Merge all event group label into study status
-    status_df["Event Group Label"] = (
-        status_df["Event Group Label"].fillna("")
-        + status_df["Event Group Label3"].fillna("")
-        + status_df["Event Group Label4"].fillna("")
-    )
-    status_df["Event Group Label"].fillna(status_df["Event Group Label"], inplace=True)
-    status_df = status_df.drop(
-        columns=[
-            "Event Group Label3",
-            "Event Group Label4",
-        ]
-    )
-    # filter the data frame to only include subjects whose end of study date is later than or equal to main consent date
-    filteredemrollment_df = enrollment_df[enrollment_df["End of Study Date"] >= enrollment_df["Main Consent Date"]]
-    filteredDSEOS_df = DSEOS_df[
-        (DSEOS_df["Last Study Visit"] != "Pre-Screening")
-        #  & (DSEOS_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
-        & (DSEOS_df["Subject"].isin(filteredemrollment_df["Subject"].values))
-    ].copy()
+            for filter_index, filter_option in enumerate(filter_options):
+                # Apply the filter to the dataframe
+                filtered_df = enrollment_df[filter_option].copy()
+                filtered_df = filtered_df[
+                    (filtered_df["Consent Date"].notna()) | (filtered_df["Main Consent Date"].notna())
+                ]
 
-    status_df["Event Group Label"] = status_df.apply(
-        lambda row: "Off Study"
-        if (row["Subject"] in filteredDSEOS_df["Subject"].values)
-        & (row["Event Group Label"] != "Withdrawn Prior to Study Treatment")
-        else "On Study/" + row["Event Group Label"],
-        axis=1,
-    )
-    status_df = status_df.replace("On Study/Withdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment")
-    status_df = pd.merge(
-        status_df,
-        filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
-        on="Subject",
-        how="left",
-    )
-    # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
-    status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
+                # Calculate the stats
+                ## Total Consented
+                TT_df = filtered_df.copy()
+                TT = filtered_df["Subject"].count()
+                ## Screen Failed, convert to str and strip the space
+                SF_df = filtered_df[
+                    filtered_df["Subject meets all study eligibility?"].fillna("").astype(str).str.strip() == "No"
+                ].copy()
+                SF = SF_df["Subject"].count()
 
-    # TODO: DSMB-Study Tx & AE STATISTICS
-    infusion_count = []
-    # * Cohort 1
-    # Create a new dataframe for Total huCAR T Cell Dose Administered table with infusion_df
-    infusionA_df = infusion_df[infusion_df["Cohort Assignment"] == "Cohort 1"]
-    infusion_statA1 = get_stats_df("Total huCART-meso Administered", infusionA_df)
-    # Create a new dataframe for Total Cell Dose Administered table with infusion_df
-    infusion_statA2 = get_stats_df("Total Cell Dose Administered", infusionA_df)
-    # Count the number of subjects that met the target dose
-    met_target_count = infusionA_df[infusionA_df["Met Target Dose"] == "Y"].count()["Subject"]
-    # Count the number of subjects
-    total_subject_count = infusionA_df["Subject"].nunique()
-    infusion_statA2["Met Target Dose"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Create a new dataframe for %scFv Flow table with infusion_df
-    infusion_statA3 = get_stats_perc_df("%scFv Flow", infusionA_df)
-    # Count the number of subjects that met the target %scFv
-    met_target_count = infusionA_df[infusionA_df["Met Target %scFv"] == "Y"].count()["Subject"]
-    infusion_statA3["Met Target %scFv"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Combine the three dataframes
-    infusion_statA = pd.concat([infusion_statA1, infusion_statA2, infusion_statA3], axis=1)
-    infusion_statA = infusion_statA.replace([np.inf, -np.inf], "")
-    infusion_statA = infusion_statA.fillna("")
-    infusion_count.append(total_subject_count)
+                # Eligible, convert to str and strip the space
+                EL_df = filtered_df[
+                    filtered_df["Subject meets all study eligibility?"].fillna("").astype(str).str.strip() == "Yes"
+                ].copy()
+                EL = EL_df["Subject"].count()
+                # Study Treatment Administered, convert to str and strip the space
+                INF_df = filtered_df[
+                    filtered_df["Study Treatment Administered"].fillna("").astype(str).str.strip() == "Yes"
+                ].copy()
+                INF = INF_df["Subject"].count()
 
-    ## TODO: FORMATTING THE DATAFRAME
-    # TODO: Day 0
-    # Convert the columns to scientific notation if the value is not NaN
+                # Define a dictionary containing the status of each variable
+                status_list.append(
+                    {
+                        "Total Consented": TT,
+                        "Screen Failed": SF,
+                        "Eligible": EL,
+                        "Study Treatment Administered": INF,
+                    }
+                )
 
-    infusion_df["Target Cell Dose"] = infusion_df["Target Cell Dose"].apply(
-        lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
-    )
-    infusion_df["Total huCART-meso Administered"] = infusion_df["Total huCART-meso Administered"].apply(
-        lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
-    )
-    infusion_df["Total Cell Dose Administered"] = infusion_df["Total Cell Dose Administered"].apply(
-        lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
-    )
-    # adding '%' sign to %scFv Flow
-    infusion_df["%scFv Flow"] = infusion_df.apply(
-        lambda row: str(x) + "%" if pd.notna(x := row["%scFv Flow"]) else x, axis=1
-    )
-    infusion_df = infusion_df.drop(columns=["Target Cell Dose"])
+                # Calculate the stats for the filtered dataframe
+                LegalSex_list.append(get_stats_percentage("Legal Sex", TT_df, SF_df, EL_df, INF_df))
+                Age_at_Consent_list.append(get_stats_df("Age at Consent", TT_df, SF_df, EL_df, INF_df))
+                Race_list.append(get_stats_percentage("Race", TT_df, SF_df, EL_df, INF_df))
+                Ethnicity_list.append(get_stats_percentage("Ethnicity", TT_df, SF_df, EL_df, INF_df))
 
-    # TODO: SAFETY STATS
+            # *: remove after calculating the stats
+            enrollment_df = enrollment_df.drop(
+                columns=[
+                    "Consent Date",
+                    "Date of Birth",
+                    #   "Main Consent Date",
+                    "Form Sequence Number",
+                    "Race",
+                ]
+            )
+            update_race_column = {"Race1": "Race"}
+            enrollment_df = enrollment_df.rename(columns=update_race_column)
 
-    # Gather all stats of each cohort (currently only has cohort 1)
-    total_infused_df = infusion_df.copy()
-    total_infused_df = total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort 1"]
+            ### TODO: DSMB-Study Tx & AE Listing
+            # adding Target Cell Dose dictionary
+            # !: Update this dictionary when new dose level and their dose are added
+            TCD_dict = {
+                "Dose Level -1 (DL-1)": 3000000,
+                "Dose Level 1 (DL1)": 30000000,
+                #  "Dose Level 2 (DL2)": 20000000,
+                #  "Dose Level 3 (DL3)": 60000000,
+                "Not Assigned": "Not Assigned",
+            }
 
-    # Gather all stats of each cohort (currently only has cohort 1)
-    total_status_df = status_df.copy()
-    total_status_df = total_status_df[total_status_df["Cohort Assignment"] == "Cohort 1"]
+            # TODO: Study Tx & AE Listing Day 0
+            # Subject: get subject from enrollment_df instead of data["DM"] because enrollment_df already removed duplicate DM if more than 1 DM is entered.
+            infusion_df = enrollment_df["Subject"].copy()
+            infusion_df = add_rename_column_corelisting(infusion_df, data, "EXINF", "Event Label", "Event Label")
+            infusion_df = infusion_df[infusion_df["Event Label"] == "Day 0"]
+            # Cohort Assignment, use DSCA_df above
+            infusion_df = pd.merge(infusion_df, DSCA_df, on="Subject", how="left")
 
-    # # Total number of subjects
-    # AE_total_count = get_stats_percentage("AE", total_status_df).T
-    # SAE_total_count = get_stats_percentage("SAE", total_status_df).T
-    # # merge AE and SAE dataframes
-    # safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
+            # Dose Level, use the DSDLA_df from above that dropped duplicate and using the latest data
+            DSDLA_df = DSDLA_df.drop(
+                columns=[
+                    "Form Sequence Number",
+                ]
+            )
+            infusion_df = pd.merge(infusion_df, DSDLA_df, on="Subject", how="left")
+
+            # Fill NaN with
+            # Infusion Date
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "Date Study Treatment Administered (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
+                "Date Study Treatment Administered",
+                "Subject",
+                "Event Label",
+            )
+            # convert the date to datetime object and format it to MM-DD-YYYY
+            infusion_df["Date Study Treatment Administered"] = infusion_df["Date Study Treatment Administered"].apply(
+                lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+            )
+
+            # adding Target Cell Dose using TCD_dict
+            infusion_df["Target Cell Dose"] = infusion_df["Dose Level Assignment"].map(TCD_dict)
+
+            # Total huCart19-IL18 Cell Dose
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TDOS)",
+                "Total huCART-meso Administered",
+                "Subject",
+                "Event Label",
+            )
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+                "Subject",
+                "Event Label",
+            )
+            # combine Total huCART-meso CAR T Cell Dose Administered and x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1) columns, compare the new value with 'Target Cell Dose', and convert the Total huCART-meso CAR T Cell Dose Administered column to string
+            infusion_df["Total huCART-meso Administered"] = infusion_df["Total huCART-meso Administered"].multiply(
+                10 ** infusion_df["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)"]
+            )
+            infusion_df = infusion_df.drop(
+                columns=["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)"]
+            )
+
+            # Total Cell Dose Administered column
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "Total Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TOTDOS)",
+                "Total Cell Dose Administered",
+                "Subject",
+                "Event Label",
+            )
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)",
+                "Subject",
+                "Event Label",
+            )
+            infusion_df["Total Cell Dose Administered"] = infusion_df["Total Cell Dose Administered"].multiply(
+                10 ** infusion_df["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)"]
+            )
+            infusion_df = infusion_df.drop(
+                columns=["x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TOTDOSXP_cl_YS_EX10POW1)"]
+            )
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "Total Volume Administered (mL) (IG_NS_NA_EXINF1.NM_NS_NH_TOTVOL)",
+                "Total Volume Administered",
+                "Subject",
+                "Event Label",
+            )
+            # Adding Met Target Dose column based on the condition of Total Cell Dose Administered and Total huCART-meso CAR T Cell Dose Administered if 'Target Cell Dose' is integer
+            infusion_df["Met Target Dose"] = infusion_df.apply(
+                lambda row: "Y"
+                if isinstance(row["Target Cell Dose"], int)
+                and row["Total huCART-meso Administered"] >= row["Target Cell Dose"]
+                else "",
+                axis=1,
+            )
+            infusion_df["Met Target Dose"] = infusion_df.apply(
+                lambda row: "N"
+                if isinstance(row["Target Cell Dose"], int)
+                and row["Total huCART-meso Administered"] < row["Target Cell Dose"]
+                else row["Met Target Dose"],
+                axis=1,
+            )
+
+            # %scFv Flow
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "Transduction Efficiency (%) (IG_NS_NA_EXINF1.NM_NS_NH_TRANSEFFP)",
+                "%scFv Flow",
+                "Subject",
+                "Event Label",
+            )
+
+            # adding Met Target %scFv
+            infusion_df = add_rename_column_corelisting(
+                infusion_df,
+                data,
+                "EXINF",
+                "Transduction Efficiency (%) (IG_NS_NA_EXINF1.NM_NS_NH_TRANSEFFP)",
+                "Met Target %scFv",
+                "Subject",
+                "Event Label",
+            )
+            # fillter out the rows that have NaN in Met Target %scFv
+            infusion_df["Met Target %scFv"] = infusion_df[infusion_df["Met Target %scFv"].notna()][
+                "Met Target %scFv"
+            ].apply(lambda x: "Y" if x >= 2 else "N")
+            # fill NaN with empty string
+            pd.set_option("future.no_silent_downcasting", True)
+            infusion_df = infusion_df.fillna("").infer_objects(copy=False)
+
+            # Only keep the rows that have Event Group Label
+            infusion_df = infusion_df[infusion_df["Event Label"] != ""]
+
+            # AE and SAE data
+            #    if not data["AE"].empty:
+            AE_df = data["AE"][
+                [
+                    "Subject",
+                    "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)",
+                    "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
+                ]
+            ].copy()
+            AE_new_col_name = {
+                "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_YS_AESAE1)": "AE or SAE?",
+                "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)": "Event Onset",
+            }
+            AE_df = AE_df.rename(columns=AE_new_col_name)
+            #  Only assign Y to AE/SAE for event onset is after study tx
+            # filtered_AE_df = AE_df[
+            #     AE_df["Event Onset"] == "After huCART-meso cell Administration"
+            # ]
+
+            # # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
+            # infusion_df = infusion_df.replace([np.nan, np.inf, -np.inf], "")
+            status_df = EL_df[["Subject", "Cohort Assignment"]]
+            # Check filtered_AE_df if the subject of status_df is in the filtered_AE dataframe. If yes, then add 'Y' to the column 'AE' in infusion_df, else add 'N'
+            status_df["AE"] = status_df["Subject"].apply(lambda x: "Y" if x in AE_df["Subject"].values else "N")
+            # Check filtered_AE_df if the subject of infusion_df has SAE in column 'AE or SAE?' . If yes, then add 'Y' to the column 'SAE', else add 'N'
+            status_df["SAE"] = status_df["Subject"].apply(
+                lambda x: "Y" if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values else "N"
+            )
+            # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
+            status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
+
+            # Event Label Update dictionary for cohort 1
+            event_1_dict = {
+                "Primary Treatment and Follow Up": "Primary Follow-up",
+                "Pre-Treatment Safety Visit": "Pre-Treatment",
+                #   "Long-Term Follow-up (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
+                "LTFU (Ongoing Persistence)": "LTFU (Ongoing Persistence)",
+                "LTFU (Loss of Persistence)": "LTFU (Loss of Persistence)",
+            }
+
+            # Add the pattern match as a separate key
+            def map_event(event):
+                if event in event_1_dict:
+                    return event_1_dict[event]
+                elif "Loss of Persistence" in event:
+                    return "LTFU (Loss of Persistence)"
+                elif "Ongoing Persistence" in event:
+                    return "LTFU (Ongoing Persistence)"
+                else:
+                    return event
+
+            # Getting Study Status dataframe from SV, column Subject, Event Label and Event Date
+            status_SV_df = data["DSSV"][["Subject", "Event Group Label", "Event Date"]]
+            # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
+            status_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+            #   print(status_DSSVLTFU_df)
+            status_DSSVLTFU_df["Event Group Label"] = status_DSSVLTFU_df["Event Label"].apply(map_event)
+            #   print(status_DSSVLTFU_df["Event Group Label"])
+            # Combine DSSVLTFU with SV dataframe vertically
+            status_SV_df = pd.concat([status_SV_df, status_DSSVLTFU_df])
+            # Sort the dataframe by Subject and Event Date
+            status_SV_df = status_SV_df.sort_values(by=["Subject", "Event Date"])
+            # For each unique subject, get the last row of the dataframe
+            status_SV_df = status_SV_df.groupby("Subject").tail(1)
+            #   print(status_SV_df["Event Group Label"])
+            # Merge left with the current response dataframe
+            status_df = pd.merge(
+                status_df,
+                status_SV_df[["Subject", "Event Group Label"]],
+                on="Subject",
+                how="left",
+            )
+            #  print(status_df)
+            # Rename the column Event Label to Event Label (Study Status)
+            status_df["Event Group Label"] = status_df["Event Group Label"].map(event_1_dict)
+
+            status_df["Event Group Label3"] = status_df["Subject"].apply(
+                lambda x: "Pre-Treatment"
+                if (
+                    enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
+                    .fillna("")
+                    .str.strip()
+                    .values[0]
+                    == "Pending"
+                )
+                else ""
+            )
+            status_df["Event Group Label4"] = status_df["Subject"].apply(
+                lambda x: "Withdrawn Prior to Study Treatment"
+                if (
+                    enrollment_df[enrollment_df["Subject"] == x]["Study Treatment Administered"]
+                    .fillna("")
+                    .str.strip()
+                    .values[0]
+                    == "No"
+                )
+                & (
+                    enrollment_df[enrollment_df["Subject"] == x]["Subject meets all study eligibility?"]
+                    .fillna("")
+                    .str.strip()
+                    .values[0]
+                    == "Yes"
+                )
+                else ""
+            )
+            # Merge all event group label into study status
+            status_df["Event Group Label"] = (
+                status_df["Event Group Label"].fillna("")
+                + status_df["Event Group Label3"].fillna("")
+                + status_df["Event Group Label4"].fillna("")
+            )
+            status_df["Event Group Label"].fillna(status_df["Event Group Label"], inplace=True)
+            status_df = status_df.drop(
+                columns=[
+                    "Event Group Label3",
+                    "Event Group Label4",
+                ]
+            )
+            # filter the data frame to only include subjects whose end of study date is later than or equal to main consent date
+            filteredemrollment_df = enrollment_df[
+                enrollment_df["End of Study Date"] >= enrollment_df["Main Consent Date"]
+            ]
+            filteredDSEOS_df = DSEOS_df[
+                (DSEOS_df["Last Study Visit"] != "Pre-Screening")
+                #  & (DSEOS_df["Last Study Visit"] != "Screening/Eligibility Confirmation")
+                & (DSEOS_df["Subject"].isin(filteredemrollment_df["Subject"].values))
+            ].copy()
+
+            status_df["Event Group Label"] = status_df.apply(
+                lambda row: "Off Study"
+                if (row["Subject"] in filteredDSEOS_df["Subject"].values)
+                & (row["Event Group Label"] != "Withdrawn Prior to Study Treatment")
+                else "On Study/" + row["Event Group Label"],
+                axis=1,
+            )
+            status_df = status_df.replace(
+                "On Study/Withdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment"
+            )
+            status_df = pd.merge(
+                status_df,
+                filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
+                on="Subject",
+                how="left",
+            )
+            # replaces all occurrences of NaN, positive infinity, and negative infinity in the infusion_df dataframe with empty strings.
+            status_df = status_df.replace([np.nan, np.inf, -np.inf], "")
+
+            # TODO: DSMB-Study Tx & AE STATISTICS
+            infusion_count = []
+            # * Cohort 1
+            # Create a new dataframe for Total huCAR T Cell Dose Administered table with infusion_df
+            infusionA_df = infusion_df[infusion_df["Cohort Assignment"] == "Cohort 1"]
+            infusion_statA1 = get_stats_df("Total huCART-meso Administered", infusionA_df)
+            # Create a new dataframe for Total Cell Dose Administered table with infusion_df
+            infusion_statA2 = get_stats_df("Total Cell Dose Administered", infusionA_df)
+            # Count the number of subjects that met the target dose
+            met_target_count = infusionA_df[infusionA_df["Met Target Dose"] == "Y"].count()["Subject"]
+            # Count the number of subjects
+            total_subject_count = infusionA_df["Subject"].nunique()
+            infusion_statA2["Met Target Dose"] = (
+                str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
+            )
+            # Create a new dataframe for %scFv Flow table with infusion_df
+            infusion_statA3 = get_stats_perc_df("%scFv Flow", infusionA_df)
+            # Count the number of subjects that met the target %scFv
+            met_target_count = infusionA_df[infusionA_df["Met Target %scFv"] == "Y"].count()["Subject"]
+            infusion_statA3["Met Target %scFv"] = (
+                str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
+            )
+            # Combine the three dataframes
+            infusion_statA = pd.concat([infusion_statA1, infusion_statA2, infusion_statA3], axis=1)
+            infusion_statA = infusion_statA.replace([np.inf, -np.inf], "")
+            infusion_statA = infusion_statA.fillna("")
+            infusion_count.append(total_subject_count)
+
+            ## TODO: FORMATTING THE DATAFRAME
+            # TODO: Day 0
+            # Convert the columns to scientific notation if the value is not NaN
+
+            infusion_df["Target Cell Dose"] = infusion_df["Target Cell Dose"].apply(
+                lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
+            )
+            infusion_df["Total huCART-meso Administered"] = infusion_df["Total huCART-meso Administered"].apply(
+                lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
+            )
+            infusion_df["Total Cell Dose Administered"] = infusion_df["Total Cell Dose Administered"].apply(
+                lambda x: convert_float_2_sci_notation(x) if not isinstance(x, str) and pd.notna(x) else x
+            )
+            # adding '%' sign to %scFv Flow
+            infusion_df["%scFv Flow"] = infusion_df.apply(
+                lambda row: str(x) + "%" if pd.notna(x := row["%scFv Flow"]) else x, axis=1
+            )
+            infusion_df = infusion_df.drop(columns=["Target Cell Dose"])
+
+            # TODO: SAFETY STATS
+
+            # Gather all stats of each cohort (currently only has cohort 1)
+            total_infused_df = infusion_df.copy()
+            total_infused_df = total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort 1"]
+
+            # Gather all stats of each cohort (currently only has cohort 1)
+            total_status_df = status_df.copy()
+            total_status_df = total_status_df[total_status_df["Cohort Assignment"] == "Cohort 1"]
+
+            # # Total number of subjects
+            # AE_total_count = get_stats_percentage("AE", total_status_df).T
+            # SAE_total_count = get_stats_percentage("SAE", total_status_df).T
+            # # merge AE and SAE dataframes
+            # safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
 
     if export:
         with pd.ExcelWriter(
@@ -1021,8 +1040,8 @@ def DSMB15122(
                                 normal_data_format,
                             )
 
-                        for i in range(0, len(stat_order)):
-                            worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)
+                    for i in range(0, len(stat_order)):
+                        worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)
 
                     # * Autofit
                     worksheet3.autofit()

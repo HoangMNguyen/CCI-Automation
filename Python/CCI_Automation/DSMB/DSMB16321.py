@@ -46,18 +46,20 @@ class DSMB16321:
         Returns:
             None
         """
-        # process the enrollment listing
-        self.enrollment_listing_df_output, self.enrollment_listing_df = self.enrollment_listing()
-        self.enrollment_stat_table(self.enrollment_listing_df)
-        self.EGFR_listing_df_output, self.EGFR_listing_df = self.EGFR_listing()
-        self.infusion_df, self.infusionR_df = self.infusion_listing()
-        self.infusion_stats(self.infusion_df, self.infusionR_df)
-        self.response_df, self.responseR_df = self.response_listing()
-        self.response_stats()
-        self.AE_df, self.status_df, self.safetyCH1_total_df, self.safetyCH2_total_df, self.safetyCHN1_total_df = (
-            self.status_listing(self.enrollment_listing_df)
-        )
-        self.export(self.output_dir, self.output_file_name)
+        # process the listing only when Demographics is not empty
+        data = self.data
+        if not data["DM"].empty:
+            self.enrollment_listing_df_output, self.enrollment_listing_df = self.enrollment_listing()
+            self.enrollment_stat_table(self.enrollment_listing_df)
+            self.EGFR_listing_df_output, self.EGFR_listing_df = self.EGFR_listing()
+            self.infusion_df, self.infusionR_df = self.infusion_listing()
+            self.infusion_stats(self.infusion_df, self.infusionR_df)
+            self.response_df, self.responseR_df = self.response_listing()
+            self.response_stats()
+            self.AE_df, self.status_df, self.safetyCH1_total_df, self.safetyCH2_total_df, self.safetyCHN1_total_df = (
+                self.status_listing(self.enrollment_listing_df)
+            )
+            self.export(self.output_dir, self.output_file_name)
 
     def enrollment_listing(self):
         data = self.data
@@ -1534,6 +1536,13 @@ class DSMB16321:
         response_df = response_df.drop(columns=["Treated"])
         response_df = response_df.drop_duplicates()
 
+        # check the number of subject
+        if not data["RS"].empty:
+            self.subject_prim_count = len(response_df["Subject"].unique())
+        else:
+            self.subject_prim_count = 0
+        # print(self.subject_prim_count)
+
         # print(response_df)
 
         # TODO: RESPONSE LISTING for Retreated Subjects
@@ -2224,27 +2233,28 @@ class DSMB16321:
         )
 
         filteredDSEOS_df = DSEOS_df[(DSEOS_df["Subject"].isin(filteredemrollment_df["Subject"].values))].copy()
-
-        status_df["Event Label"] = status_df.apply(
-            lambda row: "Off Study"
-            if (row["Subject"] in filteredDSEOS_df["Subject"].values)
-            & ("Withdrawn Prior to Study Treatment" not in row["Event Label"])
-            else "On Study/" + row["Event Label"],
-            axis=1,
-        )
-        status_df = status_df.replace(
-            "On Study/Withdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment"
-        )
-        status_df = status_df.replace(
-            "On Study/Pre-TreatmentWithdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment"
-        )
-        status_df = pd.merge(
-            status_df,
-            filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
-            on="Subject",
-            how="left",
-        )
-        status_df = status_df.replace("On Study/Pre-TreatmentPre-Treatment", "On Study/Pre-Treatment")
+        # on perform the replace when status_df is not empty
+        if not status_df.empty:
+            status_df["Event Label"] = status_df.apply(
+                lambda row: "Off Study"
+                if (row["Subject"] in filteredDSEOS_df["Subject"].values)
+                & ("Withdrawn Prior to Study Treatment" not in row["Event Label"])
+                else "On Study/" + row["Event Label"],
+                axis=1,
+            )
+            status_df = status_df.replace(
+                "On Study/Withdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment"
+            )
+            status_df = status_df.replace(
+                "On Study/Pre-TreatmentWithdrawn Prior to Study Treatment", "Withdrawn Prior to Study Treatment"
+            )
+            status_df = pd.merge(
+                status_df,
+                filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
+                on="Subject",
+                how="left",
+            )
+            status_df = status_df.replace("On Study/Pre-TreatmentPre-Treatment", "On Study/Pre-Treatment")
 
         # replaces all occurrences of NaN, positive infinity, and negative infinity with empty strings.
         status_df = status_df.replace([np.nan, np.inf, -np.inf], "N/A")
@@ -2680,14 +2690,15 @@ class DSMB16321:
                     for i in range(0, len(OOS_Response_Codelist)):
                         worksheet6.write(i + 1, 0, OOS_Response_Codelist[i], bold_11_format)
 
-                    for i in range(0, len(self.response_stat_OOS)):
-                        for j in range(0, len(self.response_stat_OOS.columns)):
-                            worksheet6.write(
-                                i + 1,
-                                j + 1,
-                                self.response_stat_OOS.iloc[i, j],
-                                normal_data_format,
-                            )
+                    if self.subject_prim_count > 0:
+                        for i in range(0, len(self.response_stat_OOS)):
+                            for j in range(0, len(self.response_stat_OOS.columns)):
+                                worksheet6.write(
+                                    i + 1,
+                                    j + 1,
+                                    self.response_stat_OOS.iloc[i, j],
+                                    normal_data_format,
+                                )
 
                     worksheet6.autofit()
 
