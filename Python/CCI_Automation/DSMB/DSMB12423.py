@@ -1921,7 +1921,7 @@ class DSMB12423:
                                 worksheet6.merge_range("Q2:Q3", "Subject ID", bold_11_format)
                                 worksheet6.merge_range("R2:U2", "Current Response", bold_11_format)
                                 worksheet6.merge_range("V2:Y2", "Best Response/Timepoint", bold_11_format)
-                                worksheet6.merge_range("Z2:AA2", "Overall Response/Day 28", bold_11_format)
+                                worksheet6.merge_range("Z2:AA2", "Overall Response/Day 28-R", bold_11_format)
                                 worksheet6.write("R3", "PET-Based Response", bold_11_format)
                                 worksheet6.write("S3", "Study Timepoint", bold_11_format)
                                 worksheet6.write("T3", "CT-Based Response", bold_11_format)
