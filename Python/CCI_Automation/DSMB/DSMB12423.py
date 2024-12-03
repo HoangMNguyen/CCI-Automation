@@ -9,7 +9,12 @@ from DSMB.DSMB_util import (
     get_stats_perc_df,
     convert_float_2_sci_notation,
 )
-from util import get_data_from_dict, age_calculation, add_rename_column_df, convert_integers_to_strings
+from util import (
+    get_data_from_dict,
+    age_calculation,
+    add_rename_column_df,
+    convert_integers_to_strings,
+)
 from datetime import datetime
 from typing import Optional
 
@@ -311,7 +316,7 @@ class DSMB12423:
                 "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)": "Dose Level Assignment"
             },
         }
-        raw_infusion_df = get_data_from_dict(data, input_dict)
+        raw_infusion_df = get_data_from_dict(data, input_dict, "EXINF")
         # convert the date to datetime object and format it to MM-DD-YYYY
         raw_infusion_df["Date of TmCD19-IL18 Infusion"] = raw_infusion_df["Date of TmCD19-IL18 Infusion"].apply(
             lambda x: datetime.strptime(x.strftime("%Y-%m-%d"), "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
@@ -319,7 +324,7 @@ class DSMB12423:
 
         # TODO: INFUSION LISTING Day 0
 
-        infusion_df = raw_infusion_df[raw_infusion_df["Event Group Label"] == "Day 0"]
+        infusion_df = raw_infusion_df[raw_infusion_df["Event Group Label"] == "Day 0"].copy()
         # Lymphodepleting Chemotherapy Regimen
         infusion_df = add_rename_column_df(
             infusion_df,
@@ -393,7 +398,7 @@ class DSMB12423:
         ]
 
         # TODO: Infusion Listing Day 0-R
-        infusionR_df = raw_infusion_df[raw_infusion_df["Event Group Label"] == "Day 0-R"]
+        infusionR_df = raw_infusion_df[raw_infusion_df["Event Group Label"] == "Day 0-R"].copy()
         # Lymphodepleting Chemotherapy Regimen
         infusionR_df = add_rename_column_df(
             infusionR_df,
@@ -436,6 +441,22 @@ class DSMB12423:
 
         # Only keep the rows that have Event Group Label
         infusionR_df = infusionR_df[infusionR_df["Event Group Label"] != ""]
+
+        # Order the columns
+        infusionR_df = infusionR_df[
+            [
+                "Subject",
+                "Event Group Label",
+                "Cohort Assignment",
+                "Lymphodepleting Chemotherapy Regimen",
+                "Date of TmCD19-IL18 Infusion",
+                "Total TmCD19-IL18 CAR T Cell Dose Administered",
+                "Total Cell Dose Administered",
+                "%scFv Flow",
+                "Met Target %scFv",
+            ]
+        ]
+        # print(infusionR_df)
         return infusion_df, infusionR_df
 
     def infusion_stats(self, infusion_df, infusionR_df):
@@ -1649,8 +1670,8 @@ class DSMB12423:
 
                     worksheet3.merge_range("B1:D1", "Cells Infused", bold_12_wrap_format)
                     worksheet3.merge_range("E1:F1", "Transduction Efficiency", bold_12_wrap_format)
-                    worksheet3.write("B2", "Total Cells", bold_12_wrap_format)
-                    worksheet3.write("C2", "TmCD19-IL18 Cells", bold_12_wrap_format)
+                    worksheet3.write("B2", "TmCD19-IL18 Cells", bold_12_wrap_format)
+                    worksheet3.write("C2", "Total Cells", bold_12_wrap_format)
                     worksheet3.write("D2", "Met Target Dose", bold_12_wrap_format)
                     worksheet3.write("E2", "%scFv Flow", bold_12_wrap_format)
                     worksheet3.write("F2", "Met Target %scFv", bold_12_wrap_format)
