@@ -562,7 +562,7 @@ def convert_integers_to_strings(df, column_name):
     return df
 
 
-def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
+def get_data_from_dict(data: dict, input_dict: dict, *exclude) -> pd.DataFrame:
     """
     Retrieves and processes data from a dictionary based on specified keys.
     Subject and Event Date columns are always included in the output DataFrame.
@@ -579,15 +579,20 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
     # Convert dict_keys to a list to use index method
     keys_list = list(input_dict.keys())
 
+    # Convert exclude to a list
+    exclude = list(exclude)
+
     for key in input_dict.keys():
         if key in data:
             input_keys = ["Subject", "Event Date"] + list(input_dict[key].keys())
             collected_data = data[key][input_keys].copy()
             collected_data.rename(columns=input_dict[key], inplace=True)
-            # if there are more than one row for the same subject, keep the one with the last 'Event Date'
-            collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
-                subset=["Subject"], keep="last"
-            )
+            # input_key is not within the exclude list
+            if key not in exclude:
+                # if there are more than one row for the same subject, keep the one with the last 'Event Date'
+                collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
+                    subset=["Subject"], keep="last"
+                )
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
                 if "Date" in col:
