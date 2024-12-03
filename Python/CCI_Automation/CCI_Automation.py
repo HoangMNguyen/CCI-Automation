@@ -316,6 +316,8 @@ class Widget(QWidget):
                 )
             else:
                 try:
+                    from Clockify.Clockify import clockify_create_tasks
+
                     clockify_create_tasks(
                         clockify_get_api_key(),
                         clockify_get_workplace_id(),

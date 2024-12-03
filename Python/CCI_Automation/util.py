@@ -9,6 +9,7 @@ import math
 import zipfile
 from typing import Optional, List, Dict, Tuple, Union
 import pandas as pd
+from Clockify.tasks import task_list
 
 # TODO: implement type hints for all functions
 
@@ -249,40 +250,13 @@ def format_timedelta(td):
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
-def clockify_create_tasks(api_key, workspace_id, project_name):
-    """
-    Create tasks in Clockify for a given project.
-
-    This function reads task names from a CSV file, constructs a list of tasks, and then uses the Clockify API
-    to create these tasks under a specified project in a specified workspace.
-
-    Args:
-        api_key (str): The API key for authenticating with the Clockify API.
-        workspace_id (str): The ID of the workspace in Clockify where the tasks will be created.
-        project_name (str): The name of the project in Clockify under which the tasks will be created.
-
-    Returns:
-        list: A list containing the responses from the Clockify API for each task creation request.
-    """
-    current_dir = os.getcwd()
-    template_tasks = pd.read_csv(os.path.join(current_dir, "Clockify/Tasks.csv"))
-    task_list = template_tasks["Task"].tolist()
-    # print(task_list)
-    project_id = clockify_get_project_id(clockify_get_api_key(), clockify_get_workplace_id(), project_name)
-    headers = {"content-type": "application/json", "X-Api-Key": api_key}
-    url = f"https://api.clockify.me/api/v1/workspaces/{workspace_id}/projects/{project_id}/tasks"
-    for task_name in task_list:
-        data = {"name": task_name}
-        response = requests.post(url, headers=headers, json=data)
-        print(response.json())
-
-
 def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
     """Read all data from csv files within the corelisting from a zip file into a dictionary of dataframes
 
     - Apply the cut off date if it's not None
     - Convert the subject ID to the format of 12345-67 instead of 100-12345-67
     - Filtered data to only submitted status
+    - Filtered data to only non-ILB status
 
     Args:
         input_dir (string): string of input directory of the zip file
@@ -588,7 +562,7 @@ def convert_integers_to_strings(df, column_name):
     return df
 
 
-def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
+def get_data_from_dict(data: dict, input_dict: dict, *exclude) -> pd.DataFrame:
     """
     Retrieves and processes data from a dictionary based on specified keys.
     Subject and Event Date columns are always included in the output DataFrame.
@@ -605,15 +579,20 @@ def get_data_from_dict(data: dict, input_dict: dict) -> pd.DataFrame:
     # Convert dict_keys to a list to use index method
     keys_list = list(input_dict.keys())
 
+    # Convert exclude to a list
+    exclude = list(exclude)
+
     for key in input_dict.keys():
         if key in data:
             input_keys = ["Subject", "Event Date"] + list(input_dict[key].keys())
             collected_data = data[key][input_keys].copy()
             collected_data.rename(columns=input_dict[key], inplace=True)
-            # if there are more than one row for the same subject, keep the one with the last 'Event Date'
-            collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
-                subset=["Subject"], keep="last"
-            )
+            # input_key is not within the exclude list
+            if key not in exclude:
+                # if there are more than one row for the same subject, keep the one with the last 'Event Date'
+                collected_data = collected_data.sort_values(["Subject", "Event Date"]).drop_duplicates(
+                    subset=["Subject"], keep="last"
+                )
             # check if value contains 'Date' in the column name, then convert to datetime
             for col in collected_data.columns:
                 if "Date" in col:
