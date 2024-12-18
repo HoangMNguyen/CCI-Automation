@@ -61,13 +61,19 @@ Sub QueryDetailListingFormatSponsor()
     Call RemoveColumn(WS1, "Country")
     Call RemoveColumn(WS1, "Site")
     Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Visit Method")
     Call RemoveColumn(WS1, "Query ID")
     Call RemoveColumn(WS1, "Query Rule")
     Call RemoveColumn(WS1, "Created By Role")
     Call RemoveColumn(WS1, "Created By Query Team")
     Call RemoveColumn(WS1, "Answered By Role")
     Call RemoveColumn(WS1, "Closed By Role")
-    Call RemoveColumn(WS1, "Query Vault ID")
+    Call RemoveColumn(WS1, "Source Type")
+    Call RemoveColumn(WS1, "Source System Name")
+    Call RemoveColumn(WS1, "Source User")
+    Call RemoveColumn(WS1, "Source ID")
+    Call RemoveColumn(WS1, "Original Query Text in the Base Language")
+    Call RemoveColumn(WS1, "Original Query Text in English")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "Item OID")
     Call RemoveColumn(WS1, "Query Team")
@@ -152,6 +158,7 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Country")
     Call RemoveColumn(WS1, "Site")
     Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Visit Method")
     Call RemoveColumn(WS1, "Query ID")
     Call RemoveColumn(WS1, "Query Rule")
     Call RemoveColumn(WS1, "Created By Role")
@@ -159,6 +166,12 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Answered By Role")
     Call RemoveColumn(WS1, "Closed By Role")
     Call RemoveColumn(WS1, "Query Vault ID")
+    Call RemoveColumn(WS1, "Source Type")
+    Call RemoveColumn(WS1, "Source System Name")
+    Call RemoveColumn(WS1, "Source User")
+    Call RemoveColumn(WS1, "Source ID")
+    Call RemoveColumn(WS1, "Original Query Text in the Base Language")
+    Call RemoveColumn(WS1, "Original Query Text in English")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "Item OID")
     Call RemoveColumn(WS1, "Query Team")
@@ -380,8 +393,28 @@ Sub FormProgressListingFormat()
     End If
     StartingRow = StartingRow + NotSubmittedYesDMR
     
+    'Adding Validation Tab
     
+    Dim WS3 As Worksheet
+    Set WS3 = Sheets.Add(After:=WS2)
+    WS3.Name = "Validation"
+    WS3.Range("A1").Value = "Subject"
+    WS3.Range("B1").Value = "Event Group Label"
+    WS3.Range("C1").Value = "Event Date"
+    WS3.Range("D1").Value = "Form Label"
+    WS3.Range("E1").Value = "Form Status"
+    WS3.Range("F1").Value = "Intentionally Left Blank"
+    WS3.Range("G1").Value = "Intentionally Left Blank"
+    WS3.Range("H1").Value = "Marked for Removal"
     
+    WS1.Activate
+    Call RemoveFilter
+    Call FilterColumn(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterColumn(WS1, "Intentionally Left Blank", "Yes")
+    Dim HeadersCopy As Variant
+    HeadersCopy = Array("Subject", "Event Group Label", "Event Date", "Form Label", "Form Status", "Intentionally Left Blank", "Intentionally Left Blank Reason", "Marked for Removal")
+    
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersCopy, 1, 2)
     
     'Formatting
     WS2.Activate
@@ -397,6 +430,17 @@ Sub FormProgressListingFormat()
     ActiveSheet.Range("D1").Select
     Call FormatTable
     
+    'Sort Metrics
+    Call sortAsc("E1")
+    
+    WS3.Activate
+    ActiveSheet.Range("A1").Select
+    Call FormatTable
+    
+    'Sort Validation
+    Call sortAsc("A1")
+    Call sortAsc("C1")
+    
     WS1.Activate
     Call OutFormat
     
@@ -406,6 +450,7 @@ Sub FormProgressListingFormat()
     Call FilterColumn(WS1, "Form Status", FilterValues)
     
     Application.ScreenUpdating = True
+    
     'Save file
     Dim modifiedDate As String
     Dim modifiedTime As String
