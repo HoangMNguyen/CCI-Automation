@@ -312,11 +312,8 @@ Sub FormProgressListingFormat()
     WS2.Range("M1").Value = "DMR Complete"
     WS2.Range("N1").Value = "Open Queries"
     
-    
     Dim NoSDVYesDMR As Integer
-    
 
-    
     NoSDVYesDMR = CountPerColumnName(WS1, "SDV Complete", "No", "DMR Complete", "Yes")
     
     WS1.Activate
@@ -394,27 +391,78 @@ Sub FormProgressListingFormat()
     StartingRow = StartingRow + NotSubmittedYesDMR
     
     'Adding Validation Tab
-    
     Dim WS3 As Worksheet
     Set WS3 = Sheets.Add(After:=WS2)
     WS3.Name = "Validation"
-    WS3.Range("A1").Value = "Subject"
-    WS3.Range("B1").Value = "Event Group Label"
-    WS3.Range("C1").Value = "Event Date"
-    WS3.Range("D1").Value = "Form Label"
-    WS3.Range("E1").Value = "Form Status"
-    WS3.Range("F1").Value = "Intentionally Left Blank"
-    WS3.Range("G1").Value = "Intentionally Left Blank"
-    WS3.Range("H1").Value = "Marked for Removal"
+    
+    'Error count table
+    WS3.Range("A1").Value = "Finding"
+    WS3.Range("B1").Value = "Count"
+    WS3.Range("A2").Value = "Form is ILB'ed and entered under Unscheduled event"
+    WS3.Range("A3").Value = "Non-unscheduled form is marked for removal"
+    WS3.Range("A4").Value = "Unscheduled form is marked for removal"
+    
+    'Error description table
+    WS3.Range("D1").Value = "Finding Description"
+    WS3.Range("E1").Value = "Subject"
+    WS3.Range("F1").Value = "Event Group Label"
+    WS3.Range("G1").Value = "Event Date"
+    WS3.Range("H1").Value = "Form Label"
+    WS3.Range("I1").Value = "Form Status"
+    WS3.Range("J1").Value = "Intentionally Left Blank"
+    WS3.Range("K1").Value = "Intentionally Left Blank Reason"
+    WS3.Range("L1").Value = "Marked for Removal"
+    WS3.Range("M1").Value = "Suggested Action"
+    
+    'Form is ILB'ed and entered under Unscheduled event
+    Dim ILBYesUns As Integer
     
     WS1.Activate
     Call RemoveFilter
     Call FilterColumn(WS1, "Event Group Label", "*Unscheduled*")
     Call FilterColumn(WS1, "Intentionally Left Blank", "Yes")
-    Dim HeadersCopy As Variant
-    HeadersCopy = Array("Subject", "Event Group Label", "Event Date", "Form Label", "Form Status", "Intentionally Left Blank", "Intentionally Left Blank Reason", "Marked for Removal")
+    ILBYesUns = CountFilteredRows(WS1, "Subject")
+    HeadersToCopy = Array("Subject", "Event Group Label", "Event Date", "Form Label", "Form Status", "Intentionally Left Blank", "Intentionally Left Blank Reason", "Marked for Removal")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 5, 2)
+    If ILBYesUns > 0 Then
+        For i = 1 To ILBYesUns
+            WS3.Range("D" & (i + StartingRow)).Value = "Form is ILB'ed and entered under Unscheduled event"
+            WS3.Range("M" & (i + StartingRow)).Value = "Please unselect the form from the Unscheduled prompt"
+        Next i
+    End If
+    StartingRow = StartingRow + ILBYesUns
     
-    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersCopy, 1, 2)
+    'Any non-unscheduled form is marked for removal
+    Dim NonUnsMarkedforRemoval As Integer
+    
+    Call RemoveFilter
+    Call FilterExcludeValue(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterColumn(WS1, "Marked for Removal", "Yes")
+    NonUnsMarkedforRemoval = CountFilteredRows(WS1, "Subject")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 5, StartingRow + 1)
+    If NonUnsMarkedforRemoval > 0 Then
+        For i = 1 To NonUnsMarkedforRemoval
+            WS3.Range("D" & (i + StartingRow)).Value = "Non-unscheduled form is marked for removal"
+            WS3.Range("M" & (i + StartingRow)).Value = "Please investigate why the form was marked for removal"
+        Next i
+    End If
+    StartingRow = StartingRow + NonUnsMarkedforRemoval
+    
+    'Unscheduled form is marked for removal
+    Dim UnsMarkedforRemoval As Integer
+    
+    Call RemoveFilter
+    Call FilterColumn(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterColumn(WS1, "Marked for Removal", "Yes")
+    UnsMarkedforRemoval = CountFilteredRows(WS1, "Subject")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 5, StartingRow + 1)
+    If UnsMarkedforRemoval > 0 Then
+        For i = 1 To UnsMarkedforRemoval
+            WS3.Range("D" & (i + StartingRow)).Value = "Unscheduled form is marked for removal"
+            WS3.Range("M" & (i + StartingRow)).Value = "Please reset the form"
+        Next i
+    End If
+    StartingRow = StartingRow + UnsMarkedforRemoval
     
     'Formatting
     WS2.Activate
@@ -436,10 +484,17 @@ Sub FormProgressListingFormat()
     WS3.Activate
     ActiveSheet.Range("A1").Select
     Call FormatTable
+    ActiveSheet.Range("D1").Select
+    Call FormatTable
+    
+    'Count validation findings
+    WS3.Range("B2").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Form is ILB'ed and entered under Unscheduled event")
+    WS3.Range("B3").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Non-unscheduled form is marked for removal")
+    WS3.Range("B4").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Unscheduled form is marked for removal")
     
     'Sort Validation
-    Call sortAsc("A1")
-    Call sortAsc("C1")
+    Call sortAsc("E1")
+    Call sortAsc("G1")
     
     WS1.Activate
     Call OutFormat
