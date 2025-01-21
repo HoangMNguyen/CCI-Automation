@@ -61,13 +61,19 @@ Sub QueryDetailListingFormatSponsor()
     Call RemoveColumn(WS1, "Country")
     Call RemoveColumn(WS1, "Site")
     Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Visit Method")
     Call RemoveColumn(WS1, "Query ID")
     Call RemoveColumn(WS1, "Query Rule")
     Call RemoveColumn(WS1, "Created By Role")
     Call RemoveColumn(WS1, "Created By Query Team")
     Call RemoveColumn(WS1, "Answered By Role")
     Call RemoveColumn(WS1, "Closed By Role")
-    Call RemoveColumn(WS1, "Query Vault ID")
+    Call RemoveColumn(WS1, "Source Type")
+    Call RemoveColumn(WS1, "Source System Name")
+    Call RemoveColumn(WS1, "Source User")
+    Call RemoveColumn(WS1, "Source ID")
+    Call RemoveColumn(WS1, "Original Query Text in the Base Language")
+    Call RemoveColumn(WS1, "Original Query Text in English")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "Item OID")
     Call RemoveColumn(WS1, "Query Team")
@@ -152,6 +158,7 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Country")
     Call RemoveColumn(WS1, "Site")
     Call RemoveColumn(WS1, "Event Label")
+    Call RemoveColumn(WS1, "Visit Method")
     Call RemoveColumn(WS1, "Query ID")
     Call RemoveColumn(WS1, "Query Rule")
     Call RemoveColumn(WS1, "Created By Role")
@@ -159,6 +166,12 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Answered By Role")
     Call RemoveColumn(WS1, "Closed By Role")
     Call RemoveColumn(WS1, "Query Vault ID")
+    Call RemoveColumn(WS1, "Source Type")
+    Call RemoveColumn(WS1, "Source System Name")
+    Call RemoveColumn(WS1, "Source User")
+    Call RemoveColumn(WS1, "Source ID")
+    Call RemoveColumn(WS1, "Original Query Text in the Base Language")
+    Call RemoveColumn(WS1, "Original Query Text in English")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "Item OID")
     Call RemoveColumn(WS1, "Query Team")
@@ -299,11 +312,8 @@ Sub FormProgressListingFormat()
     WS2.Range("M1").Value = "DMR Complete"
     WS2.Range("N1").Value = "Open Queries"
     
-    
     Dim NoSDVYesDMR As Integer
-    
 
-    
     NoSDVYesDMR = CountPerColumnName(WS1, "SDV Complete", "No", "DMR Complete", "Yes")
     
     WS1.Activate
@@ -380,8 +390,104 @@ Sub FormProgressListingFormat()
     End If
     StartingRow = StartingRow + NotSubmittedYesDMR
     
+    'Adding Validation Tab
+    Dim WS3 As Worksheet
+    Set WS3 = Sheets.Add(After:=WS2)
+    WS3.Name = "Validation"
     
+    'Finding count table
+    WS3.Range("A1").Value = "Finding"
+    WS3.Range("B1").Value = "Count"
+    WS3.Range("A2").Value = "Form is ILB'ed and entered under Unscheduled event"
+    WS3.Range("A3").Value = "Non-unscheduled form is marked for removal"
+    WS3.Range("A4").Value = "Unscheduled form is marked for removal"
+    WS3.Range("A5").Value = "Unscheduled Prompt is ILB'ed"
     
+    'Error description table
+    WS3.Range("D1").Value = "Finding Description"
+    WS3.Range("E1").Value = "Suggested Action"
+    WS3.Range("F1").Value = "Subject"
+    WS3.Range("G1").Value = "Event Group Label"
+    WS3.Range("H1").Value = "Event Date"
+    WS3.Range("I1").Value = "Form Label"
+    WS3.Range("J1").Value = "Form Status"
+    WS3.Range("K1").Value = "Intentionally Left Blank"
+    WS3.Range("L1").Value = "Intentionally Left Blank Reason"
+    WS3.Range("M1").Value = "Marked for Removal"
+    
+    'Form is ILB'ed, not marked for removal, and entered under Unscheduled event
+    Dim ILBYesUns As Integer
+    
+    WS1.Activate
+    Call RemoveFilter
+    Call FilterColumn(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterExcludeValue(WS1, "Form Label", "*Prompt*")
+    Call FilterColumn(WS1, "Intentionally Left Blank", "Yes")
+    Call FilterExcludeValue(WS1, "Marked for Removal", "Yes")
+    ILBYesUns = CountFilteredRows(WS1, "Subject")
+    HeadersToCopy = Array("Subject", "Event Group Label", "Event Date", "Form Label", "Form Status", "Intentionally Left Blank", "Intentionally Left Blank Reason", "Marked for Removal")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 6, 2)
+    
+    Dim StartingRow2 As Integer
+    StartingRow2 = 1
+    
+    If ILBYesUns > 0 Then
+        For i = 1 To ILBYesUns
+            WS3.Range("D" & (i + StartingRow2)).Value = "Form is ILB'ed and entered under Unscheduled event"
+            WS3.Range("E" & (i + StartingRow2)).Value = "Please unselect the form from the Unscheduled Prompt and reset"
+        Next i
+    End If
+    StartingRow2 = StartingRow2 + ILBYesUns
+    
+    'Unscheduled form is marked for removal
+    Dim UnsMarkedforRemoval As Integer
+    
+    Call RemoveFilter
+    Call FilterColumn(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterExcludeValue(WS1, "Form Label", "*Prompt*")
+    Call FilterColumn(WS1, "Marked for Removal", "Yes")
+    UnsMarkedforRemoval = CountFilteredRows(WS1, "Subject")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 6, StartingRow2 + 1)
+    If UnsMarkedforRemoval > 0 Then
+        For i = 1 To UnsMarkedforRemoval
+            WS3.Range("D" & (i + StartingRow2)).Value = "Unscheduled form is marked for removal"
+            WS3.Range("E" & (i + StartingRow2)).Value = "Please reset the form"
+        Next i
+    End If
+    StartingRow2 = StartingRow2 + UnsMarkedforRemoval
+    
+    'Any non-unscheduled form is marked for removal
+    Dim NonUnsMarkedforRemoval As Integer
+    
+    Call RemoveFilter
+    Call FilterExcludeValue(WS1, "Event Group Label", "*Unscheduled*")
+    Call FilterColumn(WS1, "Marked for Removal", "Yes")
+    NonUnsMarkedforRemoval = CountFilteredRows(WS1, "Subject")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 6, StartingRow2 + 1)
+    If NonUnsMarkedforRemoval > 0 Then
+        For i = 1 To NonUnsMarkedforRemoval
+            WS3.Range("D" & (i + StartingRow2)).Value = "Non-unscheduled form is marked for removal"
+            WS3.Range("E" & (i + StartingRow2)).Value = "Please investigate why the form was marked for removal"
+        Next i
+    End If
+    StartingRow2 = StartingRow2 + NonUnsMarkedforRemoval
+    
+    'Unscheduled prompt is ILB'ed and not marked for removal
+    Dim PromptILB As Integer
+    
+    Call RemoveFilter
+    Call FilterColumn(WS1, "Form Label", "*Prompt*")
+    Call FilterColumn(WS1, "Intentionally Left Blank", "Yes")
+    Call FilterExcludeValue(WS1, "Marked for Removal", "Yes")
+    PromptILB = CountFilteredRows(WS1, "Subject")
+    Call CopySelectedVisibleColumnsToLocation(WS1, WS3, HeadersToCopy, 6, StartingRow2 + 1)
+    If PromptILB > 0 Then
+        For i = 1 To PromptILB
+            WS3.Range("D" & (i + StartingRow2)).Value = "Unscheduled Prompt is ILB'ed"
+            WS3.Range("E" & (i + StartingRow2)).Value = "Please reset the unscheduled event"
+        Next i
+    End If
+    StartingRow2 = StartingRow2 + PromptILB
     
     'Formatting
     WS2.Activate
@@ -397,6 +503,25 @@ Sub FormProgressListingFormat()
     ActiveSheet.Range("D1").Select
     Call FormatTable
     
+    'Sort Metrics
+    Call sortAsc("E1")
+    
+    WS3.Activate
+    ActiveSheet.Range("A1").Select
+    Call FormatTable
+    ActiveSheet.Range("D1").Select
+    Call FormatTable
+    
+    'Count validation findings
+    WS3.Range("B2").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Form is ILB'ed and entered under Unscheduled event")
+    WS3.Range("B3").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Non-unscheduled form is marked for removal")
+    WS3.Range("B4").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Unscheduled form is marked for removal")
+    WS3.Range("B5").Value = WorksheetFunction.CountIf(WS3.Columns("D"), "Unscheduled Prompt is ILB'ed")
+    
+    'Sort Validation
+    Call sortAsc("F1")
+    Call sortAsc("H1")
+    
     WS1.Activate
     Call OutFormat
     
@@ -406,6 +531,7 @@ Sub FormProgressListingFormat()
     Call FilterColumn(WS1, "Form Status", FilterValues)
     
     Application.ScreenUpdating = True
+    
     'Save file
     Dim modifiedDate As String
     Dim modifiedTime As String
