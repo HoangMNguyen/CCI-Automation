@@ -663,6 +663,25 @@ class DSMB12423:
         temp_mask = responseA_primary_df[
             "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
         ].apply(lambda x: str(x).isdigit())
+        # Coerce to numeric first (turn non‐numeric to NaN).
+        responseA_primary_df.loc[
+            temp_mask,
+            "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
+        ] = pd.to_numeric(
+            responseA_primary_df.loc[
+                temp_mask,
+                "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
+            ],
+            errors="coerce",
+        )
+
+        # Now safely convert to int, but only for rows that pass the mask.
+        temp_mask = (
+            temp_mask
+            & responseA_primary_df[
+                "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
+            ].notna()
+        )
         responseA_primary_df = convert_integers_to_strings(
             responseA_primary_df,
             "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
