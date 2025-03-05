@@ -32,6 +32,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     Dim WS2 As Worksheet
     Dim WS3 As Worksheet
     Dim WS4 As Worksheet
+    Dim WS5 As Worksheet
     Dim SheetNum As Long
     Dim VSheet As Worksheet
     Dim TempSheet As Worksheet
@@ -88,11 +89,11 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
 
 
     ElseIf WS1.Range("A2").Value = "823312" Then
-        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, lastRow)
+        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
         WS1.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
         WS2.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
         WS3.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
-    
+        WS5.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
 
     ElseIf WS1.Range("A2").Value = "826250" Then
         Call S32816.QFSR(WS1, WS2, WS3, WS4, lastRow)
@@ -131,7 +132,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     TempSheet.Activate
     
     For Each xcell In ActiveSheet.Range("F1:F" & lastRow).Cells
-    If xcell.Text = "Incomplete" Or xcell.Text = "Work In Progress" Or xcell.Text = "Submitted to Sponsor" Then
+    If xcell.text = "Incomplete" Or xcell.text = "Work In Progress" Or xcell.text = "Submitted to Sponsor" Then
         If SelectCells Is Nothing Then
             Set SelectCells = Range(xcell.Address)
         Else
@@ -162,7 +163,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     Dim cel As Range
     TempSheet.Activate
     For Each cel In VSheet.Range("A2:A" & lngCount).Cells
-        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("J1:J" & TempRow), cel.Text)
+        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("J1:J" & TempRow), cel.text)
         If cel.Value = "" Then
             cel.Value = "Detected form(s) created by site with Ready for Submission/Completed status"
             cel.Font.Bold = True
@@ -217,6 +218,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     Dim WS2 As Worksheet
     Dim WS3 As Worksheet
     Dim WS4 As Worksheet
+    Dim WS5 As Worksheet
     Dim SheetNum As Long
     Dim CurrentSheetNum As Long
     Dim fileSaveName As Variant
@@ -266,11 +268,11 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
         Call S01422.QFSR(WS1, "Incomplete", "Work In Progress")
 
     ElseIf WS1.Range("A2").Value = "823312" Then
-        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, lastRow)
+        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
         WS1.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
         WS2.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
         WS3.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
-
+        WS5.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
 
     ElseIf WS1.Range("A2").Value = "826250" Then
         Call S32816.QFSR(WS1, WS2, WS3, WS4, lastRow)
@@ -298,7 +300,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
 
     For Each xcell In ActiveSheet.Range("A1:F" & lastRow).Cells
-        If xcell.Text = "Completed" Or xcell.Text = "Ready for Submission" Or xcell.Text = "Submitted to Sponsor" Then
+        If xcell.text = "Completed" Or xcell.text = "Ready for Submission" Or xcell.text = "Submitted to Sponsor" Then
             If SelectCells Is Nothing Then
                 Set SelectCells = Range(xcell.Address)
             Else
@@ -321,7 +323,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
         lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
 
         For Each xcell In ActiveSheet.Range("F1:F" & lastRow).Cells
-            If xcell.Text = "Completed" Or xcell.Text = "Ready for Submission" Or xcell.Text = "Submitted to Sponsor" Then
+            If xcell.text = "Completed" Or xcell.text = "Ready for Submission" Or xcell.text = "Submitted to Sponsor" Then
                 If SelectCells Is Nothing Then
                     Set SelectCells = Range(xcell.Address)
                 Else
@@ -400,6 +402,7 @@ Dim WS1 As Worksheet
 Dim WS2 As Worksheet
 Dim WS3 As Worksheet
 Dim WS4 As Worksheet
+Dim WS5 As Worksheet
 Dim lastRow As Long
 Dim WSCount As Integer
 Dim Sh As Integer
@@ -442,7 +445,7 @@ ElseIf WS1.Range("C2").Value = "850925" Then
     Call S01422.QQSR(WS1) '01422 Study
     
 ElseIf WS1.Range("C2").Value = "823312" Then
-    Call S15CT055.QQSR(WS1, WS2, WS3, WS4) '15CT055 study
+    Call S15CT055.QQSR(WS1, WS2, WS3, WS4, WS5) '15CT055 study
     
 ElseIf WS1.Range("C2").Value = "826250" Then
     Call S32816.QQSR(WS1, WS2, WS3, WS4) '32816 study
@@ -499,7 +502,7 @@ lngCount = Application.WorksheetFunction.CountA(Columns(1))
 Dim cel As Range
 If Not IsEmpty(VSheet.Range("A2")) Then
     For Each cel In VSheet.Range("A2:A" & lngCount).Cells
-        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("O1:O" & VRow), cel.Text)
+        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("O1:O" & VRow), cel.text)
     Next cel
 End If
 
