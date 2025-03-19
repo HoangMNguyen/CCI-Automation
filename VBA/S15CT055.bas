@@ -47,8 +47,25 @@ WS2.Activate
 Call Main.OutFormat
 End Sub
 
-Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
+Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
 
+    'Copy cohort 3 data to another tab
+     WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
+        "15CT055 Cohort 3 LTFU Calendar", _
+        "15CT055 Cohort 3 Primary Calendar", _
+        "15CT055 Cohort 3 Retreatment Calendar", _
+        "15CT055 Cohort 3 Retx-LTFU Calendar"), Operator:=xlFilterValues
+   
+    WS1.Range("A1:J" & lastRow).Select
+    Selection.Copy
+    
+    Set WS5 = Sheets.Add
+    WS5.Name = "Cohort 3 Form Status"
+    WS5.Paste
+    Call Main.OutFormat
+
+   Sheets("All Cohorts Form Status Report").Move Before:=Sheets(1)
+    
     'Copy cohort 2 data to another tab
      WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
         "15CT055 Cohort 2 LTFU Calendar", _
@@ -57,7 +74,7 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
         "15CT055 Cohort 2 Retx-LTFU Calendar", _
         "15CT055 Exception Retreatment Calendar"), Operator:=xlFilterValues
    
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
     Set WS2 = Sheets.Add
@@ -70,7 +87,7 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
     'Copy cohort 1 data to another tab
     Sheets("All Cohorts Form Status Report").Select
     WS1.Range("A1").AutoFilter Field:=3, Criteria1:="15CT055 Calendar", Operator:=xlOr, Criteria2:="15CT055-LTFU Calendar"
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
     Set WS3 = Sheets.Add
@@ -84,13 +101,16 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
     WS4.Name = "Form Status Overview"
     
     WS4.Range("A1").Value = "All Cohorts Form Status"
-    Call FormStatusOverview(WS1, WS4, 1, LastRow)
+    Call FormStatusOverview(WS1, WS4, 1, lastRow)
     
     WS4.Range("A8").Value = "Cohort 1 Form Status"
-    Call FormStatusOverview(WS3, WS4, 8, LastRow)
+    Call FormStatusOverview(WS3, WS4, 8, lastRow)
     
     WS4.Range("A15").Value = "Cohort 2 Form Status"
-    Call FormStatusOverview(WS2, WS4, 15, LastRow)
+    Call FormStatusOverview(WS2, WS4, 15, lastRow)
+    
+    WS4.Range("A22").Value = "Cohort 3 Form Status"
+    Call FormStatusOverview(WS5, WS4, 22, lastRow)
  
     'Autofit and add borders for the form status overview table
     ActiveSheet.Range("A1").Select
@@ -101,16 +121,22 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
 
     ActiveSheet.Range("A15").Select
     Call FormatTable
+    
+    ActiveSheet.Range("A22").Select
+    Call FormatTable
 
     WS1.Range("A1").AutoFilter Field:=3
 
 End Sub
 
-Sub QQSR(WS1, WS2, WS3, WS4)
+Sub QQSR(WS1, WS2, WS3, WS4, WS5)
 
-Dim LastRow As Long
+Dim lastRow As Long
 
-Set WS2 = Sheets.Add(After:=WS1)
+Set WS5 = Sheets.Add(After:=WS1)
+WS5.Name = "Cohort 3 Query Report"
+
+Set WS2 = Sheets.Add(After:=WS5)
 WS2.Name = "Cohort 2 Query Report"
 
 Set WS3 = Sheets.Add(After:=WS2)
@@ -121,7 +147,7 @@ WS4.Name = "Query Report Overview"
 
 WS1.Activate
 WS1.Range("A1").Select
-LastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
 
 'Copy cohort 2 data to another tab
 WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
@@ -131,13 +157,23 @@ WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
    "15CT055 Cohort 2 Retx-LTFU Calendar", _
    "15CT055 Exception Retreatment Calendar"), Operator:=xlFilterValues
 
-WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS2.Paste
 
 'Copy cohort 1 data to another tab
 WS1.Range("A1").AutoFilter Field:=5, Criteria1:="15CT055 Calendar", Operator:=xlOr, Criteria2:="15CT055-LTFU Calendar"
-WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS3.Paste
+
+'Copy cohort 3 data to another tab
+WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
+        "15CT055 Cohort 3 LTFU Calendar", _
+        "15CT055 Cohort 3 Primary Calendar", _
+        "15CT055 Cohort 3 Retreatment Calendar", _
+        "15CT055 Cohort 3 Retx-LTFU Calendar"), Operator:=xlFilterValues
+
+WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
+WS5.Paste
 
 WS4.Range("A1").Value = "All Cohorts Query Status"
 Call QueryReportOverview(WS1, WS4, 1)
@@ -148,6 +184,9 @@ Call QueryReportOverview(WS3, WS4, 7)
 WS4.Range("A13").Value = "Cohort 2 Query Status"
 Call QueryReportOverview(WS2, WS4, 13)
 
+WS4.Range("A19").Value = "Cohort 3 Query Status"
+Call QueryReportOverview(WS5, WS4, 19)
+
 'Autofit and add borders for the form status overview table
 WS4.Activate
 WS4.Range("A1").Select
@@ -157,6 +196,9 @@ WS4.Range("A7").Select
 FormatTable
 
 WS4.Range("A13").Select
+FormatTable
+
+WS4.Range("A19").Select
 FormatTable
 
 End Sub
