@@ -337,6 +337,9 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
         End If
         Set SelectCells = Nothing
         Call FormatTable
+        'add autofilter back after removing not needed rows
+        ActiveSheet.Range("A1").AutoFilter
+
     Next CurrentSheetNum
     
     Sheets(2).Activate
