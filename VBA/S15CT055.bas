@@ -175,6 +175,9 @@ WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
 WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS5.Paste
 
+WS1.Activate
+RemoveFilter
+
 WS4.Range("A1").Value = "All Cohorts Query Status"
 Call QueryReportOverview(WS1, WS4, 1)
 
