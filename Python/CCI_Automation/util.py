@@ -295,7 +295,8 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                             df[column_name] = pd.to_datetime(df[column_name])
                             # filter out the data that is after the cut off date. If the date is null, keep it
                             df = df[(df[column_name] <= cut_off_date) | (df[column_name].isnull())]
-
+                        # if there are more than one row for the same subject, keep the one with the last 'Event Date'
+                        df = df.sort_values(["Subject", "Event Date"]).drop_duplicates(subset=["Subject"], keep="last")
                     # Replace '100-' prefix with an empty string
                     df["Subject"] = df["Subject"].str.replace("^100-", "", regex=True)
                     # only get data that is submitted status
