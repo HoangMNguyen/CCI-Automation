@@ -1,6 +1,6 @@
 Attribute VB_Name = "SafetyMacro"
 Sub FormatNonAECRF()
-'Last updated: 02/09/2024 By Nina Sizova
+'Last updated: 04/14/2025 By Nina Sizova
 
     Dim xcell As Object
     Dim SelectCells As Range
@@ -43,14 +43,23 @@ Sub FormatNonAECRF()
     'Hidden Range (Event Group Name to Data Listing As Of)
     Dim EGNColumn As String
     Dim DLAOColumn As String
+    Dim FNColumn As String
+    Dim FSColumn As String
     EGNColumn = FindColumn(WS2, "Event Group Name")
     DLAOColumn = FindColumn(WS2, "Data Listing As Of")
-    Columns(EGNColumn & ":" & DLAOColumn).Hidden = True
+    FNColumn = FindColumn(WS2, "Form Name")
+    FSColumn = FindColumn(WS2, "Form Status")
+    Columns(EGNColumn & ":" & FNColumn).Hidden = True
+    Columns(FSColumn & ":" & DLAOColumn).Hidden = True
     If Not IsEmpty(Range("A2")) Then
         WS2.Range("A2:" & LastColumn & lastRow).Select
         Selection.VerticalAlignment = xlTop
         Selection.WrapText = True
     End If
+    
+    'Sort by Form Sequence Number and Subject
+    Call sortAsc("K1")
+    Call sortAsc("A1")
     
     'Freeze top row
     ActiveWindow.FreezePanes = False

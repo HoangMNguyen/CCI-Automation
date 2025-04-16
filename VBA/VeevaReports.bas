@@ -232,11 +232,11 @@ Sub FormProgressListingFormat()
     Call RemoveColumn(WS1, "Event Label")
     Call RemoveColumn(WS1, "Event Group Sequence Number")
     Call RemoveColumn(WS1, "SDV Plan")
-    Call RemoveColumn(WS1, "SDV Override Plan")
-    Call RemoveColumn(WS1, "SDV Required")
+    Call RemoveColumn(WS1, "Form SDV Override Plan")
+    Call RemoveColumn(WS1, "Form SDV Required")
     Call RemoveColumn(WS1, "DMR Plan")
-    Call RemoveColumn(WS1, "DMR Override Plan")
-    Call RemoveColumn(WS1, "DMR Required")
+    Call RemoveColumn(WS1, "Form DMR Override Plan")
+    Call RemoveColumn(WS1, "Form DMR Required")
     Call RemoveColumn(WS1, "Frozen")
     Call RemoveColumn(WS1, "Freeze Date")
     Call RemoveColumn(WS1, "Locked")
@@ -265,30 +265,30 @@ Sub FormProgressListingFormat()
     WS2.Range("A7").Value = "SDV Status"
     WS2.Range("B7").Value = "Counts"
     WS2.Range("A8").Value = "Forms Pending SDV"
-    WS2.Range("B8").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "SDV Complete", "No")
+    WS2.Range("B8").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "Form SDV Complete", "No")
     WS2.Range("A9").Value = "Forms SDV Complete"
-    WS2.Range("B9").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "SDV Complete", "Yes")
+    WS2.Range("B9").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "Form SDV Complete", "Yes")
     WS2.Range("A10").Value = "% Forms SDV Complete"
-    WS2.Range("B10").Value = Int(CountPerColumnName(WS1, "Form Status", "Submitted", "SDV Complete", "Yes") / (CountPerColumnName(WS1, "Form Status", "Submitted", "SDV Complete", "No") + CountPerColumnName(WS1, "Form Status", "Submitted", "SDV Complete", "Yes")) * 100)
+    WS2.Range("B10").Value = Int(CountPerColumnName(WS1, "Form Status", "Submitted", "Form SDV Complete", "Yes") / (CountPerColumnName(WS1, "Form Status", "Submitted", "Form SDV Complete", "No") + CountPerColumnName(WS1, "Form Status", "Submitted", "Form SDV Complete", "Yes")) * 100)
     
     WS2.Range("A13").Value = "DMR Status"
     WS2.Range("B13").Value = "Counts"
     WS2.Range("A14").Value = "Forms Pending DMR"
-    WS2.Range("B14").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "DMR Complete", "No")
+    WS2.Range("B14").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "Form DMR Complete", "No")
     WS2.Range("A15").Value = "Forms DMR Complete"
-    WS2.Range("B15").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "DMR Complete", "Yes")
+    WS2.Range("B15").Value = CountPerColumnName(WS1, "Form Status", "Submitted", "Form DMR Complete", "Yes")
     WS2.Range("A16").Value = "% Forms DMR Complete"
-    WS2.Range("B16").Value = Int(CountPerColumnName(WS1, "Form Status", "Submitted", "DMR Complete", "Yes") / (CountPerColumnName(WS1, "Form Status", "Submitted", "DMR Complete", "No") + CountPerColumnName(WS1, "Form Status", "Submitted", "DMR Complete", "Yes")) * 100)
+    WS2.Range("B16").Value = Int(CountPerColumnName(WS1, "Form Status", "Submitted", "Form DMR Complete", "Yes") / (CountPerColumnName(WS1, "Form Status", "Submitted", "Form DMR Complete", "No") + CountPerColumnName(WS1, "Form Status", "Submitted", "Form DMR Complete", "Yes")) * 100)
     
     'Adding if ReSDV or ReDMR exists
     Dim ReSDVCountYes As Integer
     Dim ReDMRCountYes As Integer
     Dim ReSDVCountNo As Integer
     Dim ReDMRCountNo As Integer
-    ReSDVCountYes = CountPerColumnName(WS1, "Form Status", "Submitted", "Requires Re-SDV", "Yes")
-    ReDMRCountYes = CountPerColumnName(WS1, "Form Status", "Submitted", "Requires Re-DMR", "Yes")
-    ReSDVCountNo = CountPerColumnName(WS1, "Form Status", "Submitted", "Requires Re-SDV", "No")
-    ReDMRCountNo = CountPerColumnName(WS1, "Form Status", "Submitted", "Requires Re-DMR", "No")
+    ReSDVCountYes = CountPerColumnName(WS1, "Form Status", "Submitted", "Form Requires Re-SDV", "Yes")
+    ReDMRCountYes = CountPerColumnName(WS1, "Form Status", "Submitted", "Form Requires Re-DMR", "Yes")
+    ReSDVCountNo = CountPerColumnName(WS1, "Form Status", "Submitted", "Form Requires Re-SDV", "No")
+    ReDMRCountNo = CountPerColumnName(WS1, "Form Status", "Submitted", "Form Requires Re-DMR", "No")
     
     If ReSDVCountYes <> 0 Or ReDMRCountYes <> 0 Or ReSDVCountNo <> 0 Or ReDMRCountNo <> 0 Then
         WS2.Range("A11").Value = "Forms Require Re-SDV"
@@ -314,15 +314,15 @@ Sub FormProgressListingFormat()
     
     Dim NoSDVYesDMR As Integer
 
-    NoSDVYesDMR = CountPerColumnName(WS1, "SDV Complete", "No", "DMR Complete", "Yes")
+    NoSDVYesDMR = CountPerColumnName(WS1, "Form SDV Complete", "No", "Form DMR Complete", "Yes")
     
     WS1.Activate
     Call RemoveFilter
-    Call FilterColumn(WS1, "SDV Complete", "No")
-    Call FilterColumn(WS1, "DMR Complete", "Yes")
+    Call FilterColumn(WS1, "Form SDV Complete", "No")
+    Call FilterColumn(WS1, "Form DMR Complete", "Yes")
     NoSDVYesDMR = CountFilteredRows(WS1, "Subject")
     Dim HeadersToCopy As Variant
-    HeadersToCopy = Array("Subject", "Subject Status", "Event Group Label", "Event Date", "Form Label", "Form Sequence Number", "Form Status", "SDV Complete", "DMR Complete", "Open Queries")  ' Replace with your headers
+    HeadersToCopy = Array("Subject", "Subject Status", "Event Group Label", "Event Date", "Form Label", "Form Sequence Number", "Form Status", "Form SDV Complete", "Form DMR Complete", "Open Queries")  ' Replace with your headers
     Call CopySelectedVisibleColumnsToLocation(WS1, WS2, HeadersToCopy, 5, 2)
     
     Dim StartingRow As Integer
@@ -336,7 +336,7 @@ Sub FormProgressListingFormat()
 
     Dim YesSDVOpenQuery As Integer
     Call RemoveFilter
-    Call FilterColumn(WS1, "SDV Complete", "Yes")
+    Call FilterColumn(WS1, "Form SDV Complete", "Yes")
     Call FilterExcludeValue(WS1, "Open Queries", "0")
     YesSDVOpenQuery = CountFilteredRows(WS1, "Subject")
     Call CopySelectedVisibleColumnsToLocation(WS1, WS2, HeadersToCopy, 5, StartingRow + 1)
@@ -350,7 +350,7 @@ Sub FormProgressListingFormat()
     
     Dim YesDMROpenQuery As Integer
     Call RemoveFilter
-    Call FilterColumn(WS1, "DMR Complete", "Yes")
+    Call FilterColumn(WS1, "Form DMR Complete", "Yes")
     Call FilterExcludeValue(WS1, "Open Queries", "0")
     YesDMROpenQuery = CountFilteredRows(WS1, "Subject")
     Call CopySelectedVisibleColumnsToLocation(WS1, WS2, HeadersToCopy, 5, StartingRow + 1)
@@ -365,7 +365,7 @@ Sub FormProgressListingFormat()
     Dim NotSubmittedYesSDV As Integer
     Call RemoveFilter
     Call FilterExcludeValue(WS1, "Form Status", "Submitted")
-    Call FilterColumn(WS1, "SDV Complete", "Yes")
+    Call FilterColumn(WS1, "Form SDV Complete", "Yes")
     NotSubmittedYesSDV = CountFilteredRows(WS1, "Subject")
     Call CopySelectedVisibleColumnsToLocation(WS1, WS2, HeadersToCopy, 5, StartingRow + 1)
     If NotSubmittedYesSDV > 0 Then
@@ -379,7 +379,7 @@ Sub FormProgressListingFormat()
     Dim NotSubmittedYesDMR As Integer
     Call RemoveFilter
     Call FilterExcludeValue(WS1, "Form Status", "Submitted")
-    Call FilterColumn(WS1, "DMR Complete", "Yes")
+    Call FilterColumn(WS1, "Form DMR Complete", "Yes")
     NotSubmittedYesDMR = CountFilteredRows(WS1, "Subject")
 
     Call CopySelectedVisibleColumnsToLocation(WS1, WS2, HeadersToCopy, 5, StartingRow + 1)
