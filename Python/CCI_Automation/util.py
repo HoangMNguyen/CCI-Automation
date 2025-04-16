@@ -295,7 +295,6 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                             df[column_name] = pd.to_datetime(df[column_name])
                             # filter out the data that is after the cut off date. If the date is null, keep it
                             df = df[(df[column_name] <= cut_off_date) | (df[column_name].isnull())]
-
                     # Replace '100-' prefix with an empty string
                     df["Subject"] = df["Subject"].str.replace("^100-", "", regex=True)
                     # only get data that is submitted status
@@ -604,6 +603,7 @@ def get_data_from_dict(data: dict, input_dict: dict, *exclude) -> pd.DataFrame:
                 merged_df = collected_data
             else:
                 merged_df = pd.merge(merged_df, collected_data, on="Subject", how="left")
+
     return merged_df
 
 
