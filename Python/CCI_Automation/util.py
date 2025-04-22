@@ -676,3 +676,89 @@ def age_calculation(merged_df, output_column, DOB: str, CS1: str, CS2: str = "")
                     (merged_df[CS1].isnull() & merged_df[CS2].notnull())
                 ].apply(lambda x: relativedelta(x[CS2], x[DOB]).years, axis=1)
     return merged_df
+
+
+def get_excel_formats(workbook):
+    """
+    Returns a dictionary of formatting options for Excel workbooks.
+
+    Args:
+        workbook: The xlsxwriter workbook object
+
+    Returns:
+        dict: Dictionary containing formatting options
+    """
+    return {
+        "bold_11_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": True,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": True,
+                "font_name": "Calibri",
+                "font_size": 11,
+                "border": 1,
+            }
+        ),
+        "bold_12_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": False,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": True,
+                "font_name": "Calibri",
+                "font_size": 12,
+                "border": 1,
+            }
+        ),
+        "bold_12_wrap_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": True,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": True,
+                "font_name": "Calibri",
+                "font_size": 12,
+                "border": 1,
+            }
+        ),
+        "bold_11_wrap_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": True,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": True,
+                "font_name": "Calibri",
+                "font_size": 11,
+                "border": 1,
+            }
+        ),
+        "normal_data_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": False,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": False,
+                "font_name": "Calibri",
+                "font_size": 11,
+                "border": 1,
+            }
+        ),
+        "normal_data_wrap_format": workbook.add_format(
+            {
+                "bg_color": "#FFFFFF",
+                "text_wrap": True,
+                "valign": "vcenter",
+                "align": "center",
+                "bold": False,
+                "font_name": "Calibri",
+                "font_size": 11,
+                "border": 1,
+            }
+        ),
+    }
