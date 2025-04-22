@@ -141,7 +141,7 @@ class Widget(QWidget):
             self.ui.comboBox_2.addItems(["03821", "11823", "12423", "15122", "15420", "16321"])
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "DSMB Report":
-            self.ui.comboBox_2.addItems(["15420", "12423", "15122", "03821"])
+            self.ui.comboBox_2.addItems(["15420", "11823", "12423", "15122", "03821"])
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "Clockify Dashboard" or self.selected_option == "Add templated tasks":
             self.ui.comboBox_2.addItems(clockify_get_list_projects(clockify_get_api_key(), clockify_get_workplace_id()))
