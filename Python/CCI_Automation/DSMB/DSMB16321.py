@@ -19,6 +19,7 @@ from util import (
 )
 from datetime import datetime
 from typing import Optional
+import re
 
 # Opt-in to the future behavior
 pd.set_option("future.no_silent_downcasting", True)
@@ -305,188 +306,126 @@ class DSMB16321:
         }
         IE_df = IE_df.rename(columns=IE_new_col_name)
         Eligible_df = IE_df[IE_df["Subject meets all study eligibility?"] == "Yes"].copy()
-        # *: PREPARE DATA FOR EGFR LISTING
-        EGFR_subject_df = Eligible_df["Subject"].copy()
-        EGFR1_df = EGFR_subject_df
-        EGFR1_df = add_rename_column_corelisting(EGFR1_df, data, "LBEGFR", "Event Group Label", "Event Group Label")
 
-        EGFR1_df = EGFR1_df[(EGFR1_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")].copy()
+        # *: Get latest date from Sugery in Initial Study Enrollment/Apheresis event
+        MHSG_subject_df = Eligible_df["Subject"].copy()
+        MHSG1_df = MHSG_subject_df
+        MHSG1_df = add_rename_column_corelisting(MHSG1_df, data, "MHSG", "Event Group Label", "Event Group Label")
 
-        EGFR_collectionDT_df = data["LBEGFR"][
+        MHSG1_df = MHSG1_df[(MHSG1_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")].copy()
+
+        MHSG_collectionDT_df = data["MHSG"][
             [
                 "Subject",
                 "Event Group Label",
-                "Was EGFR Amplification testing performed? (IG_NS_NA_LBEGFR1.CL_NS_NH_EGFRAMPERF_cl_YS_YN1)",
+                "Was EGFR amplification testing performed on this sample? (IG_NS_NA_MHSG4.CL_NS_NH_EGFRPERF_cl_YS_YN1)",
+                "Date of Surgery (IG_NS_NA_MHSG2.DT_NS_NH_SGDAT)",
+            ]
+        ].copy()
+
+        MHSG_new_col_name = {
+            "Was EGFR amplification testing performed on this sample? (IG_NS_NA_MHSG4.CL_NS_NH_EGFRPERF_cl_YS_YN1)": "Was EGFR amplification testing performed on this sample?",
+            "Date of Surgery (IG_NS_NA_MHSG2.DT_NS_NH_SGDAT)": "Date of Surgery",
+        }
+
+        MHSG_collectionDT_df = MHSG_collectionDT_df.rename(columns=MHSG_new_col_name)
+
+        # Filter the DataFrame based on the conditions
+        filtered_MHSGINIT_df = MHSG_collectionDT_df[
+            (MHSG_collectionDT_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")
+            & (MHSG_collectionDT_df["Was EGFR amplification testing performed on this sample?"] == "Yes")
+            & (MHSG_collectionDT_df["Date of Surgery"].notna())
+        ].copy()
+
+        # Sort and get the last row for each subject, need test result from last collection date
+        filtered_MHSGINIT_df = filtered_MHSGINIT_df.sort_values(["Date of Surgery"])
+        filtered_MHSGINIT_df = filtered_MHSGINIT_df.groupby("Subject").tail(1)  # Get the last row per subject
+        filtered_MHSGINIT_df = filtered_MHSGINIT_df.sort_values(["Subject"])
+        # print(filtered_MHSGINIT_df)
+        # drop "Event Group Label" and "Was EGFR amplification testing performed on this sample?" column
+        filtered_MHSGINIT_df = filtered_MHSGINIT_df.drop(
+            columns=["Event Group Label", "Was EGFR amplification testing performed on this sample?"]
+        )
+        # Renmae filtered_MHSGINIT_df["Date of Surgery"] to "Collection Date"
+        filtered_MHSGINIT_df = filtered_MHSGINIT_df.rename(columns={"Date of Surgery": "Collection Date"})
+
+        # *: PREPARE DATA FOR EGFR LISTING
+        # EGFR_subject_df = Eligible_df["Subject"].copy()
+        # EGFR1_df = EGFR_subject_df
+        # EGFR1_df = add_rename_column_corelisting(EGFR1_df, data, "LBEGFR", "Event Group Label", "Event Group Label")
+
+        # EGFR1_df = EGFR1_df[(EGFR1_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")].copy()
+
+        EGFR_df = data["LBEGFR"][
+            [
+                "Subject",
+                # "Event Group Label",
+                # "Was EGFR Amplification testing performed? (IG_NS_NA_LBEGFR1.CL_NS_NH_EGFRAMPERF_cl_YS_YN1)",
                 "Collection Date (IG_NS_NA_LBEGFR1.DT_YS_NH_LBDAT)",
                 "Amplification of EGFR (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR_cl_YS_DTNDT1)",
                 "EGFRvIII Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR8_cl_YS_DTNDT1)",
                 "EGFR Extracellular Domain Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_EGFRMUT_cl_YS_DTNDT1)",
             ]
         ].copy()
+
         EGFR_new_col_name = {
-            "Was EGFR Amplification testing performed? (IG_NS_NA_LBEGFR1.CL_NS_NH_EGFRAMPERF_cl_YS_YN1)": "Was EGFR Amplification testing performed?",
+            # "Was EGFR Amplification testing performed? (IG_NS_NA_LBEGFR1.CL_NS_NH_EGFRAMPERF_cl_YS_YN1)": "Was EGFR Amplification testing performed?",
             "Collection Date (IG_NS_NA_LBEGFR1.DT_YS_NH_LBDAT)": "Collection Date",
             "Amplification of EGFR (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR_cl_YS_DTNDT1)": "Amplification of EGFR",
             "EGFRvIII Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR8_cl_YS_DTNDT1)": "EGFRvIII Mutation",
             "EGFR Extracellular Domain Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_EGFRMUT_cl_YS_DTNDT1)": "EGFR Extracellular Domain Mutation",
         }
-        EGFR_collectionDT_df = EGFR_collectionDT_df.rename(columns=EGFR_new_col_name)
+
+        EGFR_df = EGFR_df.rename(columns=EGFR_new_col_name)
+
+        # Merge the filtered_MHSGINIT_df with the EGFR_collectionDT_df on "Subject" and "Collection Date"
+        EGFR_df = pd.merge(
+            filtered_MHSGINIT_df[["Subject", "Collection Date"]].drop_duplicates(),
+            EGFR_df,
+            on=["Collection Date", "Subject"],
+            how="left",
+        )
 
         # Filter the DataFrame based on the conditions
-        filtered_INIT_df = EGFR_collectionDT_df[
-            (EGFR_collectionDT_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")
-            & (EGFR_collectionDT_df["Was EGFR Amplification testing performed?"] == "Yes")
-            & (EGFR_collectionDT_df["Collection Date"].notna())
-        ].copy()
-        # Sort and get the last row for each subject, need test result from last collection date
-        filtered_INIT_df = filtered_INIT_df.sort_values(["Collection Date"])
-        # same collection date will have 2 rows with different labs
-        filtered_INIT_df = filtered_INIT_df.groupby("Subject").tail(2)
-        # filtered_INIT_df = filtered_INIT_df.groupby("Subject").head(2)
-        filtered_INIT_df = filtered_INIT_df.sort_values(["Subject"])
+        # filtered_INIT_df = EGFR_collectionDT_df[
+        #     (EGFR_collectionDT_df["Event Group Label"] == "Initial Study Enrollment/Apheresis")
+        #     & (EGFR_collectionDT_df["Was EGFR Amplification testing performed?"] == "Yes")
+        #     & (EGFR_collectionDT_df["Collection Date"].notna())
+        # ].copy()
+
+        # # Sort and get the last row for each subject, need test result from last collection date
+        # filtered_INIT_df = filtered_INIT_df.sort_values(["Collection Date"])
+        # filtered_INIT_df = filtered_INIT_df.groupby("Subject").tail(2)  # Get the last 2 rows per subject
+        # filtered_INIT_df = filtered_INIT_df.sort_values(["Subject"])
 
         replacement_date = pd.Timestamp("1900-01-01")
+        # filtered_INIT_df["Collection Date"] = filtered_INIT_df["Collection Date"].fillna(replacement_date)
 
-        # Replace missing dates with the specified value
-        filtered_INIT_df["Collection Date"] = filtered_INIT_df["Collection Date"].fillna(replacement_date)
-        # filtered_INIT_df["Collection Date"] = pd.to_datetime(filtered_INIT_df["Collection Date"])
-
-        # List of columns to concatenate
+        # Define the columns to concatenate
         columns_to_concatenate_init = [
             "Amplification of EGFR",
             "EGFRvIII Mutation",
             "EGFR Extracellular Domain Mutation",
         ]
 
-        # Group by "Collection Date" and concatenate strings within each group, when some tests are performed twice by different labs, there will be duplicate results in one cell
-        # Perform the groupby operation and aggregation
+        # Perform aggregation and retain only the first non-empty value for each column, handling NaN properly
         agg_init_df = (
-            filtered_INIT_df.groupby(["Collection Date"])[columns_to_concatenate_init]
-            .apply(lambda group: group.fillna("").astype(str).agg(" ".join))
+            EGFR_df.groupby(["Subject", "Collection Date"])[columns_to_concatenate_init]
+            .apply(
+                lambda group: group.apply(lambda col: col.dropna().iloc[0] if not col.dropna().empty else "")
+            )  # Retain first non-empty value
             .reset_index()
         )
 
-        # Rename the aggregated columns if needed
-        agg_init_df.columns = ["Collection Date"] + columns_to_concatenate_init
-
-        # # Replace missing dates with the specified value
+        # Fill any remaining NaNs in the "Collection Date" column with the placeholder date
         agg_init_df["Collection Date"] = agg_init_df["Collection Date"].fillna(replacement_date)
 
-        # Merge aggregated data back to the original DataFrame
-        filtered_INIT_df = pd.merge(
-            filtered_INIT_df[["Subject", "Collection Date"]].drop_duplicates(),
-            agg_init_df,
-            on="Collection Date",
-            how="left",
-        )
-        # Corrected lambda function to replace duplcate values entered twice in different labs based on condition and handle missing values
-        filtered_INIT_df["Amplification of EGFR"] = filtered_INIT_df.apply(
-            lambda row: "Detected"
-            if row["Amplification of EGFR"] == "Detected Detected"
-            else "Not Detected"
-            if row["Amplification of EGFR"] == "Not Detected Not Detected"
-            else "Indeterminant"
-            if row["Amplification of EGFR"] == "Indeterminant Indeterminant"
-            else row["Amplification of EGFR"],
-            axis=1,
-        )
-
-        # print(filtered_INIT_df)
-        # Some EGFR data were entered into unscheduled disease assessment event, need to be combined with the EGFR data from Initial Study Enrollment/Apheresis
-        filtered_UNS_df = EGFR_collectionDT_df[
-            (EGFR_collectionDT_df["Event Group Label"] == "Unscheduled Disease Assessments")
-            & (EGFR_collectionDT_df["Was EGFR Amplification testing performed?"] == "Yes")
-            & (EGFR_collectionDT_df["Collection Date"].notna())
-        ].copy()
-        EGFR_collectionDT2_df = pd.merge(
-            filtered_INIT_df, filtered_UNS_df, on=["Subject", "Collection Date"], how="outer", suffixes=("", "_UNS")
-        )
-
-        # Convert the entire column to string to avoid data type issues
-        EGFR_collectionDT2_df["Amplification of EGFR"] = (
-            EGFR_collectionDT2_df["Amplification of EGFR"].fillna("").astype(str)
-        )
-        EGFR_collectionDT2_df["EGFRvIII Mutation"] = EGFR_collectionDT2_df["EGFRvIII Mutation"].fillna("").astype(str)
-        EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"] = (
-            EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"].fillna("").astype(str)
-        )
-        # if "Amplification of EGFR" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
-        mask = EGFR_collectionDT2_df["Amplification of EGFR"] == ""
-        EGFR_collectionDT2_df.loc[mask, "Amplification of EGFR"] = EGFR_collectionDT2_df.loc[
-            mask, "Amplification of EGFR_UNS"
-        ]
-
-        # if "EGFRvIII Mutation" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
-        mask = EGFR_collectionDT2_df["EGFRvIII Mutation"] == ""
-        EGFR_collectionDT2_df.loc[mask, "EGFRvIII Mutation"] = EGFR_collectionDT2_df.loc[mask, "EGFRvIII Mutation_UNS"]
-
-        # if "EGFR Extracellular Domain Mutation" in EGFR_collectionDT2_df.columns is blank, replace the value with Unscheduled evnt's test result
-        mask = EGFR_collectionDT2_df["EGFR Extracellular Domain Mutation"] == ""
-        EGFR_collectionDT2_df.loc[mask, "EGFR Extracellular Domain Mutation"] = EGFR_collectionDT2_df.loc[
-            mask, "EGFR Extracellular Domain Mutation_UNS"
-        ]
-
-        # print(EGFR_collectionDT2_df)
-
-        EGFR_collectionDT2_df = EGFR_collectionDT2_df.drop(
-            columns=[
-                "Event Group Label",
-                "Was EGFR Amplification testing performed?",
-                # "Event Group Label_UNS",
-                # "Was EGFR Amplification testing performed?_UNS",
-            ]
-        )
-        EGFR2_df = pd.merge(
-            EGFR1_df,
-            EGFR_collectionDT2_df,
-            on=["Subject"],
-            how="left",
-        )
-
-        # Sort and get the first row of unscheudled test which is the same collection date as "Initial Study Enrollment/Apheresis" for each subject
-        EGFR2_df = EGFR2_df.sort_values(["Collection Date"])
-        EGFR_df = EGFR2_df.groupby("Subject").head(1)
-        EGFR_df = EGFR_df.sort_values(["Subject"])
-        # print(EGFR_df)
-
-        #  replacement_date = pd.Timestamp("1900-01-01")
-
-        # Replace missing dates with the specified value
         EGFR_df["Collection Date"] = EGFR_df["Collection Date"].fillna(replacement_date)
         EGFR_df["Collection Date"] = pd.to_datetime(EGFR_df["Collection Date"])
 
-        # List of columns to concatenate
-        columns_to_concatenate = [
-            "Amplification of EGFR",
-            "EGFRvIII Mutation",
-            "EGFR Extracellular Domain Mutation",
-        ]
+        EGFR_final_df = agg_init_df.sort_values(["Subject"])
+        # print(EGFR_final_df)
 
-        # Group by "Collection Date" and concatenate strings within each group, when some tests are performed twice by different labs, there will be duplicate results in one cell
-        # Perform the groupby operation and aggregation
-        agg_df = (
-            EGFR_df.groupby(["Collection Date"])[columns_to_concatenate]
-            .apply(lambda group: group.fillna("").astype(str).agg(" ".join))
-            .reset_index()
-        )
-
-        # Rename the aggregated columns if needed
-        agg_df.columns = ["Collection Date"] + columns_to_concatenate
-
-        # # Replace missing dates with the specified value
-        agg_df["Collection Date"] = agg_df["Collection Date"].fillna(replacement_date)
-
-        # Merge aggregated data back to the original DataFrame
-        EGFR_df = pd.merge(
-            EGFR_df[["Subject", "Collection Date"]].drop_duplicates(),
-            agg_df,
-            on="Collection Date",
-            how="left",
-        )
-
-        EGFR_final_df = EGFR_df.sort_values(["Subject"])
-
-        # get "MGMT Result" data from MHDIAG
         MHDIAG_df = data["MHDIAG"][["Subject", "MGMT Result (IG_NS_NA_MHDIAG2.CL_NS_NH_MGMTRES_cl_NS_MGMTRES1)"]].copy()
         MHDIAG_new_col_name = {
             "MGMT Result (IG_NS_NA_MHDIAG2.CL_NS_NH_MGMTRES_cl_NS_MGMTRES1)": "MGMT Result",
@@ -498,15 +437,22 @@ class DSMB16321:
             on=["Subject"],
             how="left",
         )
-        # Merge EGFR data with MHDIAG data, keep eligible subjects even EGFR was not tested
+
         EGFR_final2_df = pd.merge(EGFR_final_df, MHDIAG_df, on="Subject", how="right")
         EGFR_final2_df["Collection Date"] = EGFR_final2_df["Collection Date"].fillna(replacement_date)
         EGFR_final2_df = EGFR_final2_df.sort_values(["Subject"])
         EGFR_final2_df = EGFR_final2_df.fillna("")
 
-        # prepare the output dataframe
+        # replace "" with "Not Done" for all columns except "Subject" and "Collection Date"
+        EGFR_final2_df.loc[EGFR_final2_df["Amplification of EGFR"] == "", "Amplification of EGFR"] = (
+            "Not Done"  # Replace empty strings with "Not Done"
+        )
+        EGFR_final2_df.loc[EGFR_final2_df["EGFRvIII Mutation"] == "", "EGFRvIII Mutation"] = "Not Done"
+        EGFR_final2_df.loc[
+            EGFR_final2_df["EGFR Extracellular Domain Mutation"] == "", "EGFR Extracellular Domain Mutation"
+        ] = "Not Done"
+
         EGFR_output_df = EGFR_final2_df.copy()
-        # *Re-order the columns and remove the columns that are not needed
         EGFR_output_df = EGFR_output_df[
             [
                 "Subject",
@@ -848,7 +794,11 @@ class DSMB16321:
 
         # TODO: RESPONSE LISTING
         INF_df = data["EXINF"][
-            ["Subject", "Event Group Label", "Was study treatment administered? (ig_EXINF1.INFOCCUR)"]
+            [
+                "Subject",
+                "Event Group Label",
+                "Was study treatment administered? (ig_EXINF1.INFOCCUR)",
+            ]
         ].copy()
         INF_new_col_name = {
             "Was study treatment administered? (ig_EXINF1.INFOCCUR)": "Treated",
@@ -865,17 +815,66 @@ class DSMB16321:
             response_df,
             data,
             "RS",
+            "Event Group Name",
+            "Event Group Name",
+            "Subject",
+        ).drop_duplicates()
+        response_df = add_rename_column_corelisting(
+            response_df,
+            data,
+            "RS",
+            "Was a disease assessment performed? (IG_NS_NA_RS1.CL_NS_YH_RSPERF_cl_YS_YN1)",
+            "Was a disease assessment performed?",
+            "Subject",
+            "Event Group Name",
+        ).drop_duplicates()
+        response_df = add_rename_column_corelisting(
+            response_df,
+            data,
+            "RS",
             "Did the subject have measurable disease at study treatment baseline? (IG_NS_NA_RS1.CL_NS_YH_MDATBL_cl_YS_YN1)",
             "Measurable vs. Non-Measurable Disease",
             "Subject",
-            #  "Event Group Label",
+            "Event Group Name",
         ).drop_duplicates()
+        response_df = add_rename_column_corelisting(
+            response_df,
+            data,
+            "RS",
+            "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
+            "Study Phase",
+            "Subject",
+            "Event Group Name",
+        ).drop_duplicates()
+
+        # filter by "Event Group Name"="eg_PRMTXFUP" or "Event Group Name"="eg_LTFUP1" or "Event Group Name"="eg_UNSRS"
+        response_df = response_df[
+            (response_df["Event Group Name"] == "eg_PRMTXFUP")
+            | (response_df["Event Group Name"] == "eg_LTFUP1")
+            | (response_df["Event Group Name"] == "eg_UNSRS")
+        ].copy()
+        # filter by study phase = "Primary Treatment"
+        response_df = response_df[response_df["Study Phase"] == "Primary Treatment"].copy()
+
+        response_df = response_df[response_df["Was a disease assessment performed?"] == "Yes"].copy()
+        # drop "Event Group Name" column and "Was a disease assessment performed?" column
+        response_df = response_df.drop(
+            columns=["Event Group Name", "Study Phase", "Was a disease assessment performed?"]
+        )
 
         # Drop rows where 'Measurable vs. Non-Measurable Disease' is NaN or empty string
         response_df = response_df[
             response_df["Measurable vs. Non-Measurable Disease"].notna()
             & response_df["Measurable vs. Non-Measurable Disease"].astype(bool)
         ]
+
+        # sort data by subject
+        response_df = response_df.sort_values(by=["Subject"])
+
+        # Ensure column is a string type for consistent comparison
+        response_df["Measurable vs. Non-Measurable Disease"] = response_df[
+            "Measurable vs. Non-Measurable Disease"
+        ].astype(str)
 
         # Corrected lambda function to replace values based on condition and handle missing values
         response_df["Measurable vs. Non-Measurable Disease"] = response_df.apply(
@@ -891,11 +890,12 @@ class DSMB16321:
             [
                 "Subject",
                 "Event Group Label",
+                "Event Group Name",
                 "Event Date",
                 "Study Phase (IG_NS_NA_RSBMRI1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
                 # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)",
                 # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)",
-                "Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)",
+                "Target Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)",
                 "Measurable Lesion Change Percentage from Baseline (%) (IG_NS_NA_RSBMRI4.NM_NS_YH_TLCP)",
             ]
         ].copy()
@@ -903,11 +903,13 @@ class DSMB16321:
             "Study Phase (IG_NS_NA_RSBMRI1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)": "Study Phase",
             # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)": "Primary Time Point",
             # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)": "Unscheduled Primary Day#",
-            "Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)": "Lesion #",
+            "Target Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)": "Lesion #",
             "Measurable Lesion Change Percentage from Baseline (%) (IG_NS_NA_RSBMRI4.NM_NS_YH_TLCP)": "% Change is SPD",
         }
         responseP_RSBMRI_df = responseP_RSBMRI_df.rename(columns=RSBMRI_new_col_name).drop_duplicates()
-        #
+        # order by subject, event date
+        responseP_RSBMRI_df = responseP_RSBMRI_df.sort_values(by=["Subject", "Event Date"])
+
         # Convert 'Lesion #' to numeric (if needed) and handle errors by coercing non-numeric values to NaN
         responseP_RSBMRI_df["Lesion #"] = pd.to_numeric(responseP_RSBMRI_df["Lesion #"], errors="coerce")
 
@@ -920,6 +922,7 @@ class DSMB16321:
             [
                 "Subject",
                 "Event Group Label",
+                "Event Group Name",
                 "Event Date",
                 "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
                 "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)",
@@ -937,15 +940,18 @@ class DSMB16321:
             "Overall Objective Status (IG_NS_NA_RS2.CL_NS_NH_OOS_cl_NS_OOSRESP1)": "Overall Objective Status",
         }
         responseP1_df = responseP1_df.rename(columns=RS_new_col_name).drop_duplicates()
-        responseP1_df = responseP1_df.sort_values(by=["Subject"])
+        # sort by subject and event date
+        responseP1_df = responseP1_df.sort_values(by=["Subject", "Event Date"])
+
+        # print(responseP1_df)
 
         responseP_df = pd.merge(
             responseP1_df,
             responseP_RSBMRI_df,
-            on=["Subject", "Event Group Label", "Event Date", "Study Phase"],
+            on=["Subject", "Event Group Label", "Event Group Name", "Event Date", "Study Phase"],
             how="left",
         )
-
+        # print(responseP_df)
         # Convert Event Date to datetime object
         responseP_df["Event Date"] = pd.to_datetime(responseP_df["Event Date"])
 
@@ -1041,6 +1047,7 @@ class DSMB16321:
 
         drop_RS_columns = [
             "Event Group Label",
+            "Event Group Name",
             "Study Phase",
             "Primary Time Point",
             "Unscheduled Primary Day#",
@@ -1048,6 +1055,7 @@ class DSMB16321:
         ]
         drop_LASTV_columns = [
             "Event Group Label",
+            "Event Group Name",
             "Study Phase",
             "Primary Time Point",
             "Unscheduled Primary Day#",
@@ -1056,6 +1064,7 @@ class DSMB16321:
         ]
 
         responseP_df = responseP_df[responseP_df["Study Phase"] == "Primary Treatment"].copy()
+        # print(responseP_df)
 
         DAY1_df = responseP_df[responseP_df["Event Group Label"] == "Day 1"].copy()
         DAY1_df = DAY1_df.drop(columns=drop_RS_columns)
@@ -1470,9 +1479,6 @@ class DSMB16321:
         # M12_df = M12_df.drop(columns=drop_RS_columns)
         response_df = pd.merge(response_df, M12_df, on="Subject", how="left", suffixes=("", "_M12"))
 
-        UNS_df = responseP_df[(responseP_df["Event Group Label"] == "Unscheduled Disease Assessments")].copy()
-
-        # Add Day in front of unscheduedled Day#
         # Define a function to handle conversion safely
         def safe_int_conversion(value):
             try:
@@ -1482,16 +1488,182 @@ class DSMB16321:
                 # Return an empty string if conversion fails
                 return "Day " + str(value)
 
+        # adding Primary ANP data to response_df
+        responseP_CMPMANP_df = data["CMPMANP"][
+            [
+                "Subject",
+                "Study Phase (ig_CMPMANP1.STUDYPHS)",
+                "Start Date (ig_CMPMANP2.ANPSTDAT)",
+            ]
+        ].copy()
+        CMPMANP_new_col_name = {
+            "Study Phase (ig_CMPMANP1.STUDYPHS)": "Study Phase",
+            "Start Date (ig_CMPMANP2.ANPSTDAT)": "ANP Start Date",
+        }
+        responseP_CMPMANP_df = responseP_CMPMANP_df.rename(columns=CMPMANP_new_col_name).drop_duplicates()
+        # Filter the DataFrame for Primary Treatment
+        responseP_CMPMANP_df_filtered = responseP_CMPMANP_df[
+            responseP_CMPMANP_df["Study Phase"] == "Primary Treatment"
+        ].copy()
+
+        # Sort and get the last row for each subject, need start date from first ANP
+        responseP_CMPMANP_df_filtered = responseP_CMPMANP_df_filtered.sort_values(["ANP Start Date"])
+        responseP_CMPMANP_df_filtered = responseP_CMPMANP_df_filtered.groupby("Subject").head(
+            1
+        )  # Get the first row per subject
+        responseP_CMPMANP_df_filtered = responseP_CMPMANP_df_filtered.sort_values(["Subject"])
+        responseP_CMPMANP_df_filtered = responseP_CMPMANP_df_filtered.drop(columns=["Study Phase"])
+
+        # adding LTFU ANP data to response_df
+        responseP_CMLANP_df = data["CMLANP"][
+            [
+                "Subject",
+                "Study Phase (ig_CMLANP1.STUDYPHS)",
+                "Start Date (ig_CMLANP2.ANPSTDAT)",
+            ]
+        ].copy()
+        CMLANP_new_col_name = {
+            "Study Phase (ig_CMLANP1.STUDYPHS)": "Study Phase",
+            "Start Date (ig_CMLANP2.ANPSTDAT)": "LTFU ANP Start Date",
+        }
+        responseP_CMLANP_df = responseP_CMLANP_df.rename(columns=CMLANP_new_col_name).drop_duplicates()
+        # Filter the DataFrame for Primary Treatment
+        responseP_CMLANP_df_filtered = responseP_CMLANP_df[
+            responseP_CMLANP_df["Study Phase"] == "Primary Treatment"
+        ].copy()
+
+        # Sort and get the last row for each subject, need start date from first ANP
+        responseP_CMLANP_df_filtered = responseP_CMLANP_df_filtered.sort_values(["LTFU ANP Start Date"])
+        responseP_CMLANP_df_filtered = responseP_CMLANP_df_filtered.groupby("Subject").head(
+            1
+        )  # Get the first row per subject
+        responseP_CMLANP_df_filtered = responseP_CMLANP_df_filtered.sort_values(["Subject"])
+        responseP_CMLANP_df_filtered = responseP_CMLANP_df_filtered.drop(columns=["Study Phase"])
+
+        DAY0_df = data["EXINF"][
+            [
+                "Subject",
+                "Event Group Label",
+                "Was study treatment administered? (ig_EXINF1.INFOCCUR)",
+                "Study Treatment Date (ig_EXINF1.INFDAT)",
+            ]
+        ].copy()
+        DAY0_new_col_name = {
+            "Was study treatment administered? (ig_EXINF1.INFOCCUR)": "Treated",
+            "Study Treatment Date (ig_EXINF1.INFDAT)": "Day 0 Date",
+        }
+        DAY0_df = DAY0_df.rename(columns=DAY0_new_col_name)
+        DAY0_df = DAY0_df[(DAY0_df["Event Group Label"] == "Day 0") & (DAY0_df["Treated"] == "Yes")].copy()
+        DAY0_df = DAY0_df.drop(columns=["Event Group Label", "Treated"])
+
+        responsePANP_df = pd.merge(
+            responseP_CMPMANP_df_filtered,
+            DAY0_df,
+            on=["Subject"],
+            how="right",
+        )
+        responsePANP_df = pd.merge(
+            responsePANP_df,
+            responseP_CMLANP_df_filtered,
+            on=["Subject"],
+            how="outer",
+        )
+
+        # print(responsePANP_df)
+        def LTFU_safe_int_conversion(value):
+            try:
+                # Attempt to convert the value to an integer
+                return "LTFU Day " + str(int(value))
+            except (ValueError, TypeError):
+                # if already has Day or Month in the string, add LTFU in front of it
+                return "LTFU " + str(value)
+
+        # Convert the columns to datetime
+        responsePANP_df["Day 0 Date"] = pd.to_datetime(responsePANP_df["Day 0 Date"])
+        responsePANP_df["ANP Start Date"] = pd.to_datetime(responsePANP_df["ANP Start Date"])
+        responsePANP_df["LTFU ANP Start Date"] = pd.to_datetime(responsePANP_df["LTFU ANP Start Date"])
+
+        # Ensure both columns are datetime
+        responsePANP_df["ANP Start Date"] = pd.to_datetime(responsePANP_df["ANP Start Date"])
+        responsePANP_df["LTFU ANP Start Date"] = pd.to_datetime(responsePANP_df["LTFU ANP Start Date"])
+
+        # Calculate the difference between the two dates for rows "ANP Start Date" is not blank
+        responsePANP_df = responsePANP_df[responsePANP_df["ANP Start Date"] != ""]
+        # responsePANP_df["ANP Start Date"] = pd.to_datetime(responsePANP_df["ANP Start Date"])
+        difference = responsePANP_df["ANP Start Date"] - responsePANP_df["Day 0 Date"]
+        responsePANP_df["Study Day Received First ANP"] = difference.dt.days
+        responsePANP_df["Study Day Received First ANP"] = responsePANP_df["Study Day Received First ANP"].replace(
+            "nan", ""
+        )
+
+        responsePANP_df["Study Day Received First ANP"] = responsePANP_df.apply(
+            lambda row: safe_int_conversion(row["Study Day Received First ANP"])
+            if pd.notna(row["Study Day Received First ANP"]) and row["Study Day Received First ANP"] != ""
+            else "",
+            axis=1,
+        )
+        # Calculate the difference between the two dates for rows "ANP Start Date" is not blank
+        responsePANP_df = responsePANP_df[responsePANP_df["LTFU ANP Start Date"] != ""]
+        difference_LTFU = responsePANP_df["LTFU ANP Start Date"] - responsePANP_df["Day 0 Date"]
+        responsePANP_df["LTFU Study Day Received First ANP"] = difference_LTFU.dt.days
+        responsePANP_df["LTFU Study Day Received First ANP"] = responsePANP_df[
+            "LTFU Study Day Received First ANP"
+        ].replace("nan", "")
+
+        responsePANP_df["LTFU Study Day Received First ANP"] = responsePANP_df.apply(
+            lambda row: LTFU_safe_int_conversion(row["LTFU Study Day Received First ANP"])
+            if pd.notna(row["LTFU Study Day Received First ANP"]) and row["LTFU Study Day Received First ANP"] != ""
+            else "",
+            axis=1,
+        )
+        # Ensure both columns are converted to string type
+        responsePANP_df["Study Day Received First ANP"] = responsePANP_df["Study Day Received First ANP"].astype(str)
+        responsePANP_df["LTFU Study Day Received First ANP"] = responsePANP_df[
+            "LTFU Study Day Received First ANP"
+        ].astype(str)
+        # print(responsePANP_df)
+
+        # Fill empty strings in "Study Day Received First ANP" with values from "LTFU Study Day Received First ANP"
+        responsePANP_df["Study Day Received First ANP"] = (
+            responsePANP_df["Study Day Received First ANP"]
+            .replace("", pd.NA)
+            .fillna(responsePANP_df["LTFU Study Day Received First ANP"])
+        )
+
+        # Drop the original date columns
+        responsePANP_df = responsePANP_df.drop(
+            columns=["Day 0 Date", "ANP Start Date", "LTFU ANP Start Date", "LTFU Study Day Received First ANP"]
+        )
+
+        # Merge the DataFrames
+        response_df = pd.merge(response_df, responsePANP_df, on="Subject", how="left")
+
+        # filter by "Event Group Name" = "eg_UNSRS" or "eg_LTFUP1"
+        UNS_df = responseP_df[responseP_df["Event Group Name"].isin(["eg_UNSRS", "eg_LTFUP1"])].copy()
+        UNS_df = UNS_df.sort_values(by=["Subject", "Event Date"])
+
         UNS_df["Primary Time Point"] = UNS_df[UNS_df["Primary Time Point"].notna()]["Primary Time Point"].astype(str)
         UNS_df.loc[
             UNS_df["Primary Time Point"] == "Unscheduled",
             "Primary Time Point",
         ] = ""
-
+        # apply concanate "LTFU " for UNS_df["Primary Time Point"] where "Event Group Name" = "eg_LTFUP1"
+        UNS_df["Primary Time Point"] = UNS_df.apply(
+            lambda row: "LTFU " + str(row["Primary Time Point"])
+            if row["Event Group Name"] == "eg_LTFUP1"
+            and pd.notna(row["Primary Time Point"])
+            and row["Primary Time Point"] != ""
+            else row["Primary Time Point"],
+            axis=1,
+        )
+        # print(UNS_df)
+        # apply safe_int_conversion for UNS_df["Unscheduled Primary Day#"] where "Event group name" = "eg_UNSRS"
         UNS_df["Unscheduled Primary Day#"] = UNS_df.apply(
             lambda row: safe_int_conversion(row["Unscheduled Primary Day#"])
-            if pd.notna(row["Unscheduled Primary Day#"]) and row["Unscheduled Primary Day#"] != ""
-            else "",
+            if pd.notna(row["Unscheduled Primary Day#"])
+            and row["Unscheduled Primary Day#"] != ""
+            and row["Event Group Name"] == "eg_UNSRS"
+            else row["Unscheduled Primary Day#"],
             axis=1,
         )
 
@@ -1513,12 +1685,15 @@ class DSMB16321:
         UNS_df = UNS_df.groupby(["Primary Time Point"]).apply(concatenate_group).reset_index(drop=True)
 
         # Removing duplicates if there are any within the same group
-        UNS_df = UNS_df.drop_duplicates(subset=["Overall Objective Status"])
+        # UNS_df = UNS_df.drop_duplicates(subset=["Overall Objective Status"])
 
         # UNS_df = UNS_df_grouped_unique
         UNS_df = UNS_df.drop(columns=drop_RS_columns)
 
         UNS_df = UNS_df.drop(columns=["% Change is SPD"])
+        # order by subject
+        UNS_df = UNS_df.sort_values(by=["Subject"])
+        # print(UNS_df)
         response_df = pd.merge(response_df, UNS_df, on="Subject", how="left", suffixes=("", "_UNS"))
 
         pd.set_option("future.no_silent_downcasting", True)
@@ -1526,15 +1701,49 @@ class DSMB16321:
         # replace "-" for blank unscheduled response
         response_df["Overall Objective Status_UNS"] = response_df["Overall Objective Status_UNS"].replace("", "-")
 
-        # replacement_date = pd.Timestamp("1900-01-01")
-        # # Replace missing dates with the specified value
-        # response_df["Event Date"] = response_df["Event Date"].fillna(replacement_date)
-
         response_df = pd.merge(response_df, Treated_df, on="Subject", how="right")
         response_df = response_df.fillna("")
         response_df = response_df.sort_values(by=["Subject"])
         response_df = response_df.drop(columns=["Treated"])
         response_df = response_df.drop_duplicates()
+        # print(response_df)
+
+        # Group by 'Subject' and apply the logic
+        response_df["Study Day Received First ANP"] = (
+            response_df.groupby("Subject")
+            .apply(
+                lambda group: group.apply(
+                    lambda row: (
+                        row["Study Day Received First ANP"] + " Confirmed PD"
+                        if not group[
+                            [
+                                "Overall Objective Status",
+                                "Overall Objective Status_D28",
+                                "Overall Objective Status_M2",
+                                "Overall Objective Status_M4",
+                                "Overall Objective Status_M6",
+                                "Overall Objective Status_M8",
+                                "Overall Objective Status_M10",
+                                "Overall Objective Status_M12",
+                                "Overall Objective Status_UNS",
+                            ]
+                        ]
+                        .apply(lambda col: col.str.contains("Confirmed PD", na=False))
+                        .any()
+                        .any()  # Check if any column contains "Confirmed PD"
+                        and pd.notna(row["Study Day Received First ANP"])
+                        and row["Study Day Received First ANP"] != ""
+                        else row["Study Day Received First ANP"]
+                    ),
+                    axis=1,
+                )
+            )
+            .reset_index(level=0, drop=True)
+        )
+
+        # replacement_date = pd.Timestamp("1900-01-01")
+        # # Replace missing dates with the specified value
+        # response_df["Event Date"] = response_df["Event Date"].fillna(replacement_date)
 
         # check the number of subject
         if not data["RS"].empty:
@@ -1564,17 +1773,66 @@ class DSMB16321:
             responseR_df,
             data,
             "RS",
+            "Event Group Name",
+            "Event Group Name",
+            "Subject",
+        ).drop_duplicates()
+        responseR_df = add_rename_column_corelisting(
+            responseR_df,
+            data,
+            "RS",
+            "Was a disease assessment performed? (IG_NS_NA_RS1.CL_NS_YH_RSPERF_cl_YS_YN1)",
+            "Was a disease assessment performed?",
+            "Subject",
+            "Event Group Name",
+        ).drop_duplicates()
+        responseR_df = add_rename_column_corelisting(
+            responseR_df,
+            data,
+            "RS",
             "Did the subject have measurable disease at study treatment baseline? (IG_NS_NA_RS1.CL_NS_YH_MDATBL_cl_YS_YN1)",
             "Measurable vs. Non-Measurable Disease",
             "Subject",
-            # "Event Group Label",
+            "Event Group Name",
         ).drop_duplicates()
+        responseR_df = add_rename_column_corelisting(
+            responseR_df,
+            data,
+            "RS",
+            "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
+            "Study Phase",
+            "Subject",
+            "Event Group Name",
+        ).drop_duplicates()
+
+        # filter by "Event Group Name"="eg_PRMTXFUPR" or "Event Group Name"="eg_PTSR1" or "Event Group Name"="eg_UNSRS"
+        responseR_df = responseR_df[
+            (responseR_df["Event Group Name"] == "eg_PRMTXFUPR1")
+            | (responseR_df["Event Group Name"] == "eg_LTFUP1R1")
+            | (responseR_df["Event Group Name"] == "eg_PTSR1")
+            | (responseR_df["Event Group Name"] == "eg_UNSRS")
+        ].copy()
+
+        responseR_df = responseR_df[responseR_df["Study Phase"] == "Retreatment"].copy()
+        responseR_df = responseR_df[responseR_df["Was a disease assessment performed?"] == "Yes"].copy()
+        # drop "Event Group Name" column and "Was a disease assessment performed?" column
+        responseR_df = responseR_df.drop(
+            columns=["Event Group Name", "Was a disease assessment performed?", "Study Phase"]
+        )
 
         # Drop rows where 'Measurable vs. Non-Measurable Disease' is NaN or empty string
         responseR_df = responseR_df[
             responseR_df["Measurable vs. Non-Measurable Disease"].notna()
             & responseR_df["Measurable vs. Non-Measurable Disease"].astype(bool)
         ]
+
+        # sort data by subject
+        responseR_df = responseR_df.sort_values(by=["Subject"])
+
+        # Ensure column is a string type for consistent comparison
+        responseR_df["Measurable vs. Non-Measurable Disease"] = responseR_df[
+            "Measurable vs. Non-Measurable Disease"
+        ].astype(str)
 
         # Corrected lambda function to replace values based on condition and handle missing values
         responseR_df["Measurable vs. Non-Measurable Disease"] = responseR_df.apply(
@@ -1590,11 +1848,12 @@ class DSMB16321:
             [
                 "Subject",
                 "Event Group Label",
+                "Event Group Name",
                 "Event Date",
                 "Study Phase (IG_NS_NA_RSBMRI1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
                 # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)",
                 # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)",
-                "Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)",
+                "Target Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)",
                 "Measurable Lesion Change Percentage from Baseline (%) (IG_NS_NA_RSBMRI4.NM_NS_YH_TLCP)",
             ]
         ].copy()
@@ -1602,7 +1861,7 @@ class DSMB16321:
             "Study Phase (IG_NS_NA_RSBMRI1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)": "Study Phase",
             # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)": "Primary Time Point",
             # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)": "Unscheduled Primary Day#",
-            "Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)": "Lesion #",
+            "Target Lesion # (IG_NS_NA_RSBMRI3.NM_YS_YH_LESNUM)": "Lesion #",
             "Measurable Lesion Change Percentage from Baseline (%) (IG_NS_NA_RSBMRI4.NM_NS_YH_TLCP)": "% Change is SPD",
         }
         responsePR_RSBMRI_df = responsePR_RSBMRI_df.rename(columns=RSBMRIR_new_col_name).drop_duplicates()
@@ -1621,6 +1880,7 @@ class DSMB16321:
             [
                 "Subject",
                 "Event Group Label",
+                "Event Group Name",
                 "Event Date",
                 "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
                 "Retreatment Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPTR_cl_NS_NETPT2)",
@@ -1638,12 +1898,12 @@ class DSMB16321:
             "Overall Objective Status (IG_NS_NA_RS2.CL_NS_NH_OOS_cl_NS_OOSRESP1)": "Overall Objective Status",
         }
         responseP1R_df = responseP1R_df.rename(columns=RSR_new_col_name).drop_duplicates()
-        responseP1R_df = responseP1R_df.sort_values(by=["Subject"])
+        responseP1R_df = responseP1R_df.sort_values(by=["Subject", "Event Date"])
 
         responsePR_df = pd.merge(
             responseP1R_df,
             responsePR_RSBMRI_df,
-            on=["Subject", "Event Group Label", "Event Date", "Study Phase"],
+            on=["Subject", "Event Group Label", "Event Group Name", "Event Date", "Study Phase"],
             how="left",
         )
 
@@ -1652,6 +1912,7 @@ class DSMB16321:
 
         drop_RSR_columns = [
             "Event Group Label",
+            "Event Group Name",
             "Study Phase",
             "Retreatment Time Point",
             "Unscheduled Retreatment Day#",
@@ -1659,6 +1920,7 @@ class DSMB16321:
         ]
         drop_LASTVR_columns = [
             "Event Group Label",
+            "Event Group Name",
             "Study Phase",
             "Retreatment Time Point",
             "Unscheduled Retreatment Day#",
@@ -1875,17 +2137,183 @@ class DSMB16321:
 
         responseR_df = pd.merge(responseR_df, M12R1_df, on="Subject", how="left", suffixes=("", "_M12R1"))
 
-        UNSR_df = responsePR_df[(responsePR_df["Event Group Label"] == "Unscheduled Disease Assessments")].copy()
+        # adding Primary ANP data to response_df
+        responseR_CMPMANP_df = data["CMPMANP"][
+            [
+                "Subject",
+                "Study Phase (ig_CMPMANP1.STUDYPHS)",
+                "Start Date (ig_CMPMANP2.ANPSTDAT)",
+            ]
+        ].copy()
+        R_CMPMANP_new_col_name = {
+            "Study Phase (ig_CMPMANP1.STUDYPHS)": "Study Phase",
+            "Start Date (ig_CMPMANP2.ANPSTDAT)": "ANP Start Date",
+        }
+        responseR_CMPMANP_df = responseR_CMPMANP_df.rename(columns=R_CMPMANP_new_col_name).drop_duplicates()
+        # Filter the DataFrame for Primary Treatment
+        responseR_CMPMANP_df_filtered = responseR_CMPMANP_df[
+            responseR_CMPMANP_df["Study Phase"] == "Retreatment"
+        ].copy()
 
-        # Add Day in front of unscheduedled Day#
-        # Define a function to handle conversion safely
+        # Sort and get the last row for each subject, need start date from first ANP
+        responseR_CMPMANP_df_filtered = responseR_CMPMANP_df_filtered.sort_values(["ANP Start Date"])
+        responseR_CMPMANP_df_filtered = responseR_CMPMANP_df_filtered.groupby("Subject").head(
+            1
+        )  # Get the first row per subject
+        responseR_CMPMANP_df_filtered = responseR_CMPMANP_df_filtered.sort_values(["Subject"])
+        responseR_CMPMANP_df_filtered = responseR_CMPMANP_df_filtered.drop(columns=["Study Phase"])
+
+        # adding LTFU ANP data to response_df
+        responseR_CMLANP_df = data["CMLANP"][
+            [
+                "Subject",
+                "Study Phase (ig_CMLANP1.STUDYPHS)",
+                "Start Date (ig_CMLANP2.ANPSTDAT)",
+            ]
+        ].copy()
+        R_CMLANP_new_col_name = {
+            "Study Phase (ig_CMLANP1.STUDYPHS)": "Study Phase",
+            "Start Date (ig_CMLANP2.ANPSTDAT)": "LTFU ANP Start Date",
+        }
+        responseR_CMLANP_df = responseR_CMLANP_df.rename(columns=R_CMLANP_new_col_name).drop_duplicates()
+        # Filter the DataFrame for Primary Treatment
+        responseR_CMLANP_df_filtered = responseR_CMLANP_df[responseR_CMLANP_df["Study Phase"] == "Retreatment"].copy()
+
+        # Sort and get the last row for each subject, need start date from first ANP
+        responseR_CMLANP_df_filtered = responseR_CMLANP_df_filtered.sort_values(["LTFU ANP Start Date"])
+        responseR_CMLANP_df_filtered = responseR_CMLANP_df_filtered.groupby("Subject").head(
+            1
+        )  # Get the first row per subject
+        responseR_CMLANP_df_filtered = responseR_CMLANP_df_filtered.sort_values(["Subject"])
+        responseR_CMLANP_df_filtered = responseR_CMLANP_df_filtered.drop(columns=["Study Phase"])
+
+        DAY0R_df = data["EXINF"][
+            [
+                "Subject",
+                "Event Group Label",
+                "Was study treatment administered? (ig_EXINF1.INFOCCUR)",
+                "Study Treatment Date (ig_EXINF1.INFDAT)",
+            ]
+        ].copy()
+        DAY0R_new_col_name = {
+            "Was study treatment administered? (ig_EXINF1.INFOCCUR)": "Treated",
+            "Study Treatment Date (ig_EXINF1.INFDAT)": "Day 0-R1 Date",
+        }
+        DAY0R_df = DAY0R_df.rename(columns=DAY0R_new_col_name)
+        DAY0R_df = DAY0R_df[(DAY0R_df["Event Group Label"] == "Day 0-R1") & (DAY0R_df["Treated"] == "Yes")].copy()
+        DAY0R_df = DAY0R_df.drop(columns=["Event Group Label", "Treated"])
+
+        responseRANP_df = pd.merge(
+            responseR_CMPMANP_df_filtered,
+            DAY0R_df,
+            on=["Subject"],
+            how="right",
+        )
+        responseRANP_df = pd.merge(
+            responseRANP_df,
+            responseR_CMLANP_df_filtered,
+            on=["Subject"],
+            how="outer",
+        )
+
         def safe_int_conversion_R(value):
             try:
                 # Attempt to convert the value to an integer
                 return "Day " + str(int(value)) + "-R"
             except (ValueError, TypeError):
                 # Return an empty string if conversion fails
-                return "Day " + str(value) + "-R"
+                return "Day " + str(value)
+
+        def LTFU_safe_int_conversion_R(value):
+            try:
+                # Attempt to convert the value to an integer
+                return "LTFU Day " + str(int(value)) + "-R"
+            except (ValueError, TypeError):
+                # Return an empty string if conversion fails
+                return "LTFU Day " + str(value)
+
+        # Convert the columns to datetime
+        responseRANP_df["Day 0-R1 Date"] = pd.to_datetime(responseRANP_df["Day 0-R1 Date"])
+        responseRANP_df["ANP Start Date"] = pd.to_datetime(responseRANP_df["ANP Start Date"])
+        responseRANP_df["LTFU ANP Start Date"] = pd.to_datetime(responseRANP_df["LTFU ANP Start Date"])
+
+        # Ensure both columns are datetime
+        responseRANP_df["ANP Start Date"] = pd.to_datetime(responseRANP_df["ANP Start Date"])
+        responseRANP_df["LTFU ANP Start Date"] = pd.to_datetime(responseRANP_df["LTFU ANP Start Date"])
+
+        # Calculate the difference between the two dates for rows "ANP Start Date" is not blank
+        responseRANP_df = responseRANP_df[responseRANP_df["ANP Start Date"] != ""]
+        # responsePANP_df["ANP Start Date"] = pd.to_datetime(responsePANP_df["ANP Start Date"])
+        differenceR = responseRANP_df["ANP Start Date"] - responseRANP_df["Day 0-R1 Date"]
+        responseRANP_df["Study Day Received First ANP"] = differenceR.dt.days
+        responseRANP_df["Study Day Received First ANP"] = responseRANP_df["Study Day Received First ANP"].replace(
+            "nan", ""
+        )
+
+        responseRANP_df["Study Day Received First ANP"] = responseRANP_df.apply(
+            lambda row: safe_int_conversion_R(row["Study Day Received First ANP"])
+            if pd.notna(row["Study Day Received First ANP"]) and row["Study Day Received First ANP"] != ""
+            else "",
+            axis=1,
+        )
+        # Calculate the difference between the two dates for rows "ANP Start Date" is not blank
+        responseRANP_df = responseRANP_df[responseRANP_df["LTFU ANP Start Date"] != ""]
+        differenceR_LTFU = responseRANP_df["LTFU ANP Start Date"] - responseRANP_df["Day 0-R1 Date"]
+        responseRANP_df["LTFU Study Day Received First ANP"] = differenceR_LTFU.dt.days
+        responseRANP_df["LTFU Study Day Received First ANP"] = responseRANP_df[
+            "LTFU Study Day Received First ANP"
+        ].replace("nan", "")
+
+        responseRANP_df["LTFU Study Day Received First ANP"] = responseRANP_df.apply(
+            lambda row: LTFU_safe_int_conversion_R(row["LTFU Study Day Received First ANP"])
+            if pd.notna(row["LTFU Study Day Received First ANP"]) and row["LTFU Study Day Received First ANP"] != ""
+            else "",
+            axis=1,
+        )
+        # Ensure both columns are converted to string type
+        responseRANP_df["Study Day Received First ANP"] = responseRANP_df["Study Day Received First ANP"].astype(str)
+        responseRANP_df["LTFU Study Day Received First ANP"] = responseRANP_df[
+            "LTFU Study Day Received First ANP"
+        ].astype(str)
+        # print(responsePANP_df)
+
+        # Fill empty strings in "Study Day Received First ANP" with values from "LTFU Study Day Received First ANP"
+        responseRANP_df["Study Day Received First ANP"] = (
+            responseRANP_df["Study Day Received First ANP"]
+            .replace("", pd.NA)
+            .fillna(responseRANP_df["LTFU Study Day Received First ANP"])
+        )
+
+        # Drop the original date columns
+        responseRANP_df = responseRANP_df.drop(
+            columns=["Day 0-R1 Date", "ANP Start Date", "LTFU ANP Start Date", "LTFU Study Day Received First ANP"]
+        )
+
+        # Merge the DataFrames
+        responseR_df = pd.merge(responseR_df, responseRANP_df, on="Subject", how="left")
+
+        # UNSR_df = responsePR_df[(responsePR_df["Event Group Label"] == "Unscheduled Disease Assessments")].copy()
+
+        # # Add Day in front of unscheduedled Day#
+        # # Define a function to handle conversion safely
+
+        # UNSR_df["Retreatment Time Point"] = UNSR_df[UNSR_df["Retreatment Time Point"].notna()][
+        #     "Retreatment Time Point"
+        # ].astype(str)
+        # UNSR_df.loc[
+        #     UNSR_df["Retreatment Time Point"] == "Unscheduled",
+        #     "Retreatment Time Point",
+        # ] = ""
+
+        # UNSR_df["Unscheduled Retreatment Day#"] = UNSR_df.apply(
+        #     lambda row: safe_int_conversion_R(row["Unscheduled Retreatment Day#"])
+        #     if pd.notna(row["Unscheduled Retreatment Day#"]) and row["Unscheduled Retreatment Day#"] != ""
+        #     else "",
+        #     axis=1,
+        # )
+        # filter by "Event Group Name" = "eg_UNSRS" or "eg_LTFUP1R1"
+        UNSR_df = responsePR_df[responsePR_df["Event Group Name"].isin(["eg_UNSRS", "eg_LTFUP1R1"])].copy()
+        UNSR_df = UNSR_df.sort_values(by=["Subject", "Event Date"])
 
         UNSR_df["Retreatment Time Point"] = UNSR_df[UNSR_df["Retreatment Time Point"].notna()][
             "Retreatment Time Point"
@@ -1894,14 +2322,25 @@ class DSMB16321:
             UNSR_df["Retreatment Time Point"] == "Unscheduled",
             "Retreatment Time Point",
         ] = ""
-
-        UNSR_df["Unscheduled Retreatment Day#"] = UNSR_df.apply(
-            lambda row: safe_int_conversion_R(row["Unscheduled Retreatment Day#"])
-            if pd.notna(row["Unscheduled Retreatment Day#"]) and row["Unscheduled Retreatment Day#"] != ""
-            else "",
+        # apply concanate "LTFU " for UNS_df["Primary Time Point"] where "Event Group Name" = "eg_LTFUP1"
+        UNSR_df["Retreatment Time Point"] = UNSR_df.apply(
+            lambda row: "LTFU " + str(row["Retreatment Time Point"])
+            if row["Event Group Name"] == "eg_LTFUP1R1"
+            and pd.notna(row["Retreatment Time Point"])
+            and row["Retreatment Time Point"] != ""
+            else row["Retreatment Time Point"],
             axis=1,
         )
-
+        # print(UNS_df)
+        # apply safe_int_conversion for UNS_df["Unscheduled Primary Day#"] where "Event group name" = "eg_UNSRS"
+        UNSR_df["Unscheduled Retreatment Day#"] = UNSR_df.apply(
+            lambda row: safe_int_conversion(row["Unscheduled Retreatment Day#"])
+            if pd.notna(row["Unscheduled Retreatment Day#"])
+            and row["Unscheduled Retreatment Day#"] != ""
+            and row["Event Group Name"] == "eg_UNSRS"
+            else row["Unscheduled Retreatment Day#"],
+            axis=1,
+        )
         UNSR_df["Retreatment Time Point"] = UNSR_df["Retreatment Time Point"].fillna("") + UNSR_df[
             "Unscheduled Retreatment Day#"
         ].fillna("")
@@ -1942,6 +2381,39 @@ class DSMB16321:
         responseR_df = responseR_df.drop(columns=["Treated"])
         responseR_df = responseR_df.drop_duplicates()
 
+        # Group by 'Subject' and apply the logic
+        responseR_df["Study Day Received First ANP"] = (
+            responseR_df.groupby("Subject")
+            .apply(
+                lambda group: group.apply(
+                    lambda row: (
+                        row["Study Day Received First ANP"] + " Confirmed PD"
+                        if not group[
+                            [
+                                "Overall Objective Status",
+                                "Overall Objective Status_D28R1",
+                                "Overall Objective Status_M2R1",
+                                "Overall Objective Status_M4R1",
+                                "Overall Objective Status_M6R1",
+                                "Overall Objective Status_M8R1",
+                                "Overall Objective Status_M10R1",
+                                "Overall Objective Status_M12R1",
+                                "Overall Objective Status_UNSR",
+                            ]
+                        ]
+                        .apply(lambda col: col.str.contains("Confirmed PD", na=False))
+                        .any()
+                        .any()  # Check if any column contains "Confirmed PD"
+                        and pd.notna(row["Study Day Received First ANP"])
+                        and row["Study Day Received First ANP"] != ""
+                        else row["Study Day Received First ANP"]
+                    ),
+                    axis=1,
+                )
+            )
+            .reset_index(level=0, drop=True)
+        )
+
         return response_df, responseR_df
 
     def response_stats(self):
@@ -1962,15 +2434,31 @@ class DSMB16321:
 
         response_stat_df = Treated_subject_df
 
-        response_stat_df = add_rename_column_corelisting(
-            response_stat_df,
-            data,
-            "RS",
-            "Did the subject have measurable disease at study treatment baseline? (IG_NS_NA_RS1.CL_NS_YH_MDATBL_cl_YS_YN1)",
-            "Measurable vs. Non-Measurable Disease",
-            "Subject",
-        ).drop_duplicates()
+        responsePSTAT_df = data["RS"][
+            [
+                "Subject",
+                "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
+                "Did the subject have measurable disease at study treatment baseline? (IG_NS_NA_RS1.CL_NS_YH_MDATBL_cl_YS_YN1)",
+            ]
+        ].copy()
+        RSPSTAT_new_col_name = {
+            "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)": "Study Phase",
+            "Did the subject have measurable disease at study treatment baseline? (IG_NS_NA_RS1.CL_NS_YH_MDATBL_cl_YS_YN1)": "Measurable vs. Non-Measurable Disease",
+        }
+        responsePSTAT_df = responsePSTAT_df.rename(columns=RSPSTAT_new_col_name).drop_duplicates()
+        # filter for Primary Treatment
+        responsePSTAT_df_filtered = responsePSTAT_df[responsePSTAT_df["Study Phase"] == "Primary Treatment"].copy()
+        responsePSTAT_df_filtered = responsePSTAT_df_filtered.drop(columns=["Study Phase"])
+        responsePSTAT_df_filtered = responsePSTAT_df_filtered.sort_values(by=["Subject"])
 
+        response_stat_df = pd.merge(
+            response_stat_df,
+            responsePSTAT_df_filtered,
+            on=["Subject"],
+            how="right",
+        )
+
+        # print(response_stat_df)
         # Drop rows where 'Measurable vs. Non-Measurable Disease' is NaN or empty string
         response_stat_df = response_stat_df[
             response_stat_df["Measurable vs. Non-Measurable Disease"].notna()
@@ -1986,13 +2474,14 @@ class DSMB16321:
             else "Unknown",
             axis=1,
         )
+        # print(response_stat_df[["Subject", "Measurable vs. Non-Measurable Disease"]])
 
         responseP1_stat_df = data["RS"][
             [
                 "Subject",
                 # "Event Group Label",
                 # "Event Date",
-                # "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
+                "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)",
                 # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)",
                 # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)",
                 # #   "Retreatment Cycle Number (IG_NS_NA_RS1.RETXCYCLENUM)",
@@ -2002,17 +2491,21 @@ class DSMB16321:
             ]
         ].copy()
         RS_new_col_name = {
-            # "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)": "Study Phase",
+            "Study Phase (IG_NS_NA_RS1.CL_YS_NH_STUDYPHS_cl_YS_STUDYPHS)": "Study Phase",
             # "Primary Time Point (IG_NS_NA_RS1.CL_YS_NH_RSTPT_cl_NS_NETPT1)": "Primary Time Point",
             # "For Unscheduled Primary Time Point, Specify Day #  (IG_NS_NA_RS1.TX_YS_YH_UNSDAY)": "Unscheduled Primary Day#",
             "Overall Objective Status (IG_NS_NA_RS2.CL_NS_NH_OOS_cl_NS_OOSRESP1)": "Overall Objective Status",
         }
         responseP1_stat_df = responseP1_stat_df.rename(columns=RS_new_col_name).drop_duplicates()
-        responseP1_stat_df = responseP1_stat_df.sort_values(by=["Subject"])
+        responseP1_stat_df_filtered = responseP1_stat_df[
+            responseP1_stat_df["Study Phase"] == "Primary Treatment"
+        ].copy()
+        responseP1_stat_df_filtered = responseP1_stat_df_filtered.drop(columns=["Study Phase"])
+        responseP1_stat_df_filtered = responseP1_stat_df_filtered.sort_values(by=["Subject"])
 
         response_stat_df = pd.merge(
             response_stat_df,
-            responseP1_stat_df,
+            responseP1_stat_df_filtered,
             on=["Subject"],
             how="left",
         )
@@ -2042,6 +2535,7 @@ class DSMB16321:
         ][["Subject", "Overall Objective Status"]].copy()
         self.subject_infused_measurable_count = len(total_infused_measurable_df["Subject"].unique())
 
+        # print(self.subject_infused_measurable_count)
         # print(total_infused_measurable_df)
 
         OOS_Response_Codelist = [
@@ -2426,16 +2920,18 @@ class DSMB16321:
                     worksheet1.merge_range("N1:Q1", "Cohort -1 Enrollment", bold_12_format)
                     worksheet1.write(1, 0, "Status", bold_11_format)
                     for i in range(len(self.status_list)):
+                        # skip "Consented" for Cohort 1, Cohort 2 and Cohort -1
                         worksheet1.write(
                             1,
                             1 + i * 4,
-                            "Total Consented\nN=" + str(self.status_list[i]["Total Consented"]),
+                            "Consented\nN=" + str(self.status_list[i]["Total Consented"]),
                             bold_11_wrap_format,
                         )
+
                         worksheet1.write(
                             1,
                             2 + i * 4,
-                            "Screen Failed\nN=" + str(self.status_list[i]["Screen Failed"]),
+                            "Screen Fail\nN=" + str(self.status_list[i]["Screen Failed"]),
                             bold_11_wrap_format,
                         )
                         worksheet1.write(
@@ -2451,10 +2947,17 @@ class DSMB16321:
                             bold_11_wrap_format,
                         )
 
-                    worksheet1.merge_range("A3:I3", "Legal Sex", bold_11_format)
-                    worksheet1.merge_range("A8:I8", "Age at Consent", bold_11_format)
-                    worksheet1.merge_range("A12:I12", "Race", bold_11_format)
-                    worksheet1.merge_range("A22:I22", "Ethnicity", bold_11_format)
+                    worksheet1.merge_range("A3:Q3", "Legal Sex", bold_11_format)
+                    worksheet1.merge_range("A8:Q8", "Age at Consent", bold_11_format)
+                    worksheet1.merge_range("A12:Q12", "Race", bold_11_format)
+                    worksheet1.merge_range("A22:Q22", "Ethnicity", bold_11_format)
+                    # # remove columns F, G, J, K, N, O
+                    # worksheet1.delete_cols(15)
+                    # worksheet1.delete_cols(14)
+                    # worksheet1.delete_cols(10)
+                    # worksheet1.delete_cols(9)
+                    # worksheet1.delete_cols(7)
+                    # worksheet1.delete_cols(6)
                     worksheet1.autofit()
 
                     ## TODO: Enrollment Listing
@@ -2716,7 +3219,8 @@ class DSMB16321:
                     worksheet7.merge_range("M2:N2", "Month 8", bold_11_format)
                     worksheet7.merge_range("O2:P2", "Month 10", bold_11_format)
                     worksheet7.merge_range("Q2:R2", "Month 12", bold_11_format)
-                    worksheet7.write("S2", "Unscheduled", bold_11_format)
+                    worksheet7.write("S2", "Study Day Received First ANP", bold_11_format)
+                    worksheet7.write("T2", "Unscheduled", bold_11_format)
 
                     worksheet7.write("C3", "Overall Objective Status", bold_11_format)
                     worksheet7.write("D3", "% Change is SPD", bold_11_format)
@@ -2734,7 +3238,12 @@ class DSMB16321:
                     worksheet7.write("P3", "% Change is SPD", bold_11_format)
                     worksheet7.write("Q3", "Overall Objective Status", bold_11_format)
                     worksheet7.write("R3", "% Change is SPD", bold_11_format)
-                    worksheet7.write("S3", "Timepoint: Overall Objective Status/% Change in SPD", bold_11_format)
+                    worksheet7.write(
+                        "S3",
+                        "Conf. PD due to receipt of alt. tx if not yet conf. PD",
+                        bold_11_format,
+                    )
+                    worksheet7.write("T3", "Timepoint: Overall Objective Status/% Change in SPD", bold_11_format)
 
                     # sort the response_df by Subject
                     self.response_df = self.response_df.sort_values(by=["Subject"])
@@ -2800,7 +3309,8 @@ class DSMB16321:
                     worksheet8.merge_range("M2:N2", "Month 8-R1", bold_11_format)
                     worksheet8.merge_range("O2:P2", "Month 10-R1", bold_11_format)
                     worksheet8.merge_range("Q2:R2", "Month 12-R1", bold_11_format)
-                    worksheet8.write("S2", "Unscheduled-R1", bold_11_format)
+                    worksheet8.write("S2", "Retx Study Day Received First ANP", bold_11_format)
+                    worksheet8.write("T2", "Unscheduled-R1", bold_11_format)
 
                     worksheet8.write("C3", "Overall Objective Status", bold_11_format)
                     worksheet8.write("D3", "% Change is SPD", bold_11_format)
@@ -2818,7 +3328,8 @@ class DSMB16321:
                     worksheet8.write("P3", "% Change is SPD", bold_11_format)
                     worksheet8.write("Q3", "Overall Objective Status", bold_11_format)
                     worksheet8.write("R3", "% Change is SPD", bold_11_format)
-                    worksheet8.write("S3", "Timepoint: Overall Objective Status/% Change in SPD", bold_11_format)
+                    worksheet8.write("S3", "Conf. PD due to receipt of alt. tx if not yet conf. PD", bold_11_format)
+                    worksheet8.write("T3", "Timepoint: Overall Objective Status/% Change in SPD", bold_11_format)
 
                     for i in range(0, len(self.responseR_df)):
                         for j in range(0, len(self.responseR_df.columns)):
