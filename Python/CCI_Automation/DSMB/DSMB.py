@@ -59,6 +59,15 @@ class DSMB:
                 output_file_name=self.output_file_name,
             )
             x.run()
+        if study_name == "11823":
+            from .DSMB11823 import DSMB11823
+
+            x = DSMB11823(
+                data,
+                output_dir=self.output_dir,
+                output_file_name=self.output_file_name,
+            )
+            x.run()
 
         if study_name == "15122":
             from .DSMB15122 import DSMB15122
