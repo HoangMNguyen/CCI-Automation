@@ -95,7 +95,8 @@ class DSMB11823:
         }
 
         # using guard rail to check if DM is in the data
-        if "DM" not in data:
+        # Check if DM exists and is not empty
+        if "DM" not in data or data["DM"].empty:
             return
 
         enrollment_df = get_data_from_dict(data, input_dict)
@@ -176,7 +177,7 @@ class DSMB11823:
         self.enrollment_df = enrollment_df.reset_index(drop=True)
 
     def Demographics_Statistics(self):
-        if "DM" not in self.data:
+        if "DM" not in self.data or self.data["DM"].empty:
             return
 
         enrollment_df = self.enrollment_df.copy()
@@ -235,7 +236,7 @@ class DSMB11823:
             "dssvltfu_occ": "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
         }
 
-        if "DM" not in self.data:
+        if "DM" not in self.data or self.data["DM"].empty:
             return
         data = self.data
 
@@ -331,7 +332,7 @@ class DSMB11823:
         self.status_df = status_df.copy()
 
     def Infusion_Listing(self):
-        if "EXINF" not in self.data:
+        if "EXINF" not in self.data or self.data["EXINF"].empty:
             return
         data = self.data
 
@@ -453,7 +454,7 @@ class DSMB11823:
         self.infusion_df = infusion_df.copy()
 
     def Infusion_Statistics(self):
-        if "EXINF" not in self.data:
+        if "EXINF" not in self.data or self.data["EXINF"].empty:
             return
         # Use the infusion_df data - no cohort separation needed
         infusion_df = self.infusion_df.copy()
@@ -507,7 +508,7 @@ class DSMB11823:
         Process response data to create a response listing table
         with 3 rows per subject (RECIST 1.1, PCWG3, PSA Response)
         """
-        if "RS" not in self.data:
+        if "RS" not in self.data or self.data["RS"].empty:
             return
         rs_data = self.data["RS"].copy()
         if rs_data.empty:
@@ -842,7 +843,7 @@ class DSMB11823:
         """
         Process PSMA imaging data to create a PET Imaging tab with data organized by subject and timepoint
         """
-        if "PSMAIMG" not in self.data:
+        if "PSMAIMG" not in self.data or self.data["PSMAIMG"].empty:
             return
 
         # Get the PSMAIMG data
