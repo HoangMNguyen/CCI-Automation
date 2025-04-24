@@ -59,10 +59,10 @@ class DSMB:
                 output_file_name=self.output_file_name,
             )
             x.run()
-        if study_name == "16321":
-            from .DSMB16321 import DSMB16321
+        if study_name == "11823":
+            from .DSMB11823 import DSMB11823
 
-            x = DSMB16321(
+            x = DSMB11823(
                 data,
                 output_dir=self.output_dir,
                 output_file_name=self.output_file_name,
