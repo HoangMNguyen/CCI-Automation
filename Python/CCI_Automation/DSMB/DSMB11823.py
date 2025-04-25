@@ -91,6 +91,8 @@ class DSMB11823:
             },
             "DSEOS": {
                 "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
+                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_YH_EOSCOD1_cl_NS_EOSREAS1)": "End of Study Reason",
+                "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "End of Study Supportive Info",
             },
         }
 
@@ -133,6 +135,36 @@ class DSMB11823:
                     label + " " + enrollment_df.loc[m, src].astype(str)
                 )
 
+        # Check DSEOS data for screen failures
+        if "DSEOS" in data and not data["DSEOS"].empty:
+            dseos_data = data["DSEOS"]
+            # Look for subjects with "Screen failure" as the reason for end of study
+            # Use the exact column name as it appears in the raw CSV data
+            screen_fail_mask = (
+                dseos_data["Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_YH_EOSCOD1_cl_NS_EOSREAS1)"]
+                == "Screen failure"
+            )
+            screen_fail_subjects = dseos_data[screen_fail_mask]
+
+            # Update enrollment_df for these subjects
+            for _, row in screen_fail_subjects.iterrows():
+                subject = row["Subject"]
+                # Also use the exact column name for supportive info
+                supportive_info = (
+                    row["Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)"]
+                    if pd.notna(row["Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)"])
+                    else ""
+                )
+
+                # Find the subject in enrollment_df and update
+                subject_mask = enrollment_df["Subject"] == subject
+                if any(subject_mask):
+                    # Update Screen Fail to Yes
+                    enrollment_df.loc[subject_mask, "Screen Fail (Y/N)"] = "Yes"
+                    # Update Reason for Screen Failure if supportive info exists
+                    if supportive_info:
+                        enrollment_df.loc[subject_mask, "Reason for Screen Failure"] = supportive_info
+
         # drop all helper cols at once
         enrollment_df = enrollment_df.drop(columns=["SF1", "SF2", "SF3", "Event Group Label"])
 
@@ -142,7 +174,9 @@ class DSMB11823:
         ended = (~inf.eq("Yes")) & enrollment_df["End of Study Date"].notna()
         enrollment_df.loc[pending, "Infused (Y/N)"] = "Pending"
         enrollment_df.loc[ended, "Infused (Y/N)"] = "No"
-        enrollment_df = enrollment_df.drop(columns=["End of Study Date"])
+        enrollment_df = enrollment_df.drop(
+            columns=["End of Study Date", "End of Study Reason", "End of Study Supportive Info"]
+        )
 
         # Sort
         enrollment_df = enrollment_df.sort_values(["Subject"])
@@ -530,7 +564,7 @@ class DSMB11823:
         }
 
         subjects = sorted(rs_data[cols["subject"]].unique())
-        standard_time_points = ["Day 28", "Month 3", "Month 6", "Month 9", "Month 12"]
+        standard_time_points = ["Day 28", "Month 2", "Month 3", "Month 4", "Month 5", "Month 6", "Month 9", "Month 12"]
         rows = []
         for subject in subjects:
             subject_data = rs_data[rs_data[cols["subject"]] == subject]
