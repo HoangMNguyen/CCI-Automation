@@ -373,8 +373,7 @@ Sub NewQuickAE()
     ' 2) Get your ordered header list
     headers = GetColumnOrder(studyCode)
     If Not IsArray(headers) Or UBound(headers) < LBound(headers) Then
-        ' fallback to MainAE if no custom order
-        Call MainAE
+        MsgBox "Study has not been configured."
         Exit Sub
     End If
     
@@ -387,8 +386,6 @@ Sub NewQuickAE()
     
     ' 4) Copy in the prioritized columns + headers
     Call CopyColumnsWithHeaders(WSsrc, WSdest, headers, 1, 1)
-    
-
     
     ' 6) Copy every other column
     lastColSrc = FindLastColumn(WSsrc)
@@ -421,7 +418,7 @@ Sub NewQuickAE()
 End Sub
 Function GetColumnOrder(studyCode As String) As Variant
     Select Case studyCode
-    Case "50424"
+    Case "50424-CCI Adverse Event"
         GetColumnOrder = Array( _
           "Subject ID#", "AE or SAE?", "Attribution to T-cell Therapy (IP1)", "T-cell Therapy Expectedness (IP1)", _
           "Other Attribution", "Specify Other Attribution", "Attribution to Ruxolitinib (IP2)", _
