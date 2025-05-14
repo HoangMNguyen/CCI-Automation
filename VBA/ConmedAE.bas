@@ -338,3 +338,219 @@ Sub QuickPDAE()
         ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
     End If
 End Sub
+Sub NewQuickAE()
+    Dim WB As Workbook
+    Dim WSsrc As Worksheet
+    Dim WSdest As Worksheet
+    Dim lastRow As Long, lastColSrc As Long, lastColDest As Long
+    Dim studyCode As String, rawID As String, parts() As String
+    Dim headers As Variant, hdrIdx As Variant
+    Dim i As Long, j As Long
+    
+    Set WB = ActiveWorkbook
+    Set WSsrc = ActiveSheet
+    
+    Application.ScreenUpdating = False
+    
+    ' 0) Cleanup & delete last data row
+    Call QuickRepCleanup
+    lastRow = FindLastRowA(WSsrc)
+    WSsrc.Rows(lastRow).Delete
+    
+    ' 1) Grab study code from A2
+    rawID = Trim(WSsrc.Range("A2").Value)
+    If Len(rawID) < 1 Then
+        MsgBox "Cell A2 is empty; cannot determine study code.", vbExclamation
+        Exit Sub
+    End If
+    
+    studyCode = rawID
+    If Len(studyCode) = 0 Then
+        MsgBox "Unable to extract study code from A2.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 2) Get your ordered header list
+    headers = GetColumnOrder(studyCode)
+    If Not IsArray(headers) Or UBound(headers) < LBound(headers) Then
+        ' fallback to MainAE if no custom order
+        Call MainAE
+        Exit Sub
+    End If
+    
+    ' 3) Add a new sheet for the Quick AE Report
+    With WB
+        .Sheets.Add After:=.Sheets(.Sheets.Count)
+        ActiveSheet.Name = "Quick AE Report"
+        Set WSdest = ActiveSheet
+    End With
+    
+    ' 4) Copy in the prioritized columns + headers
+    Call CopyColumnsWithHeaders(WSsrc, WSdest, headers, 1, 1)
+    
+
+    
+    ' 6) Copy every other column
+    lastColSrc = FindLastColumn(WSsrc)
+    lastColDest = FindLastColumn(WSdest)
+    j = 0
+    For i = 1 To lastColSrc
+        If Not IsNumberInArray(i, hdrIdx) Then
+            Call CopyColumnsWithIndex(WSsrc, WSdest, i, i + lastColDest - j)
+        Else
+            j = j + 1
+        End If
+    Next i
+    
+    ' 7) Apply your MainAE-style formatting to the new sheet
+    WSdest.Activate
+    Call FormatTable
+    
+    Application.ScreenUpdating = True
+    
+    ' 8) Prompt the user to save
+    Dim fileSaveName As Variant
+    fileSaveName = Application.GetSaveAsFilename( _
+        InitialFileName:=Now2Date(Now) & " " & studyCode & " Safety Quick Report " & Now2Time(Now) & " EST.xlsx", _
+        FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        WB.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
+End Sub
+Function GetColumnOrder(studyCode As String) As Variant
+    Select Case studyCode
+    Case "50424"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "Attribution to T-cell Therapy (IP1)", "T-cell Therapy Expectedness (IP1)", _
+          "Other Attribution", "Specify Other Attribution", "Attribution to Ruxolitinib (IP2)", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "15CT055- CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "19CT011-CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "01422-CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Therapy", "Tadekinig Alfa Attribution", "Tadekinig Alfa Expectedness", _
+          "Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "01817- CCI Protocol Defined Adverse Events"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "Attribution", "Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Was event ongoing at study discontinuation?", "Additional Toxicity Details", _
+          "Action Taken", "Date the event became an SAE:", "Seriousness as listed on the SAE form" _
+        )
+    Case "12320-CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "12418- CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "12418- CCI PDAE"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken" _
+        )
+    Case "14217-CCI Adverse Event V2"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "14217-CCI Protocol-Defined Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Specify Other Attribution", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "19422-CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Specify Other Attribution", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "19422-CCI Protocol-Defined Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Specify Other Attribution", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "35418-CCI Adverse Event"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Event ongoing?", _
+          "Date the event became an SAE", "Action Taken", "Seriousness as listed on the SAE form" _
+        )
+    Case "46417-CCI Adverse Events"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Additional Toxicity Details", "Was event ongoing at study discontinuation?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "46417-CCI Protocol Defined Adverse Events"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "CTCAE Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Additional Toxicity Details", "Was event ongoing at study discontinuation?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case "CD4CAR-ZFN-CCI Adverse Event V2"
+        GetColumnOrder = Array( _
+          "Subject ID#", "AE or SAE?", "T-cell Attribution", "T-cell Expectedness", _
+          "Other, Specify", "Other Attribution", _
+          "Category", "Toxicity", "Grade", "Start Date", "Stop Date", _
+          "Event onset", "Event ongoing?", _
+          "Date the event became an SAE", "Seriousness as listed on the SAE form" _
+        )
+    Case Else
+        GetColumnOrder = Array()  ' no custom order defined
+    End Select
+
+End Function
