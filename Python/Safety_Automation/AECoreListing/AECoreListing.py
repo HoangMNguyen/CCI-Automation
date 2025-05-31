@@ -10,6 +10,30 @@ import datetime  # Import datetime module
 class AECoreListing:
     warnings.filterwarnings("ignore")
 
+    # Add this mapping as a class variable or set in __init__
+    STUDY_KEY_MAP = {
+        "15420": {
+            "AE": "AE",
+            "DSDLA": "DLA",
+            "DSCA": "DSCA",
+            "EXINF": "INF",
+            "DSEOS": "EOS",
+        },
+        "12423": {
+            "AE": "AE",
+            "DSDLA": "DSDLA",
+            "DSCA": "DSCA",
+            "EXINF": "EXINF",
+            "DSEOS": "DSEOS",
+        },
+        "16321": {
+            "AE": "AE",
+            "DSCA": "DSCA",
+            "EXINF": "EXINF",
+        },
+        # Add more studies as needed
+    }
+
     def __init__(self, input_dir, output_dir, output_file_name):
         if input_dir == None:
             print("No dir selected!")
@@ -19,6 +43,7 @@ class AECoreListing:
             self.input_dir = input_dir
             self.output_dir = output_dir
             self.output_file_name = output_file_name
+            self.key_map = self.STUDY_KEY_MAP.get(self.study_name, {})
             self.data = read_data_dict_zip_corelisting(self.input_dir)
             self.output_df = self.calculate_output_df(self.data)
             self.output(self.output_df, self.output_dir, self.output_file_name)
@@ -40,6 +65,13 @@ class AECoreListing:
                 "Cohort A: Non-Hodgkin Lymphoma": "A",
                 "Not Assigned": "Not Assigned",
             }
+        elif study_name == "15420":
+            cohort_value_dict = {
+                "Cohort A: Non-Hodgkin Lymphoma (NHL)": "A",
+                "Cohort B: Chronic Lymphocytic Leukemia (CLL)": " B",
+                "Cohort C: Acute Lymphoblastic Leukemia (ALL)": "C",
+                "Cohort D": "D",
+            }
         return cohort_value_dict
 
     def get_dose_level_assignment_value_dict(self, study_name):
@@ -53,6 +85,17 @@ class AECoreListing:
                 "Dose Level 3 (DL3)": "DL3",
                 "Not Assigned": "Not Assigned",
             }
+        elif study_name == "15420":
+            dose_level_assignment_value_dict = {
+                "Dose Level -1 (DL-1)": "DL-1",
+                "Dose Level 1a (DL1a)": "DL1a",
+                "Dose Level 1b (DL1b)": "DL1b",
+                "Dose Level 2 (DL2)": "DL2",
+                "Dose Level 3 (DL3)": "DL3",
+                "Dose Level 4 (DL4)": "DL4",
+                "Dose Level 5 (DL5)": "DL5",
+                "Not Assigned": "Not Assigned",
+            }
         return dose_level_assignment_value_dict
 
     def get_dose_level_mapping(self, study_name):
@@ -62,6 +105,16 @@ class AECoreListing:
                 "DL1": (7, 6),
                 "DL2": (2, 7),
                 "DL3": (6, 7),
+            }
+        elif study_name == "15420":
+            dose_level_mapping = {
+                "DL-1": (7, 5),
+                "DL1a": (3, 6),
+                "DL1b": (3, 6),
+                "DL2": (7, 6),
+                "DL3": (3, 7),
+                "DL4": (7, 7),
+                "DL5": (3, 8),
             }
         return dose_level_mapping
 
@@ -103,6 +156,24 @@ class AECoreListing:
                 "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)",
                 "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)",
             ]
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "AE or SAE? (ig_AE2.AESEV)",
+                "T-cell Attribution (ig_AE1.AEREL)",
+                "T-cell Expectedness (ig_AE1.AETRTINTP)",
+                "Specify Other Attribution (ig_AE1.AERELSPOTH)",
+                "Other Attribution (ig_AE1.AERELOTH)",
+                "CTCAE Category (ig_AE1.AECAT)",
+                # "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)", # there is no AETOXDV in 15420
+                "Toxicity (ig_AE1.AETOX)",
+                "Grade (ig_AE1.AETOXGR)",
+                "Start Date (ig_AE1.AESTDAT)",
+                "Stop Date (ig_AE1.AEENDAT)",
+                "Event Onset (ig_AE1.AEONSET)",
+                "Additional Toxicity Details (ig_AE1.AETOXTERM)",
+                "Event Ongoing (ig_AE1.AEONGO)",
+            ]
 
         return header
 
@@ -114,12 +185,21 @@ class AECoreListing:
             ]
         elif study_name == "12423":
             header = ["Subject", "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)"]
-
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_NH_CACHASCOD_cl_NS_COHORT1)",
+            ]
         return header
 
     def get_DSDLA_header_list(self, study_name):
         if study_name == "12423":
             header = ["Subject", "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)"]
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "Dose Level Assignment (ig_DLA1.DLADOSELVL)",
+            ]
         return header
 
     def get_EXINF_DLA_header_list(self, study_name):
@@ -128,6 +208,12 @@ class AECoreListing:
                 "Subject",
                 "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_NH_TDOS)",
                 "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+            ]
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "CAR T Cell Dose Administered (ig_INF1.INFDOS)",
+                "x 10 to the power of (ig_INF1.INFDOSXP)",
             ]
         return header
 
@@ -145,18 +231,30 @@ class AECoreListing:
                 "Infusion Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
                 "Study Day (IG_NS_NA_EXINF1.CL_NS_NH_STUDYDAY_cl_NS_STUDYD1)",
             ]
-
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "Infusion Date (ig_INF1.INFDAT)",
+                "Event Group Label",
+            ]
         return header
 
     def get_DSEOS_header_list(self, study_name):
         if study_name == "12423":
             header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
+        elif study_name == "15420":
+            header = [
+                "Subject",
+                "End of Study Date (ig_EOS1.EOSDAT)",
+            ]
         return header
 
     def get_infusion_details(self, study_name):
         if study_name == "16321":
             return ["Day 0", "Day 0-R1", "Day 0-R2"]
         elif study_name == "12423":
+            return ["Day 0", "Day 0-R"]
+        elif study_name == "15420":
             return ["Day 0", "Day 0-R"]
 
     # Define a function to compute DLT Duration based on the rules
@@ -184,22 +282,70 @@ class AECoreListing:
         else:
             return (d_plus_28 - start_date).days + 1
 
+    def derive_toxicity_15420(self, toxicity_value):
+        """
+        Implements the Derived Toxicity logic for study 15420.
+        Uses the exact column name string, not regex.
+        """
+        if pd.isna(toxicity_value):
+            return toxicity_value
+        derived = toxicity_value
+        if "Other" in str(toxicity_value):
+            # Extract text within parentheses (exact string logic)
+            left_paren = toxicity_value.find("(")
+            right_paren = toxicity_value.find(")", left_paren)
+            if left_paren != -1 and right_paren != -1:
+                inner = toxicity_value[left_paren + 1 : right_paren]
+                inner_upper = inner.upper()
+                if inner_upper.startswith("CAR "):
+                    new_inner = "CAR " + inner[4:].lower()
+                    derived = toxicity_value.replace(inner, new_inner)
+                elif inner_upper.startswith("COVID"):
+                    derived = toxicity_value
+                else:
+                    new_inner = inner[0].upper() + inner[1:].lower() if inner else inner
+                    derived = toxicity_value.replace(inner, new_inner)
+                # Replace "hlh" with "HLH" (case-insensitive)
+                derived = derived.replace("hlh", "HLH").replace("HLH", "HLH")
+        return derived
+
     def calculate_output_df(self, data):
+        # get the keys based on the study name
+        AE_key = self.key_map.get("AE", "AE")
+        DSDLA_key = self.key_map.get("DSDLA", "DSDLA")
+        DSCA_key = self.key_map.get("DSCA", "DSCA")
+        EXINF_key = self.key_map.get("EXINF", "EXINF")
+        DSEOS_key = self.key_map.get("DSEOS", "DSEOS")
+
         # Things to do:
         output_df = pd.DataFrame()
-        # for each element in the header list, check if it is in the data["AE"] columns. If it is, then copy over the data to the output_df but without the part with parentheses
+        # for each element in the header list, check if it is in the data[AE_key] columns. If it is, then copy over the data to the output_df but without the part with parentheses
         AE_header_list = self.get_AE_header_list(self.study_name)
         for header in AE_header_list:
-            if header in data["AE"].columns:
+            if header in data[AE_key].columns:
                 # copy over the column
-                output_df[header] = data["AE"][header]
+                output_df[header] = data[AE_key][header]
         # remove rows that second column of AE_header_list is blank (for when every field is ILB instead of form)
         output_df = output_df[output_df[AE_header_list[1]].notna()]
+        # rename the columns to remove the part with parentheses
         output_df.columns = output_df.columns.str.replace(r"\s*\([^)]*\)\s*$", "", regex=True)
-        # for the rest of the column within the data["AE"] columns, copy over to the output_df
-        for column in data["AE"].columns:
+
+        if self.study_name == "15420":
+            toxicity_col = "Toxicity"
+            CTCAE_col = "CTCAE Category"
+            CTCAE_idx = output_df.columns.get_loc(CTCAE_col)
+            output_df.insert(
+                CTCAE_idx + 1,
+                "Derived Toxicity",
+                output_df[toxicity_col].apply(self.derive_toxicity_15420),
+            )
+            # insert the "Derived Toxicity" column after the "CTCAE Category" column
+            aecat_index = output_df.columns.get_loc("CTCAE Category")
+            output_df.insert(aecat_index + 1, "Derived Toxicity", output_df.pop("Derived Toxicity"))
+        # for the rest of the column within the data[AE_key] columns, copy over to the output_df
+        for column in data[AE_key].columns:
             if column not in AE_header_list:
-                output_df[column] = data["AE"][column].copy()
+                output_df[column] = data[AE_key][column].copy()
 
         # Calculating the "Duration" column based on "Start Date" and "Stop Date"
         # Convert the "Start Date" and "Stop Date" columns to datetime
@@ -224,7 +370,7 @@ class AECoreListing:
 
         # get data from DSCA
         DSCA_header_list = self.get_DSCA_header_list(self.study_name)
-        DSCA_df = data["DSCA"][DSCA_header_list]
+        DSCA_df = data[DSCA_key][DSCA_header_list]
         # rename the second column of DSCA to "Cohort"
         DSCA_df = DSCA_df.rename(columns={DSCA_df.columns[1]: "Cohort"})
         # map the cohort values to the cohort names
@@ -238,10 +384,10 @@ class AECoreListing:
         subject_index = output_df.columns.get_loc("Subject")
         output_df.insert(subject_index + 1, "Cohort", output_df.pop("Cohort"))
 
-        if "DSDLA" in data.keys():
+        if DSDLA_key in data.keys():
             # get data from Dose Level Assignment
             DSDLA_header_list = self.get_DSDLA_header_list(self.study_name)
-            DSDLA_df = data["DSDLA"][DSDLA_header_list]
+            DSDLA_df = data[DSDLA_key][DSDLA_header_list]
             # rename the second column of DSDLA to "Dose Level Assignment"
             DSDLA_df = DSDLA_df.rename(columns={DSDLA_df.columns[1]: "Dose Level Assignment"})
             # map the dose level assignment values to the dose level assignment names
@@ -256,7 +402,7 @@ class AECoreListing:
 
             # get data from EXINF
             EXINF_DLA_header_list = self.get_EXINF_DLA_header_list(self.study_name)
-            EXINF_DLA_df = data["EXINF"][EXINF_DLA_header_list]
+            EXINF_DLA_df = data[EXINF_key][EXINF_DLA_header_list]
             # get the dose level mapping
             dose_level_mapping = self.get_dose_level_mapping(self.study_name)
             # calculate the dose level based on the dose and power using function get_dose_level, with first argument as dose (second column), second argument as power (third column), and third argument as dose_level_mapping
@@ -285,7 +431,7 @@ class AECoreListing:
         for infusion_num, study_day in enumerate(infusion_details):
             # Get the data from EXINF for columns listed in the header list
             EXINF_header_list = self.get_EXINF_header_list(self.study_name)
-            infusion_df = data["EXINF"][EXINF_header_list]
+            infusion_df = data[EXINF_key][EXINF_header_list]
             # Rename the second column of EXINF to "Infusion Date"
             infusion_df = infusion_df.rename(columns={infusion_df.columns[1]: f"Infusion Date #{infusion_num + 1}"})
             # Rename the third column of EXINF to "Study Day"
@@ -352,9 +498,9 @@ class AECoreListing:
 
         # TODO: Format with pending and N/A
         # # get DSEOS data
-        # if "DSEOS" in data.keys():
+        # if DSEOS_key in data.keys():
         #     DSEOS_header_list = self.get_DSEOS_header_list(self.study_name)
-        #     DSEOS_df = data["DSEOS"][DSEOS_header_list]
+        #     DSEOS_df = data[DSEOS_key][DSEOS_header_list]
         #     # rename the second column of DSEOS to "End of Study Date"
         #     DSEOS_df = DSEOS_df.rename(columns={DSEOS_df.columns[1]: "End of Study Date"})
         #     # merge
@@ -366,10 +512,10 @@ class AECoreListing:
         output_df["Duration"] = output_df["Duration"].mask(output_df["Stop Date"] == "Pending", "Pending")
         # fill DLT Duration with "pending" if it is blank
         output_df["DLT Duration"] = output_df["DLT Duration"].fillna("Pending")
-        if "DSCA" in data.keys():
+        if DSCA_key in data.keys():
             # fill Cohort with "pending" if it is blank
             output_df["Cohort"] = output_df["Cohort"].fillna("Pending")
-        if "DSDLA" in data.keys():
+        if DSDLA_key in data.keys():
             # fill Dose Level Assignment with "pending" if it is blank
             output_df["Dose Level Assignment"] = output_df["Dose Level Assignment"].fillna("Pending")
             # fill Dose Level As Treated with "pending" if it is blank
@@ -378,6 +524,13 @@ class AECoreListing:
         return output_df
 
     def output(self, output_df, output_dir, output_file_name):
+        # get the keys based on the study name
+        AE_key = self.key_map.get("AE", "AE")
+        DSDLA_key = self.key_map.get("DSDLA", "DSDLA")
+        DSCA_key = self.key_map.get("DSCA", "DSCA")
+        EXINF_key = self.key_map.get("EXINF", "EXINF")
+        DSEOS_key = self.key_map.get("DSEOS", "DSEOS")
+
         # Create an Excel writer object using xlsxwriter engine
         with pd.ExcelWriter(
             output_dir + "/" + output_file_name + ".xlsx",
@@ -458,7 +611,7 @@ class AECoreListing:
 
             writer.book.add_worksheet("Reformated AE Report")
             writer.book.add_worksheet("AE Corelisting")
-            if "DSDLA" in self.data.keys():
+            if DSDLA_key in self.data.keys():
                 writer.book.add_worksheet("DSDLA Corelisting")
             writer.book.add_worksheet("DSCA Corelisting")
             writer.book.add_worksheet("EXINF Corelisting")
@@ -471,13 +624,13 @@ class AECoreListing:
                 if worksheet_name.startswith("Reformated AE Report"):
                     df = self.output_df
                 elif worksheet_name == "AE Corelisting":
-                    df = self.data["AE"]
+                    df = self.data[AE_key]
                 elif worksheet_name == "DSCA Corelisting":
-                    df = self.data["DSCA"]
+                    df = self.data[DSCA_key]
                 elif worksheet_name == "EXINF Corelisting":
-                    df = self.data["EXINF"]
+                    df = self.data[EXINF_key]
                 elif worksheet_name == "DSDLA Corelisting":
-                    df = self.data["DSDLA"]
+                    df = self.data[DSDLA_key]
 
                 # Replace NaN and Inf values with an empty string
                 df = df.replace([np.NAN, pd.NaT, float("inf"), float("-inf")], "")
@@ -514,7 +667,7 @@ class AECoreListing:
                     "Onset Post Infusion \n(related to last infusion)",
                     "Derived Toxicity",
                 ]
-                if "DSDLA" in self.data.keys():
+                if DSDLA_key in self.data.keys():
                     # add Dose Level Assignment to blue_columns
                     blue_columns.append("Dose Level Assignment")
                     blue_columns.append("Dose Level As Treated")
