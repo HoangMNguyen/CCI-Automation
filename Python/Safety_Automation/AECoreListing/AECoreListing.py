@@ -298,7 +298,7 @@ class AECoreListing:
             header = [
                 "Subject",
                 "Infusion Date (ig_INF1.INFDAT)",
-                "Event Group Label",
+                "Study Day (ig_INF1.CLSTUDYDAY)",
             ]
         return header
 
@@ -322,7 +322,7 @@ class AECoreListing:
         elif study_name == "12423":
             return ["Day 0", "Day 0-R"]
         elif study_name == "15420":
-            return ["Day 0", " Day 0-R"]
+            return ["Day 0", "Day 0-R"]
 
     # Define a function to compute DLT Duration based on the rules
     def compute_dlt_duration(self, row):
