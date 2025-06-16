@@ -211,10 +211,10 @@ vfilename = Split(sImportFile, "\")
 
 Application.Workbooks.Open fileName:=FilePath & fileName
 
-Set wbBk = Workbooks(Workbooks.Count)
+Set wbBk = Workbooks(Workbooks.count)
 With wbBk
 Set wsSht = .Sheets(1)
-wsSht.Copy Before:=sThisBk.Sheets(Sheets.Count)
+wsSht.Copy Before:=sThisBk.Sheets(Sheets.count)
 wbBk.Close SaveChanges:=False
 End With
 
@@ -250,12 +250,12 @@ RemoveFilter
 
 If ColumnNum2 = 0 Then
 CountSheet.Range("A1").AutoFilter Field:=ColumnNum, Criteria1:=Criterial, Operator:=xlFilterValues
-CountPerColumn = CountSheet.AutoFilter.Range.Columns(1).SpecialCells(xlCellTypeVisible).Cells.Count - 1
+CountPerColumn = CountSheet.AutoFilter.Range.Columns(1).SpecialCells(xlCellTypeVisible).Cells.count - 1
 Else
 With CountSheet.Range("A1")
     .AutoFilter Field:=ColumnNum, Criteria1:=Criterial
     .AutoFilter Field:=ColumnNum2, Criteria1:=Criterial2
-CountPerColumn = CountSheet.AutoFilter.Range.Columns(1).SpecialCells(xlCellTypeVisible).Cells.Count - 1
+CountPerColumn = CountSheet.AutoFilter.Range.Columns(1).SpecialCells(xlCellTypeVisible).Cells.count - 1
 End With
 End If
 
@@ -274,7 +274,7 @@ Public Function FindLastRowA(Sheet As Worksheet)
 
 Sheet.Activate
 Sheet.Range("A1").Select
-FindLastRowA = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+FindLastRowA = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 
 End Function
 
@@ -304,7 +304,7 @@ Public Function L2N(ColumnLetter As String)
 Dim ColumnNumber As Long
 
 'Convert To Column Number
-ColumnNumber = Range(ColumnLetter & 1).Column
+ColumnNumber = Range(ColumnLetter & 1).column
   
 L2N = ColumnNumber
     
@@ -336,7 +336,7 @@ Public Function RemoveColumn(Worksheet As Worksheet, ColumnName As String)
     If Not TargetColumn Is Nothing Then
         ' Find the index of the column
         Dim columnIndex As Integer
-        columnIndex = TargetColumn.Column
+        columnIndex = TargetColumn.column
 
         ' Remove the column with that index
         Worksheet.Columns(columnIndex).Delete
@@ -360,7 +360,7 @@ Public Function SetWidthWrapColumn(Worksheet As Worksheet, ColumnName As String,
     If Not TargetColumn Is Nothing Then
         ' Find the index of the column
         Dim columnIndex As Integer
-        columnIndex = TargetColumn.Column
+        columnIndex = TargetColumn.column
 
         ' Set the width of the column and wrap
         Worksheet.Columns(columnIndex).ColumnWidth = Width
@@ -383,7 +383,7 @@ Public Function FilterColumn(Worksheet As Worksheet, ColumnName As String, Optio
     ' Check if the column was found
     If Not TargetColumn Is Nothing Then
         Dim columnIndex As Integer
-        columnIndex = TargetColumn.Column
+        columnIndex = TargetColumn.column
 
         ' Clear existing filters
         'If Worksheet.AutoFilterMode Then Worksheet.AutoFilterMode = False
@@ -415,7 +415,7 @@ Public Function CountPerColumnName(CountSheet As Worksheet, ColumnName1 As Strin
     ' Find the first column index
     Set TargetColumn = CountSheet.Rows(1).Find(What:=ColumnName1, LookIn:=xlValues, LookAt:=xlWhole)
     If Not TargetColumn Is Nothing Then
-        ColumnNum = TargetColumn.Column
+        ColumnNum = TargetColumn.column
     Else
         Exit Function
     End If
@@ -424,7 +424,7 @@ Public Function CountPerColumnName(CountSheet As Worksheet, ColumnName1 As Strin
     If Len(ColumnName2) > 0 Then
         Set TargetColumn = CountSheet.Rows(1).Find(What:=ColumnName2, LookIn:=xlValues, LookAt:=xlWhole)
         If Not TargetColumn Is Nothing Then
-            ColumnNum2 = TargetColumn.Column
+            ColumnNum2 = TargetColumn.column
         Else
             ' If ColumnName2 is provided but not found, exit the function
             Exit Function
@@ -434,12 +434,12 @@ Public Function CountPerColumnName(CountSheet As Worksheet, ColumnName1 As Strin
     ' Apply filters and count
     If Len(ColumnName2) = 0 Then
         CountSheet.Range("A1").AutoFilter Field:=ColumnNum, Criteria1:=Criterial
-        CountPerColumnName = CountSheet.AutoFilter.Range.Columns(ColumnNum).SpecialCells(xlCellTypeVisible).Cells.Count - 1
+        CountPerColumnName = CountSheet.AutoFilter.Range.Columns(ColumnNum).SpecialCells(xlCellTypeVisible).Cells.count - 1
     Else
         With CountSheet.Range("A1")
             .AutoFilter Field:=ColumnNum, Criteria1:=Criterial
             .AutoFilter Field:=ColumnNum2, Criteria1:=Criterial2
-            CountPerColumnName = CountSheet.AutoFilter.Range.Columns(ColumnNum).SpecialCells(xlCellTypeVisible).Cells.Count - 1
+            CountPerColumnName = CountSheet.AutoFilter.Range.Columns(ColumnNum).SpecialCells(xlCellTypeVisible).Cells.count - 1
         End With
     End If
 
@@ -450,11 +450,11 @@ End Function
 
 
 ' Helper function to find column number
-Private Function GetColumnNumber(ws As Worksheet, colName As String) As Integer
+Public Function GetColumnNumber(ws As Worksheet, colName As String) As Integer
     Dim col As Range
     Set col = ws.Rows(1).Find(What:=colName, LookIn:=xlValues, LookAt:=xlWhole)
     If Not col Is Nothing Then
-        GetColumnNumber = col.Column
+        GetColumnNumber = col.column
     Else
         GetColumnNumber = 0
     End If
@@ -474,7 +474,7 @@ Public Function FilterExcludeValue(Worksheet As Worksheet, ColumnName As String,
     ' Check if the column was found
     If Not TargetColumn Is Nothing Then
         Dim columnIndex As Integer
-        columnIndex = TargetColumn.Column
+        columnIndex = TargetColumn.column
 
         ' Clear existing filters
         'If Worksheet.AutoFilterMode Then Worksheet.AutoFilterMode = False
@@ -512,7 +512,7 @@ Public Function CountFilteredRows(Worksheet As Worksheet, ColumnName As String) 
     End If
 
     ' Find the last row with data in the target column
-    lastRow = Worksheet.Cells(Worksheet.Rows.Count, TargetColumn.Column).End(xlUp).Row
+    lastRow = Worksheet.Cells(Worksheet.Rows.count, TargetColumn.column).End(xlUp).row
     
     ' Check if there are no data rows other than the header
     If lastRow = 1 Then
@@ -521,10 +521,10 @@ Public Function CountFilteredRows(Worksheet As Worksheet, ColumnName As String) 
     End If
 
     ' Define the range to count (excluding header)
-    Set VisibleCells = Worksheet.Range(TargetColumn.Offset(1, 0), Worksheet.Cells(lastRow, TargetColumn.Column)).SpecialCells(xlCellTypeVisible)
+    Set VisibleCells = Worksheet.Range(TargetColumn.Offset(1, 0), Worksheet.Cells(lastRow, TargetColumn.column)).SpecialCells(xlCellTypeVisible)
 
     ' Count the visible cells in the range
-    CountFilteredRows = VisibleCells.Cells.Count
+    CountFilteredRows = VisibleCells.Cells.count
 End Function
 
 Public Function CopySelectedVisibleColumnsToLocation(SourceWorksheet As Worksheet, DestinationWorksheet As Worksheet, _
@@ -541,7 +541,7 @@ Public Function CopySelectedVisibleColumnsToLocation(SourceWorksheet As Workshee
     End If
 
     ' Find the last row with data in the source worksheet
-    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.Count, 1).End(xlUp).Row
+    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.count, 1).End(xlUp).row
     
     'exit if lastrow is 1
     If lastRow = 1 Then
@@ -553,7 +553,7 @@ Public Function CopySelectedVisibleColumnsToLocation(SourceWorksheet As Workshee
         ' Find the column for each header name
         Set ColRange = SourceWorksheet.Rows(1).Find(What:=HeaderNames(i), LookIn:=xlValues, LookAt:=xlWhole)
         If Not ColRange Is Nothing Then
-            ColIndex = ColRange.Column
+            ColIndex = ColRange.column
 
             ' Define the range to copy for this column, excluding headers
             Set sourceRange = SourceWorksheet.Range(SourceWorksheet.Cells(2, ColIndex), SourceWorksheet.Cells(lastRow, ColIndex)).SpecialCells(xlCellTypeVisible)
@@ -588,7 +588,7 @@ Public Function CopyColumnsWithHeaders(SourceWorksheet As Worksheet, Destination
     End If
 
     ' Find the last row with data in the source worksheet
-    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.Count, 1).End(xlUp).Row
+    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.count, 1).End(xlUp).row
     
     'if lastrow is 1
     If lastRow = 1 Then
@@ -613,7 +613,7 @@ Public Function CopyColumnsWithHeaders(SourceWorksheet As Worksheet, Destination
             ' Find the column for each header name
             Set ColRange = SourceWorksheet.Rows(1).Find(What:=HeaderNames(i), LookIn:=xlValues, LookAt:=xlWhole)
             If Not ColRange Is Nothing Then
-                ColIndex = ColRange.Column
+                ColIndex = ColRange.column
     
                 ' Define the range to copy for this column, including headers
                 Set sourceRange = SourceWorksheet.Range(SourceWorksheet.Cells(1, ColIndex), SourceWorksheet.Cells(lastRow, ColIndex))
@@ -648,7 +648,7 @@ Public Function ConvertHeadersToIndex(SourceWorksheet As Worksheet, HeaderNames 
     For Each header In headers
         columnIndex = 0
         On Error Resume Next ' In case the header is not found
-        columnIndex = Application.Match(header, ws.Rows(1), 0)
+        columnIndex = Application.match(header, ws.Rows(1), 0)
         On Error GoTo 0 ' Resume normal error handling
 
         If columnIndex > 0 Then
@@ -666,7 +666,7 @@ Public Function ConvertHeadersToIndex(SourceWorksheet As Worksheet, HeaderNames 
 End Function
 
 Public Function FindLastColumn(ws As Worksheet) As Long
-    FindLastColumn = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    FindLastColumn = ws.Cells(1, ws.Columns.count).End(xlToLeft).column
 End Function
 
 Public Function IsNumberInArray(num As Long, arr As Variant) As Boolean
@@ -698,7 +698,7 @@ Public Function CopyColumnsWithIndex(SourceWorksheet As Worksheet, DestinationWo
     Dim DestinationCell As Range
 
     ' Find the last row with data in the source worksheet
-    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.Count, 1).End(xlUp).Row
+    lastRow = SourceWorksheet.Cells(SourceWorksheet.Rows.count, 1).End(xlUp).row
 
     ' Define the range to copy for this column, including headers
     Set sourceRange = SourceWorksheet.Range(SourceWorksheet.Cells(1, HeaderIndex), SourceWorksheet.Cells(lastRow, HeaderIndex))
@@ -725,7 +725,7 @@ Public Function FindHeaderIndexes(ws As Worksheet, headers As Variant) As Varian
     For Each header In headers
         columnIndex = 0
         On Error Resume Next ' In case the header is not found
-        columnIndex = Application.Match(header, ws.Rows(1), 0)
+        columnIndex = Application.match(header, ws.Rows(1), 0)
         On Error GoTo 0 ' Resume normal error handling
 
         If columnIndex > 0 Then
@@ -771,8 +771,8 @@ Function RoundDownColumn(ws As Worksheet, columnHeader As String)
 
     ' Check if the column header is found
     If Not found Is Nothing Then
-        headerCol = found.Column
-        lastRow = ws.Cells(ws.Rows.Count, headerCol).End(xlUp).Row
+        headerCol = found.column
+        lastRow = ws.Cells(ws.Rows.count, headerCol).End(xlUp).row
 
         ' Loop through each cell in the column and round down
         For Each cell In ws.Range(ws.Cells(headerRow + 1, headerCol), ws.Cells(lastRow, headerCol))

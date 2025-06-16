@@ -593,32 +593,31 @@ End Sub
 Sub FormatQuickReportRepeatForm()
 
     ' Setup
-    Dim wb As Workbook
-    Dim wsSrc As Worksheet, wsOut As Worksheet
-    Dim lastRow As Long, lastCol As Long
+    Dim WB As Workbook
+    Dim WSsrc As Worksheet, wsOut As Worksheet
+    Dim lastRow As Long, LastCol As Long
 
     'Dim nonRepeatCols As Variant, repeatStartCol As Long, repeatEndCol As Long
     Dim repeatGroupSize As Integer
     Dim lastRepIdx As Integer
-    'Dim dataArr As Variant, outArr() As Variant
-    'Dim groupFieldsCount As Integer
-    'Dim outColCount As Integer
+    Dim regColIdx As Long
+    Dim sortRange As Range
     
     Application.ScreenUpdating = False
-    Set wb = ActiveWorkbook
-    Set wsSrc = wb.ActiveSheet
-    lastRow = FindLastRowA(wsSrc)
+    Set WB = ActiveWorkbook
+    Set WSsrc = WB.ActiveSheet
+    lastRow = FindLastRowA(WSsrc)
     
     ' 1. Add the new sheet
     
-    Set wsOut = Sheets.Add(Before:=wsSrc)
+    Set wsOut = Sheets.Add(Before:=WSsrc)
     wsOut.Name = "Formatted Sheet"
     
 
     ' 2. Get the repeated headers array
 
     Dim repHeaders As Variant
-    repHeaders = GetRepeatedHeaders(wsSrc)
+    repHeaders = GetRepeatedHeaders(WSsrc)
     'For debug only
     'Dim i As Long
     'For i = LBound(repHeaders) To UBound(repHeaders)
@@ -627,20 +626,20 @@ Sub FormatQuickReportRepeatForm()
     
     '3. Find the first column of the first repeat column
     Dim firstRepIdx As Integer, lastNonRepIdx As Integer
-    firstRepIdx = GetColumnNumber(wsSrc, CStr(repHeaders(0)))
+    firstRepIdx = GetColumnNumber(WSsrc, CStr(repHeaders(0)))
     lastNonRepIdx = firstRepIdx - 1
     
-    wsSrc.Range(wsSrc.Cells(1, 1), wsSrc.Cells(1, lastNonRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
+    WSsrc.Range(WSsrc.Cells(1, 1), WSsrc.Cells(1, lastNonRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
     
     '4. Copy the headers of the columns from the first column all the way to the last element of the first repeat column set
     repeatGroupSize = UBound(repHeaders) - LBound(repHeaders) + 1
     lastRepIdx = firstRepIdx + repeatGroupSize - 1
     
     ' Copy headers from wsSrc to wsOut (row 1)
-    wsSrc.Range(wsSrc.Cells(1, 1), wsSrc.Cells(1, lastRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
+    WSsrc.Range(WSsrc.Cells(1, 1), WSsrc.Cells(1, lastRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
     
     Dim numRepeats As Integer
-    numRepeats = CountRepeatGroups(wsSrc, repHeaders, firstRepIdx)
+    numRepeats = CountRepeatGroups(WSsrc, repHeaders, firstRepIdx)
     
     'Loop rows
     Dim row As Integer, column As Integer, rowOut As Integer
@@ -649,10 +648,10 @@ Sub FormatQuickReportRepeatForm()
     For row = 2 To lastRow - 1
         firstInstance = True
         For column = firstRepIdx To firstRepIdx + numRepeats * repeatGroupSize - 1 Step repeatGroupSize
-            If wsSrc.Cells(row, column).Value = "Yes" Or firstInstance = True Then
+            If WSsrc.Cells(row, column).Value = "Yes" Or firstInstance = True Then
                 rowOut = rowOut + 1
-                wsSrc.Range(wsSrc.Cells(row, 1), wsSrc.Cells(row, lastNonRepIdx)).Copy Destination:=wsOut.Cells(rowOut, 1)
-                wsSrc.Range(wsSrc.Cells(row, column), wsSrc.Cells(row, column + repeatGroupSize - 1)).Copy Destination:=wsOut.Cells(rowOut, firstRepIdx)
+                WSsrc.Range(WSsrc.Cells(row, 1), WSsrc.Cells(row, lastNonRepIdx)).Copy Destination:=wsOut.Cells(rowOut, 1)
+                WSsrc.Range(WSsrc.Cells(row, column), WSsrc.Cells(row, column + repeatGroupSize - 1)).Copy Destination:=wsOut.Cells(rowOut, firstRepIdx)
                 firstInstance = False
             End If
         Next column
@@ -671,7 +670,22 @@ Sub FormatQuickReportRepeatForm()
     
     wsOut.Activate
     Call OutFormat
-
+    
+    '-- Final sort by Regimen # within already-sorted Column A --
+    regColIdx = GetColumnNumber(wsOut, "Regimen #")   'locate target column
+    If regColIdx > 0 Then
+        Set sortRange = wsOut.Range(wsOut.Cells(1, 1), wsOut.Cells(rowOut, wsOut.Cells(1, wsOut.Columns.count).End(xlToLeft).column))
+        
+        With wsOut.Sort
+            .SortFields.Clear
+            .SortFields.Add Key:=wsOut.Columns(1), Order:=xlAscending
+            .SortFields.Add Key:=wsOut.Columns(regColIdx), Order:=xlAscending
+            .SetRange sortRange
+            .header = xlYes
+            .Apply
+        End With
+    End If
+    '----------------------------------------------------------
 
     Application.ScreenUpdating = True
 
@@ -684,11 +698,11 @@ Function GetRepeatedHeaders(ws As Worksheet) As Variant
     Dim repeatedHeaders As Object
     Set repeatedHeaders = CreateObject("Scripting.Dictionary")
     
-    Dim lastCol As Long, col As Long
-    lastCol = ws.Cells(1, ws.Columns.count).End(xlToLeft).column
+    Dim LastCol As Long, col As Long
+    LastCol = ws.Cells(1, ws.Columns.count).End(xlToLeft).column
     
     Dim header As String
-    For col = 1 To lastCol
+    For col = 1 To LastCol
         header = Trim(ws.Cells(1, col).Value)
         If header <> "" Then
             If headerDict.Exists(header) Then
