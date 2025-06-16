@@ -23,12 +23,15 @@ Attribute VB_Exposed = False
 
 
 
+
 Sub UserForm_Initialize()
 
 ComboBox1.Clear
+
 ComboBox1.AddItem "Quick Report Query Status Format"
 ComboBox1.AddItem "Quick Reports Form Status Format Site"
 ComboBox1.AddItem "Quick Reports Form Status Format Sponsor"
+ComboBox1.AddItem "Format Quick Form Response Report (Log Form)"
 ComboBox1.AddItem "Velos/PennCTMS Schedule Review"
 ComboBox1.AddItem "Format Ad Hoc ConMed Report"
 ComboBox1.AddItem "Format Ad Hoc AE Report"
@@ -53,6 +56,8 @@ Sub CommandButton1_Click()
         Call Main.QuickReportsFormStatusFormatSite
     ElseIf ComboBox1.Value = "Quick Reports Form Status Format Sponsor" Then
         Call Main.QuickReportsFormStatusFormatSponsor
+    ElseIf ComboBox1.Value = "Format Quick Form Response Report (Log Form)" Then
+        Call Main.FormatQuickReportRepeatForm
     ElseIf ComboBox1.Value = "Velos/PennCTMS Schedule Review" Then
         Call Main.VelosScheduleReview
     ElseIf ComboBox1.Value = "Format Ad Hoc ConMed Report" Then
