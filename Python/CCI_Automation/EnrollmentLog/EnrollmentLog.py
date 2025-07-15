@@ -170,11 +170,11 @@ class EnrollmentLog:
                     worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
                 for i in range(7, 11):
                     worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
-                for i in range(11, 16):
+                for i in range(11, 17):
                     worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
-                for i in range(16, 21):
+                for i in range(17, 22):
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
-                for i in range(21, 22):
+                for i in range(22, 23):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
             elif self.study_name == "03821":
                 for i in range(9):
