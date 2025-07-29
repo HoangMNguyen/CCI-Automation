@@ -204,7 +204,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Plase type the output file name in the box below</string>
+    <string>Please type the output file name in the box below</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_5">
