@@ -49,7 +49,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     
     'Counting LastRow and LastCol for studies which only have 1 output, Errl will skip over the code above and continue loop
     WS1.Range("A1").Select
-    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
     'Delete last row
     Range("A" & lastRow).Select
     Selection.EntireRow.Delete
@@ -118,11 +118,11 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     End If
     
     'add validation tab
-    Sheets.Add After:=Sheets(Sheets.Count)
-    Set VSheet = Sheets(Sheets.Count)
+    Sheets.Add After:=Sheets(Sheets.count)
+    Set VSheet = Sheets(Sheets.count)
     VSheet.Name = "Validation tab"
-    Sheets.Add After:=Sheets(Sheets.Count)
-    Set TempSheet = Sheets(Sheets.Count)
+    Sheets.Add After:=Sheets(Sheets.count)
+    Set TempSheet = Sheets(Sheets.count)
     
 
     WS1.Activate
@@ -147,7 +147,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     
     TempSheet.Range("J1", TempSheet.Range("J1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
     Dim TempRow As Long
-    TempRow = TempSheet.Range("J1", TempSheet.Range("J1").End(xlDown)).Rows.Count
+    TempRow = TempSheet.Range("J1", TempSheet.Range("J1").End(xlDown)).Rows.count
     
     
     VSheet.Activate
@@ -163,7 +163,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     Dim cel As Range
     TempSheet.Activate
     For Each cel In VSheet.Range("A2:A" & lngCount).Cells
-        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("J1:J" & TempRow), cel.text)
+        VSheet.Range("B" & cel.row).Value = Application.WorksheetFunction.CountIf(Range("J1:J" & TempRow), cel.text)
         If cel.Value = "" Then
             cel.Value = "Detected form(s) created by site with Ready for Submission/Completed status"
             cel.Font.Bold = True
@@ -232,7 +232,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     
     'Counting LastRow and LastCol for studies which only have 1 output, Errl will skip over the code above and continue loop
     WS1.Range("A1").Select
-    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
     'Delete last row
     Range("A" & lastRow).Select
     Selection.EntireRow.Delete
@@ -297,7 +297,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     
     Worksheets(1).Activate
     ActiveSheet.Range("A1").Select
-    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 
     For Each xcell In ActiveSheet.Range("A1:F" & lastRow).Cells
         If xcell.text = "Completed" Or xcell.text = "Ready for Submission" Or xcell.text = "Submitted to Sponsor" Then
@@ -314,13 +314,13 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     Set SelectCells = Nothing
     
     'sheet count
-    SheetNum = Application.Sheets.Count
+    SheetNum = Application.Sheets.count
     For CurrentSheetNum = 2 To SheetNum
         Worksheets(CurrentSheetNum).Activate
         'remove filter
         Call RemoveFilter
         ActiveSheet.Range("A1").Select
-        lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+        lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 
         For Each xcell In ActiveSheet.Range("F1:F" & lastRow).Cells
             If xcell.text = "Completed" Or xcell.text = "Ready for Submission" Or xcell.text = "Submitted to Sponsor" Then
@@ -381,7 +381,7 @@ Sub QueryReportOverview(QueryWS, OverviewWS, TableStartRow)
     
     QueryWS.Activate
     QueryWS.Range("A1").Select
-    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
     OverviewWS.Range("B" & TableStartRow).Value = "Count"
     'unique value
     OverviewWS.Range("A" & TableStartRow + 1).Value = "Resolved"
@@ -424,7 +424,7 @@ WS1.Name = "All Cohorts Query Report"
 
 'Counting LastRow and LastCol for studies which only have 1 output, Errl will skip over the code above and continue loop
 WS1.Range("A1").Select
-lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Delete last row
 Range("A" & lastRow).Select
 Selection.EntireRow.Delete
@@ -466,7 +466,7 @@ Else 'other studies
 End If
 
 'Format table for all worksheets except the first one
-WSCount = ActiveWorkbook.Worksheets.Count
+WSCount = ActiveWorkbook.Worksheets.count
 For Sh = 2 To WSCount
     Sheets(Sh).Activate
     RemoveFilter
@@ -476,8 +476,8 @@ For Sh = 2 To WSCount
 Next Sh
 
 'add validation tab
-Sheets.Add After:=Sheets(Sheets.Count)
-Set VSheet = Sheets(Sheets.Count)
+Sheets.Add After:=Sheets(Sheets.count)
+Set VSheet = Sheets(Sheets.count)
 VSheet.Name = "Validation tab"
 
 'Filter to what is needed
@@ -494,7 +494,7 @@ WS1.Range("A1").AutoFilter Field:=8
 
 VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
 Dim VRow As Long
-VRow = VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).Rows.Count
+VRow = VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).Rows.count
 
 VSheet.Activate
 VSheet.Range("A1").Value = "Opened/Reopened with Completed/Ready for Submission/Submitted to Sponsor Status"
@@ -505,7 +505,7 @@ lngCount = Application.WorksheetFunction.CountA(Columns(1))
 Dim cel As Range
 If Not IsEmpty(VSheet.Range("A2")) Then
     For Each cel In VSheet.Range("A2:A" & lngCount).Cells
-        VSheet.Range("B" & cel.Row).Value = Application.WorksheetFunction.CountIf(Range("O1:O" & VRow), cel.text)
+        VSheet.Range("B" & cel.row).Value = Application.WorksheetFunction.CountIf(Range("O1:O" & VRow), cel.text)
     Next cel
 End If
 
@@ -560,7 +560,7 @@ WS2.Range("C1").Value = "CRF Name"
 
 WS1.Activate
 WS1.Range("A1").Select
-lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 
 WS2Row = 2
 For RowNum = 9 To lastRow
@@ -589,4 +589,169 @@ WS2.Range("A1").AutoFilter
 Application.ScreenUpdating = True
 
 End Sub
+
+Sub FormatQuickReportRepeatForm()
+
+    ' Setup
+    Dim WB As Workbook
+    Dim WSsrc As Worksheet, wsOut As Worksheet
+    Dim lastRow As Long, LastCol As Long
+
+    'Dim nonRepeatCols As Variant, repeatStartCol As Long, repeatEndCol As Long
+    Dim repeatGroupSize As Integer
+    Dim lastRepIdx As Integer
+    Dim regColIdx As Long
+    Dim sortRange As Range
+    
+    Application.ScreenUpdating = False
+    Set WB = ActiveWorkbook
+    Set WSsrc = WB.ActiveSheet
+    lastRow = FindLastRowA(WSsrc)
+    
+    ' 1. Add the new sheet
+    
+    Set wsOut = Sheets.Add(Before:=WSsrc)
+    wsOut.Name = "Formatted Sheet"
+    
+
+    ' 2. Get the repeated headers array
+
+    Dim repHeaders As Variant
+    repHeaders = GetRepeatedHeaders(WSsrc)
+    'For debug only
+    'Dim i As Long
+    'For i = LBound(repHeaders) To UBound(repHeaders)
+    '    Debug.Print repHeaders(i)
+    'Next i
+    
+    '3. Find the first column of the first repeat column
+    Dim firstRepIdx As Integer, lastNonRepIdx As Integer
+    firstRepIdx = GetColumnNumber(WSsrc, CStr(repHeaders(0)))
+    lastNonRepIdx = firstRepIdx - 1
+    
+    WSsrc.Range(WSsrc.Cells(1, 1), WSsrc.Cells(1, lastNonRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
+    
+    '4. Copy the headers of the columns from the first column all the way to the last element of the first repeat column set
+    repeatGroupSize = UBound(repHeaders) - LBound(repHeaders) + 1
+    lastRepIdx = firstRepIdx + repeatGroupSize - 1
+    
+    ' Copy headers from wsSrc to wsOut (row 1)
+    WSsrc.Range(WSsrc.Cells(1, 1), WSsrc.Cells(1, lastRepIdx)).Copy Destination:=wsOut.Cells(1, 1)
+    
+    Dim numRepeats As Integer
+    numRepeats = CountRepeatGroups(WSsrc, repHeaders, firstRepIdx)
+    
+    'Loop rows
+    Dim row As Integer, column As Integer, rowOut As Integer
+    Dim firstInstance As Boolean
+    rowOut = 1
+    For row = 2 To lastRow - 1
+        firstInstance = True
+        For column = firstRepIdx To firstRepIdx + numRepeats * repeatGroupSize - 1 Step repeatGroupSize
+            If WSsrc.Cells(row, column).Value = "Yes" Or firstInstance = True Then
+                rowOut = rowOut + 1
+                WSsrc.Range(WSsrc.Cells(row, 1), WSsrc.Cells(row, lastNonRepIdx)).Copy Destination:=wsOut.Cells(rowOut, 1)
+                WSsrc.Range(WSsrc.Cells(row, column), WSsrc.Cells(row, column + repeatGroupSize - 1)).Copy Destination:=wsOut.Cells(rowOut, firstRepIdx)
+                firstInstance = False
+            End If
+        Next column
+    Next row
+
+    ' 7. Delete unwanted columns in output
+    Dim colsToRemove As Variant
+    colsToRemove = Array("Form Name", "Form Type", "Filled Date", "Form Status", "IRB#", "Data Entry Date", _
+    "Response ID#", "CREATED_ON", "CREATOR_NAME", "LAST_MODIFIED_BY", "LAST_MODIFIED_DATE", "CALENDAR_NAME", _
+    "VISIT_NAME", "EVENT_NAME", "FORM_VERSION", "FK_FILLEDFORM", "FK_FORM", "FORM_COMPLETED", "TYPE", "FK_STUDY", _
+    "FK_PER", "ID", "FK_PATPROT", "CREATOR", "EVENT_SCHEDULE")
+    Dim j As Integer
+    For j = LBound(colsToRemove) To UBound(colsToRemove)
+        Call RemoveColumn(wsOut, CStr(colsToRemove(j)))
+    Next j
+    
+    wsOut.Activate
+    Call OutFormat
+    
+    '-- Final sort by Regimen # within already-sorted Column A --
+    regColIdx = GetColumnNumber(wsOut, "Regimen #")   'locate target column
+    If regColIdx > 0 Then
+        Set sortRange = wsOut.Range(wsOut.Cells(1, 1), wsOut.Cells(rowOut, wsOut.Cells(1, wsOut.Columns.count).End(xlToLeft).column))
+        
+        With wsOut.Sort
+            .SortFields.Clear
+            .SortFields.Add Key:=wsOut.Columns(1), Order:=xlAscending
+            .SortFields.Add Key:=wsOut.Columns(regColIdx), Order:=xlAscending
+            .SetRange sortRange
+            .header = xlYes
+            .Apply
+        End With
+    End If
+    '----------------------------------------------------------
+
+    Application.ScreenUpdating = True
+
+
+End Sub
+
+Function GetRepeatedHeaders(ws As Worksheet) As Variant
+    Dim headerDict As Object
+    Set headerDict = CreateObject("Scripting.Dictionary")
+    Dim repeatedHeaders As Object
+    Set repeatedHeaders = CreateObject("Scripting.Dictionary")
+    
+    Dim LastCol As Long, col As Long
+    LastCol = ws.Cells(1, ws.Columns.count).End(xlToLeft).column
+    
+    Dim header As String
+    For col = 1 To LastCol
+        header = Trim(ws.Cells(1, col).Value)
+        If header <> "" Then
+            If headerDict.Exists(header) Then
+                repeatedHeaders(header) = True
+            Else
+                headerDict(header) = True
+            End If
+        End If
+    Next col
+    
+    ' Convert repeated headers to array
+    If repeatedHeaders.count > 0 Then
+        GetRepeatedHeaders = repeatedHeaders.Keys
+    Else
+        GetRepeatedHeaders = Array()
+    End If
+End Function
+
+
+Function CountRepeatGroups(ws As Worksheet, repHeaders As Variant, startCol As Integer) As Integer
+    Dim repeatGroupSize As Integer
+    repeatGroupSize = UBound(repHeaders) - LBound(repHeaders) + 1
+    
+    Dim count As Integer
+    count = 0
+    
+    Dim col As Integer
+    col = startCol
+    
+    Dim i As Integer
+    Dim match As Boolean
+
+    Do
+        match = True
+        For i = 0 To repeatGroupSize - 1
+            If ws.Cells(1, col + i).Value <> repHeaders(LBound(repHeaders) + i) Then
+                match = False
+                Exit For
+            End If
+        Next i
+        If match Then
+            count = count + 1
+            col = col + repeatGroupSize
+        Else
+            Exit Do
+        End If
+    Loop While match
+    
+    CountRepeatGroups = count
+End Function
+
 

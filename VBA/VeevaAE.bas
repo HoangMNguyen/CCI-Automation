@@ -1,6 +1,6 @@
 Attribute VB_Name = "VeevaAE"
 Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safety team request. This works for AE v1: 15420 study
-
+    'Last update: 6/11/12025 by Hoang Nguyen
     Dim WB1 As Workbook
     Dim WS1 As Worksheet
     Dim WS2 As Worksheet
@@ -192,6 +192,17 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     ' Write the results back to the worksheet
     DeToxRange.Value = DeToxArray
     DeToxRange.EntireColumn.Font.Color = RGB(102, 102, 255)
+    
+    
+    ' Remove columns whose headers end with "_RAW"
+    Dim col As Long
+    Dim lastColWS2AfterProcessing As Long
+    lastColWS2AfterProcessing = FindLastColumn(WS2)
+    For col = lastColWS2AfterProcessing To 1 Step -1
+        If Right(Trim(WS2.Cells(1, col).Value), 4) = "_RAW" Then
+            WS2.Columns(col).Delete
+        End If
+    Next col
     
     'Formatting
     Call UpdateSheetFontToCalibri(WS2)

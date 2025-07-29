@@ -29,6 +29,7 @@ def EnrollmentLog16321(final_data):
     merged_df = pd.merge(merged_df, IE_df, on='Subject', how='left')
     #convert date columsn to datetime type
     merged_df['Apheresis Consent Date'] = pd.to_datetime(merged_df['Apheresis Consent Date'])
+    merged_df['Main Consent Date'] = pd.to_datetime(merged_df['Main Consent Date'])
     merged_df['Date of Birth'] = pd.to_datetime(merged_df['Date of Birth'])
     # Calculate time difference in days and convert to years
     # create a mask for non-NaT values in the two columns
@@ -36,7 +37,9 @@ def EnrollmentLog16321(final_data):
 
     # apply relativedelta only to rows with non-NaT values in both columns
     merged_df.loc[mask, 'Age at Consent'] = merged_df[mask].apply(lambda x: relativedelta(x['Apheresis Consent Date'], x['Date of Birth']).years, axis=1)
-
+    # for rows where 'Apheresis Consent Date' isnull but 'Main Consent Date' is not null, use 'Main Consent Date' to calculate age
+    merged_df.loc[(merged_df['Apheresis Consent Date'].isnull() & merged_df['Main Consent Date'].notnull()), 'Age at Consent'] = merged_df.loc[(merged_df['Apheresis Consent Date'].isnull() & merged_df['Main Consent Date'].notnull())].apply(lambda x: relativedelta(x['Main Consent Date'], x['Date of Birth']).years, axis=1)
+    
     merged_df['Apheresis Consent Date'] = pd.to_datetime(merged_df['Apheresis Consent Date']).dt.strftime('%m/%d/%Y')
     merged_df['Main Consent Date'] = pd.to_datetime(merged_df['Main Consent Date']).dt.strftime('%m/%d/%Y')
     merged_df['Date Physician-Investigator Confirmed Eligibility'] = pd.to_datetime(merged_df['Date Physician-Investigator Confirmed Eligibility']).dt.strftime('%m/%d/%Y')
@@ -58,13 +61,22 @@ def EnrollmentLog16321(final_data):
     #EXINF
     EXINF_df = final_data['EXINF'][['Subject', 'Event Group Label', 'Study Treatment Date (ig_EXINF1.INFDAT)']].copy()
     EXINF_df = EXINF_df[EXINF_df['Event Group Label'] == 'Day 0']
-    EXINF_new_col_name = {'Study Treatment Date (ig_EXINF1.INFDAT)': 'CART T cell Administration Date (Day 0)'}
+    EXINF_new_col_name = {'Study Treatment Date (ig_EXINF1.INFDAT)': 'CAR T cell Injection #1 Date (Day 0)'}
     EXINF_df = EXINF_df.rename(columns=EXINF_new_col_name)
     EXINF_df = EXINF_df.drop('Event Group Label', axis = 1)
     merged_df = pd.merge(merged_df, EXINF_df, on='Subject', how='left')
-    merged_df['CART T cell Administration Date (Day 0)'] = pd.to_datetime(merged_df['CART T cell Administration Date (Day 0)']).dt.strftime('%m/%d/%Y')
+    merged_df['CAR T cell Injection #1 Date (Day 0)'] = pd.to_datetime(merged_df['CAR T cell Injection #1 Date (Day 0)']).dt.strftime('%m/%d/%Y')
     # print(merged_df)
     
+    #EXINF2
+    EXINF_df = final_data['EXINF'][['Subject', 'Event Group Label', 'Study Treatment Date (ig_EXINF1.INFDAT)']].copy()
+    EXINF_df = EXINF_df[EXINF_df['Event Group Label'] == 'Injection 2']
+    EXINF_new_col_name = {'Study Treatment Date (ig_EXINF1.INFDAT)': 'CAR T cell Injection #2 Date (Day 14)'}
+    EXINF_df = EXINF_df.rename(columns=EXINF_new_col_name)
+    EXINF_df = EXINF_df.drop('Event Group Label', axis = 1)
+    merged_df = pd.merge(merged_df, EXINF_df, on='Subject', how='left')
+    merged_df['CAR T cell Injection #2 Date (Day 14)'] = pd.to_datetime(merged_df['CAR T cell Injection #2 Date (Day 14)']).dt.strftime('%m/%d/%Y')
+    # print(merged_df)
 
     #DSINITLF
     INITLF_df = final_data['DSINITLF'][['Subject','From which Phase is the Subject entering Long-Term Follow-Up? (ig_DSINITLF1.DSPHASE)', 'Last Study Visit Completed in Primary Follow-Up (ig_DSINITLF1.DSLVCPFU)', 'End of Primary Follow-Up Date (ig_DSINITLF1.DSENPFUDAT)']].copy()
