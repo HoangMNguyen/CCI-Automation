@@ -130,7 +130,6 @@ class AECoreListing:
         elif study_name == "15420":
             dose_level_mapping = {
                 "DL-1": (7, 5),
-                "DL1a": (3, 6),
                 "DL1b": (3, 6),
                 "DL2": (7, 6),
                 "DL3": (3, 7),
