@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 import pandas as pd
 import numpy as np
-from util import *
-from DSMB.DSMB_util import *
-from dateutil.relativedelta import *
+from util import (
+    add_rename_column_corelisting,
+    convert_integers_to_strings,
+    convert_float_2_sci_notation,
+    add_rename_column_df,
+)
+from DSMB.DSMB_util import get_stats_df, get_stats_perc_df, get_stats_percentage
+from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 from typing import Optional
 
@@ -27,6 +32,8 @@ def DSMB15420(
         "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_NH_CACHASCOD_cl_NS_COHORT1)",
         "Cohort Assignment",
     )
+    # Split Cohort Assignment by ":", keep the first part
+    enrollment_df["Cohort Assignment"] = enrollment_df["Cohort Assignment"].str.split(":").str[0]
     # Disease
     enrollment_df = add_rename_column_corelisting(
         enrollment_df, data, "PRDIAG", "Primary Diagnosis of CLL (ig_PRDIAG2.PRDIAGCLL)", "Disease CLL"
@@ -164,85 +171,52 @@ def DSMB15420(
     enrollment_df = enrollment_df.drop_duplicates()
     final_enrollment_df = enrollment_df.copy()
 
-    ### TODO: Demo Stats Table
+    ###TODO: Demo Stats Table
     # Calculate Stats of enrollment table
     TT = enrollment_df["Subject"].count()
     TT_df = enrollment_df.copy()
+
     # Screen Failed
-    SF = enrollment_df[enrollment_df["Subject meets all study eligibility?"] == "No"].count()["Subject"]
-    SF_df = enrollment_df[enrollment_df["Subject meets all study eligibility?"] == "No"]
-    # Cohort A Enrolled & Infused
-    CAE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CAI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CAE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CAI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A")) & (enrollment_df["Infused"] == "Yes")
-    ]
-    # Cohort B Enrolled & Infused
-    CBE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CBI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CBE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CBI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B")) & (enrollment_df["Infused"] == "Yes")
-    ]
-    # Cohort C Enrolled & Infused
-    CCE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CCI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CCE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CCI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C")) & (enrollment_df["Infused"] == "Yes")
-    ]
+    SF_filter = enrollment_df["Subject meets all study eligibility?"] == "No"
+    SF_df = enrollment_df[SF_filter]
+    SF = SF_df.count()["Subject"]
+
+    # Function to calculate cohort statistics
+    def get_cohort_stats(df, cohort_letter):
+        """
+        Calculate enrollment statistics for a specific cohort.
+
+        Args:
+            df: DataFrame with enrollment data
+            cohort_letter: Cohort letter (e.g., 'A', 'B', 'C', 'D')
+
+        Returns:
+            tuple: (enrolled_count, infused_count, enrolled_df, infused_df)
+        """
+        # Prepare DataFrame with empty strings instead of NaN
+        df_filled = df.fillna("")
+
+        # Filter for enrolled subjects
+        enrolled_filter = df_filled["Cohort Assignment"].str.contains(f"Cohort {cohort_letter}") & (
+            df_filled["Subject meets all study eligibility?"] == "Yes"
+        )
+        enrolled_df = df_filled.loc[enrolled_filter]
+        enrolled_count = enrolled_df.count()["Subject"]
+
+        # Filter for infused subjects
+        infused_filter = df_filled["Cohort Assignment"].str.contains(f"Cohort {cohort_letter}") & (
+            df_filled["Infused"] == "Yes"
+        )
+        infused_df = df_filled.loc[infused_filter]
+        infused_count = infused_df.count()["Subject"]
+
+        return enrolled_count, infused_count, enrolled_df, infused_df
+
+    # Calculate statistics for cohorts A, B, C, D
+    CAE, CAI, CAE_df, CAI_df = get_cohort_stats(enrollment_df, "A")
+    CBE, CBI, CBE_df, CBI_df = get_cohort_stats(enrollment_df, "B")
+    CCE, CCI, CCE_df, CCI_df = get_cohort_stats(enrollment_df, "C")
+    CDE, CDI, CDE_df, CDI_df = get_cohort_stats(enrollment_df, "D")
 
     # Fill NaN with empty string for enrollment_df
     final_enrollment_df = final_enrollment_df.fillna("")
@@ -257,18 +231,76 @@ def DSMB15420(
         "Cohort B Infused": CBI,
         "Cohort C Enrolled": CCE,
         "Cohort C Infused": CCI,
+        "Cohort D Enrolled": CDE,
+        "Cohort D Infused": CDI,
     }
 
-    # Create a new dataframe for Legal Sex table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
-    final_LegalSex_df = get_stats_percentage("Legal Sex", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create demographic statistics tables
+    # Note: The get_stats_percentage and get_stats_df functions need to be updated
+    # to include Cohort D statistics (CDE_df, CDI_df)
 
-    # Create a new dataframe for Age table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df for Age at Consent
-    final_Age_df = get_stats_df("Age", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create a new dataframe for Legal Sex table
+    final_LegalSex_df = get_stats_percentage(
+        "Legal Sex", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df
+    )
+
+    # Create a new dataframe for Age table
+    final_Age_df = get_stats_df("Age", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df)
     final_Age_df = final_Age_df.replace([np.inf, -np.inf], "")
     final_Age_df = final_Age_df.fillna("")
 
-    # Create a new dataframe for Race table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
-    final_Race_df = get_stats_percentage("Race", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create a new dataframe for Race table
+    final_Race_df = get_stats_percentage(
+        "Race", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df
+    )
+
+    # * ===== NEW CODE: Create Cohort D only stats tables =====
+    # filter to only cohort D
+    TTD_df = TT_df[TT_df["Cohort Assignment"].str.contains("Cohort D")]
+    SFD_df = SF_df[SF_df["Cohort Assignment"].str.contains("Cohort D")]
+    TTD = TTD_df["Subject"].count()
+    SFD = SFD_df["Subject"].count()
+    # Create demo stats tables for Cohort D only
+    final_LegalSex_df_D = get_stats_percentage("Legal Sex", TTD_df, SFD_df, CDE_df, CDI_df)
+    final_Age_df_D = get_stats_df("Age", TTD_df, SFD_df, CDE_df, CDI_df)
+    final_Age_df_D = final_Age_df_D.replace([np.inf, -np.inf], "")
+    final_Age_df_D = final_Age_df_D.fillna("")
+    final_Race_df_D = get_stats_percentage("Race", TTD_df, SFD_df, CDE_df, CDI_df)
+
+    # Status dictionary for Cohort D
+    final_status_D = {
+        "Total Screened": TTD,
+        "Screen Failed": SFD,
+        "Cohort D Enrolled": CDE,
+        "Cohort D Infused": CDI,
+    }
+
+    # * ===== NEW CODE: Create Cohorts A, B, C combined stats tables =====
+    # Filter out cohort D
+    TTABC_df = TT_df[~TT_df["Cohort Assignment"].str.contains("Cohort D")]
+    SFABC_df = SF_df[~SF_df["Cohort Assignment"].str.contains("Cohort D")]
+    TTABC = TTABC_df["Subject"].count()
+    SFABC = SFABC_df["Subject"].count()
+    # Create demo stats tables for Cohorts A, B, C combined
+    final_LegalSex_df_ABC = get_stats_percentage(
+        "Legal Sex", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
+    )
+    final_Age_df_ABC = get_stats_df("Age", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    final_Age_df_ABC = final_Age_df_ABC.replace([np.inf, -np.inf], "")
+    final_Age_df_ABC = final_Age_df_ABC.fillna("")
+    final_Race_df_ABC = get_stats_percentage("Race", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+
+    # Status dictionary for Cohorts A, B, C combined
+    final_status_ABC = {
+        "Total Screened": TTABC,
+        "Screen Failed": SFABC,
+        "Cohort A Enrolled": CAE,
+        "Cohort A Infused": CAI,
+        "Cohort B Enrolled": CBE,
+        "Cohort B Infused": CBI,
+        "Cohort C Enrolled": CCE,
+        "Cohort C Infused": CCI,
+    }
 
     ### TODO: INFUSION LISTING
     # if not data['INF'].empty:
@@ -839,13 +871,17 @@ def DSMB15420(
     )
 
     # Get data from DSINITRT
+    print(data["DSINITRT"])
     DSINITRT_df = data["DSINITRT"][
         [
             "Subject",
+            "Will the Subject receive Retreatment? (ig_DSINITRT1.DSRTYN)",
             "From which Phase is the Subject entering Retreatment? (ig_DSINITRT1.DSPHASER)",
             "End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)",
         ]
     ].copy()
+    # Filter out subjects that will not receive retreatment
+    DSINITRT_df = DSINITRT_df[DSINITRT_df["Will the Subject receive Retreatment? (ig_DSINITRT1.DSRTYN)"] != "No"]
     # Convert End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT) to datetime object
     DSINITRT_df["End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)"] = pd.to_datetime(
         DSINITRT_df["End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)"]
@@ -3016,6 +3052,7 @@ def DSMB15420(
             worksheet1.merge_range("D1:E1", "Cohort A (NHL)", bold_12_format)
             worksheet1.merge_range("F1:G1", "Cohort B (CLL)", bold_12_format)
             worksheet1.merge_range("H1:I1", "Cohort C (ALL)", bold_12_format)
+            worksheet1.merge_range("J1:K1", "Cohort D", bold_12_format)
             worksheet1.write(1, 0, "Status", bold_11_format)
             worksheet1.write(1, 1, "Total Screened\nN=" + str(final_status["Total Screened"]), bold_11_wrap_format)
             worksheet1.write(1, 2, "Screen Failed\nN=" + str(final_status["Screen Failed"]), bold_11_wrap_format)
@@ -3025,9 +3062,11 @@ def DSMB15420(
             worksheet1.write(1, 6, "Infused\nN=" + str(final_status["Cohort B Infused"]), bold_11_wrap_format)
             worksheet1.write(1, 7, "Eligible\nN=" + str(final_status["Cohort C Enrolled"]), bold_11_wrap_format)
             worksheet1.write(1, 8, "Infused\nN=" + str(final_status["Cohort C Infused"]), bold_11_wrap_format)
-            worksheet1.merge_range("A3:I3", "Legal Sex", bold_11_format)
-            worksheet1.merge_range("A8:I8", "Age at Consent", bold_11_format)
-            worksheet1.merge_range("A12:I12", "Race", bold_11_format)
+            worksheet1.write(1, 9, "Eligible\nN=" + str(final_status["Cohort D Enrolled"]), bold_11_wrap_format)
+            worksheet1.write(1, 10, "Infused\nN=" + str(final_status["Cohort D Infused"]), bold_11_wrap_format)
+            worksheet1.merge_range("A3:K3", "Legal Sex", bold_11_format)
+            worksheet1.merge_range("A8:K8", "Age at Consent", bold_11_format)
+            worksheet1.merge_range("A12:K12", "Race", bold_11_format)
             worksheet1.autofit()
 
             ## TODO: Enrollment Listing
@@ -3603,13 +3642,6 @@ def DSMB15420(
                 worksheet9.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
                 worksheet9.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
                 worksheet9.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
-
-                # if final_subject_C_retx_count > 0:
-                #     final_responseB_retreatment_df.to_excel(writer, sheet_name='Response Listing CLL', index = False, startrow=2, startcol=0)
-                #     # * FORMATING DATA
-                #     for i in range(0, len(final_responseC_retreatment_df)):
-                #         for j in range(0, len(final_responseB_retreatment_df.columns)):
-                #             worksheet7.write(i + 3, j + 15, final_responseB_retreatment_df.iloc[i, j], normal_data_format)
 
                 # Autofit
                 worksheet9.autofit()
