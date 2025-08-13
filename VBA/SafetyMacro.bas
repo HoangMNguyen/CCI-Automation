@@ -1,6 +1,6 @@
 Attribute VB_Name = "SafetyMacro"
 Sub FormatNonAECRF()
-'Last updated: 04/14/2025 By Nina Sizova
+'Last updated: 08/05/2025 By Nina Sizova
 
     Dim xcell As Object
     Dim SelectCells As Range
@@ -34,9 +34,9 @@ Sub FormatNonAECRF()
     WS2.Activate
     WS2.Range("A1").Select
     'Find last row
-    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
     'Find last column then split it to find the letter
-    LastCol = Cells(1, Columns.Count).End(xlToLeft).Column
+    LastCol = Cells(1, Columns.count).End(xlToLeft).column
     LastColumn = GetColumnLetter(LastCol)
 
     
@@ -45,11 +45,17 @@ Sub FormatNonAECRF()
     Dim DLAOColumn As String
     Dim FNColumn As String
     Dim FSColumn As String
+    Dim ENColumn As String
+    Dim FCVColumn As String
     EGNColumn = FindColumn(WS2, "Event Group Name")
+    ENColumn = FindColumn(WS2, "Event Name")
+    FCVColumn = FindColumn(WS2, "Form Casebook Version")
     DLAOColumn = FindColumn(WS2, "Data Listing As Of")
     FNColumn = FindColumn(WS2, "Form Name")
     FSColumn = FindColumn(WS2, "Form Status")
-    Columns(EGNColumn & ":" & FNColumn).Hidden = True
+    Columns(EGNColumn & ":" & ENColumn).Hidden = True
+    Columns(FCVColumn).Hidden = True
+    Columns(FNColumn).Hidden = True
     Columns(FSColumn & ":" & DLAOColumn).Hidden = True
     If Not IsEmpty(Range("A2")) Then
         WS2.Range("A2:" & LastColumn & lastRow).Select
