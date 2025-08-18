@@ -61,46 +61,49 @@ class EnrollmentLog:
         return output_df
 
     def output(self):
-        with pd.ExcelWriter(
-            self.output_dir + "/" + self.output_file_name + ".xlsx",
-            engine="xlsxwriter",
-            datetime_format="m/d/yyyy",  # Default ExcelWriter datetime display
-        ) as writer:
-            # # Detect all datetime-like columns automatically
-            datetime_cols = [
-                col
-                for col in self.output_df.columns
-                if pd.api.types.is_datetime64_any_dtype(self.output_df[col])
-                or pd.api.types.is_object_dtype(self.output_df[col])
+        output_path = f"{self.output_dir}/{self.output_file_name}.xlsx"
+        sheet_name = "Enrollment Log " + self.study_name
+
+        # Convert all potential date-like columns to datetime
+        for col in self.output_df.columns:
+            if pd.api.types.is_datetime64_any_dtype(self.output_df[col]) or (
+                pd.api.types.is_object_dtype(self.output_df[col])
                 and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
+            ):
+                self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce")
+
+        with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
+            # Write once
+            self.output_df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+            workbook = writer.book
+            worksheet = writer.sheets[sheet_name]
+
+            # Excel date format with no leading zeros
+            date_fmt = workbook.add_format({"num_format": "m/d/yyyy"})
+
+            # Detect datetime columns
+            datetime_cols = [
+                i
+                for i, col in enumerate(self.output_df.columns)
+                if pd.api.types.is_datetime64_any_dtype(self.output_df[col])
             ]
 
-            # Convert & normalize (strip time)
-            for col in datetime_cols:
-                self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce").dt.normalize()
-
-            # Write DataFrame
-            self.output_df.to_excel(writer, sheet_name="Enrollment Log " + self.study_name, index=False)
-            workbook = writer.book
-            worksheet = writer.sheets["Enrollment Log " + self.study_name]
-
-            # Formats
-            border_format = workbook.add_format({"border": 2, "text_wrap": True, "align": "left"})
-            date_format = workbook.add_format(
-                {
-                    "num_format": "m/d/yyyy",  # No leading zero, no time part
-                    "border": 2,
-                    "text_wrap": True,
-                    "align": "left",
-                }
-            )
-
-            # Apply column formats
-            for idx, col in enumerate(self.output_df.columns):
-                if col in datetime_cols:
-                    worksheet.set_column(idx, idx, 15, date_format)  # Force Excel date format
-                else:
-                    worksheet.set_column(idx, idx, 15, border_format)
+            # Overwrite datetime cells with proper Excel dates
+            for col_idx in datetime_cols:
+                col_name = self.output_df.columns[col_idx]
+                for row_idx, val in enumerate(self.output_df.iloc[:, col_idx], start=1):  # +1 skips header
+                    if pd.isna(val):
+                        # Skip filling "N/A" for "End of Study Date"
+                        if col_name == "End of Study Date":
+                            continue
+                        # Also skip "N/A" if the entire row's "End of Study Date" is blank
+                        eos_val = self.output_df.loc[self.output_df.index[row_idx - 1], "End of Study Date"]
+                        if pd.isna(eos_val):
+                            continue
+                        worksheet.write(row_idx, col_idx, "N/A")
+                    else:
+                        worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
 
             worksheet.autofit()
 
