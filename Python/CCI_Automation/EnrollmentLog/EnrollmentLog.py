@@ -61,12 +61,49 @@ class EnrollmentLog:
         return output_df
 
     def output(self):
-        with pd.ExcelWriter(self.output_dir + "/" + self.output_file_name + ".xlsx") as writer:
+        with pd.ExcelWriter(
+            self.output_dir + "/" + self.output_file_name + ".xlsx",
+            engine="xlsxwriter",
+            datetime_format="m/d/yyyy",  # Default ExcelWriter datetime display
+        ) as writer:
+            # # Detect all datetime-like columns automatically
+            datetime_cols = [
+                col
+                for col in self.output_df.columns
+                if pd.api.types.is_datetime64_any_dtype(self.output_df[col])
+                or pd.api.types.is_object_dtype(self.output_df[col])
+                and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
+            ]
+
+            # Convert & normalize (strip time)
+            for col in datetime_cols:
+                self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce").dt.normalize()
+
+            # Write DataFrame
             self.output_df.to_excel(writer, sheet_name="Enrollment Log " + self.study_name, index=False)
+            workbook = writer.book
             worksheet = writer.sheets["Enrollment Log " + self.study_name]
-            # worksheet.set_column(0, self.output_df.shape[1]-1, 15)
+
+            # Formats
+            border_format = workbook.add_format({"border": 2, "text_wrap": True, "align": "left"})
+            date_format = workbook.add_format(
+                {
+                    "num_format": "m/d/yyyy",  # No leading zero, no time part
+                    "border": 2,
+                    "text_wrap": True,
+                    "align": "left",
+                }
+            )
+
+            # Apply column formats
+            for idx, col in enumerate(self.output_df.columns):
+                if col in datetime_cols:
+                    worksheet.set_column(idx, idx, 15, date_format)  # Force Excel date format
+                else:
+                    worksheet.set_column(idx, idx, 15, border_format)
+
             worksheet.autofit()
-            border_format = writer.book.add_format({"border": 2, "text_wrap": True, "align": "left"})
+
             blue_header_format = writer.book.add_format(
                 {
                     "bg_color": "#B7DEE8",
@@ -177,9 +214,9 @@ class EnrollmentLog:
                     worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
                 for i in range(11, 17):
                     worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
-                for i in range(17, 22):
+                for i in range(17, 27):
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
-                for i in range(22, 23):
+                for i in range(27, 28):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
             elif self.study_name == "03821":
                 for i in range(9):
