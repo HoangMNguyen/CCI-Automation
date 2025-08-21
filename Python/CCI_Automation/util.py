@@ -555,8 +555,8 @@ def convert_integers_to_strings(df, column_name):
     if column_name not in df.columns:
         raise ValueError(f"Column '{column_name}' does not exist in the dataframe")
 
-    # Convert integers to strings, if the value is an integer, else return Nan
-    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else np.NaN)
+    # Convert integers to strings, if the value is an integer, else keep it as is
+    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else x)
 
     return df
 
