@@ -145,7 +145,7 @@ class AECoreListing:
                 "Subject",
                 "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)",
                 "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)",
-                "T-cell Expectedness (IG_NS_NA_AE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)",
+                "T-cell Expectedness (IG_NS_NA_AE1.CL_NS_YH_AETRTINTP_cl_YS_YN1)",
                 "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)",
                 "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)",
                 "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)",
@@ -562,7 +562,7 @@ class AECoreListing:
 
         # convert the "Infusion Date" rows that have data not "N/A"
         output_df["Infusion Date"] = output_df["Infusion Date"].fillna("N/A")
-        output_df["Stop Date"] = output_df["Stop Date"].fillna("N/A")
+        output_df["Stop Date"] = output_df["Stop Date"].fillna("Pending")
         # output_df["Start Date"] = output_df["Start Date"].dt.date
         output_df["D+28"] = output_df["D+28"].fillna("N/A")
         # drop the "Infusion Date" columns
