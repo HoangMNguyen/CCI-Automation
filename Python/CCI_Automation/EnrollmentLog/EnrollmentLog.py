@@ -90,20 +90,36 @@ class EnrollmentLog:
             ]
 
             # Overwrite datetime cells with proper Excel dates
-            for col_idx in datetime_cols:
-                col_name = self.output_df.columns[col_idx]
-                for row_idx, val in enumerate(self.output_df.iloc[:, col_idx], start=1):  # +1 skips header
-                    if pd.isna(val):
-                        # Skip filling "N/A" for "End of Study Date"
+            for row_idx in range(1, len(self.output_df) + 1):  # +1 skips header
+                row = self.output_df.iloc[row_idx - 1]
+                eos_val = row["End of Study Date"]
+
+                for col_idx, col_name in enumerate(self.output_df.columns):
+                    val = row[col_name]
+
+                    if not pd.isna(eos_val):  # End of Study Date is NOT blank
                         if col_name == "End of Study Date":
-                            continue
-                        # Also skip "N/A" if the entire row's "End of Study Date" is blank
-                        eos_val = self.output_df.loc[self.output_df.index[row_idx - 1], "End of Study Date"]
-                        if pd.isna(eos_val):
-                            continue
-                        worksheet.write(row_idx, col_idx, "N/A")
+                            # Always write the actual End of Study Date
+                            worksheet.write_datetime(row_idx, col_idx, eos_val.to_pydatetime(), date_fmt)
+                        else:
+                            if pd.isna(val) or val == "":
+                                # Blank → force "N/A"
+                                worksheet.write(row_idx, col_idx, "N/A")
+                            else:
+                                # Keep original value
+                                if pd.api.types.is_datetime64_any_dtype(self.output_df[col_name]):
+                                    worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
+                                else:
+                                    worksheet.write(row_idx, col_idx, val)
                     else:
-                        worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
+                        # End of Study Date IS blank → write everything as-is, no "N/A"
+                        if pd.isna(val) or val == "":
+                            worksheet.write(row_idx, col_idx, "")
+                        else:
+                            if pd.api.types.is_datetime64_any_dtype(self.output_df[col_name]):
+                                worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
+                            else:
+                                worksheet.write(row_idx, col_idx, val)
 
             worksheet.autofit()
 
