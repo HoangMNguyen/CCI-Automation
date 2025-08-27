@@ -82,13 +82,6 @@ class EnrollmentLog:
             # Excel date format with no leading zeros
             date_fmt = workbook.add_format({"num_format": "m/d/yyyy"})
 
-            # Detect datetime columns
-            datetime_cols = [
-                i
-                for i, col in enumerate(self.output_df.columns)
-                if pd.api.types.is_datetime64_any_dtype(self.output_df[col])
-            ]
-
             # Overwrite datetime cells with proper Excel dates
             for row_idx in range(1, len(self.output_df) + 1):  # +1 skips header
                 row = self.output_df.iloc[row_idx - 1]
