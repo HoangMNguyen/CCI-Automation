@@ -179,6 +179,7 @@ Sub QueryDetailListingFormatSite()
     Call RemoveColumn(WS1, "Closed By Query Team")
     Call RemoveColumn(WS1, "Closed Date")
     Call RemoveColumn(WS1, "Closed By")
+    Call RemoveColumn(WS1, "Observed Source Value")
     
     Call OutFormat
     

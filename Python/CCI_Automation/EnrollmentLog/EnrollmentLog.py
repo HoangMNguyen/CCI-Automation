@@ -61,12 +61,61 @@ class EnrollmentLog:
         return output_df
 
     def output(self):
-        with pd.ExcelWriter(self.output_dir + "/" + self.output_file_name + ".xlsx") as writer:
-            self.output_df.to_excel(writer, sheet_name="Enrollment Log " + self.study_name, index=False)
-            worksheet = writer.sheets["Enrollment Log " + self.study_name]
-            # worksheet.set_column(0, self.output_df.shape[1]-1, 15)
+        output_path = f"{self.output_dir}/{self.output_file_name}.xlsx"
+        sheet_name = "Enrollment Log " + self.study_name
+
+        # Convert all potential date-like columns to datetime
+        for col in self.output_df.columns:
+            if pd.api.types.is_datetime64_any_dtype(self.output_df[col]) or (
+                pd.api.types.is_object_dtype(self.output_df[col])
+                and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
+            ):
+                self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce")
+
+        with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
+            # Write once
+            self.output_df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+            workbook = writer.book
+            worksheet = writer.sheets[sheet_name]
+
+            # Excel date format with no leading zeros
+            date_fmt = workbook.add_format({"num_format": "m/d/yyyy"})
+
+            # Overwrite datetime cells with proper Excel dates
+            for row_idx in range(1, len(self.output_df) + 1):  # +1 skips header
+                row = self.output_df.iloc[row_idx - 1]
+                eos_val = row["End of Study Date"]
+
+                for col_idx, col_name in enumerate(self.output_df.columns):
+                    val = row[col_name]
+
+                    if not pd.isna(eos_val):  # End of Study Date is NOT blank
+                        if col_name == "End of Study Date":
+                            # Always write the actual End of Study Date
+                            worksheet.write_datetime(row_idx, col_idx, eos_val.to_pydatetime(), date_fmt)
+                        else:
+                            if pd.isna(val) or val == "":
+                                # Blank → force "N/A"
+                                worksheet.write(row_idx, col_idx, "N/A")
+                            else:
+                                # Keep original value
+                                if pd.api.types.is_datetime64_any_dtype(self.output_df[col_name]):
+                                    worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
+                                else:
+                                    worksheet.write(row_idx, col_idx, val)
+                    else:
+                        # End of Study Date IS blank → write everything as-is, no "N/A"
+                        if pd.isna(val) or val == "":
+                            worksheet.write(row_idx, col_idx, "")
+                        else:
+                            if pd.api.types.is_datetime64_any_dtype(self.output_df[col_name]):
+                                worksheet.write_datetime(row_idx, col_idx, val.to_pydatetime(), date_fmt)
+                            else:
+                                worksheet.write(row_idx, col_idx, val)
+
             worksheet.autofit()
-            border_format = writer.book.add_format({"border": 2, "text_wrap": True, "align": "left"})
+
             blue_header_format = writer.book.add_format(
                 {
                     "bg_color": "#B7DEE8",
@@ -177,9 +226,9 @@ class EnrollmentLog:
                     worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
                 for i in range(11, 17):
                     worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
-                for i in range(17, 22):
+                for i in range(17, 27):
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
-                for i in range(22, 23):
+                for i in range(27, 28):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
             elif self.study_name == "03821":
                 for i in range(9):
