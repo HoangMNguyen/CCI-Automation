@@ -410,7 +410,7 @@ class DSMB11823:
                 # Format dates as MM/DD/YYYY only if they're not null
                 chemo_dates["Lymphodepleting Chemotherapy Dates"] = chemo_dates.apply(
                     lambda row: (
-                        f"{row[start_date_col].strftime('%m/%d/%Y')} to {row[end_date_col].strftime('%m/%d/%Y')}"
+                        f"{format_date_without_leading_zeros_util(row[start_date_col])} to {format_date_without_leading_zeros_util(row[end_date_col])}"
                         if pd.notna(row[start_date_col]) and pd.notna(row[end_date_col])
                         else ""
                     ),
@@ -439,6 +439,7 @@ class DSMB11823:
         raw["Date of TmPSMA-02 CAR T Cell Infusion"] = pd.to_datetime(
             raw["Date of TmPSMA-02 CAR T Cell Infusion"], errors="coerce"
         ).dt.strftime("%m/%d/%Y")
+        raw = remove_leading_zeros_from_dates(raw)
         infusion_df = raw[raw["Event Group Label"] == "Day 0"].copy()
         # Add lymphodepleting chemotherapy dates to infusion_df if available
         if chemo_info is not None and not chemo_info.empty:
@@ -502,12 +503,12 @@ class DSMB11823:
         # Count the number of subjects that met the target dose
         total = infusion_df["Subject"].nunique()
         ycount = infusion_df["Met Target Dose"].eq("Y").sum()
-        infusion_stat2["Met Target Dose"] = f"{ycount} ({ycount/total*100:.2f}%)" if total else "0 (0%)"
+        infusion_stat2["Met Target Dose"] = f"{ycount} ({ycount / total * 100:.2f}%)" if total else "0 (0%)"
         # Create statistics for %scFv Flow
         infusion_stat3 = get_stats_perc_df("%scFv Flow", infusion_df)
         # Count the number of subjects that met the target %scFv
         y2 = infusion_df["Met Target %scFv"].eq("Y").sum()
-        infusion_stat3["Met Target %scFv"] = f"{y2} ({y2/total*100:.2f}%)" if total else "0 (0%)"
+        infusion_stat3["Met Target %scFv"] = f"{y2} ({y2 / total * 100:.2f}%)" if total else "0 (0%)"
         # Combine the three statistics dataframes
         self.infusion_stat_df = pd.concat([infusion_stat1, infusion_stat2, infusion_stat3], axis=1)
         # Rename the columns to the desired headers

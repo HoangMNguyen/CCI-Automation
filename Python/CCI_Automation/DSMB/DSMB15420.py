@@ -7,6 +7,7 @@ from util import (
     convert_float_2_sci_notation,
     add_rename_column_df,
     get_excel_formats,
+    format_date_without_leading_zeros_util,
 )
 from DSMB.DSMB_util import get_stats_df, get_stats_perc_df, get_stats_percentage
 from dateutil.relativedelta import relativedelta
@@ -169,6 +170,7 @@ def DSMB15420(
     ] = "No"
     enrollment_df = enrollment_df.drop(columns=["End of Study Date (ig_EOS1.EOSDAT)"])
     enrollment_df = enrollment_df.drop_duplicates()
+
     final_enrollment_df = enrollment_df.copy()
 
     ###TODO: Demo Stats Table
@@ -379,7 +381,7 @@ def DSMB15420(
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
     infusion_df["Date of huCART19-IL18 Infusion"] = infusion_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
     )
 
     # adding Target Cell Dose using TCD_dict
@@ -516,7 +518,7 @@ def DSMB15420(
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
     infusionR_df["Date of huCART19-IL18 Infusion"] = infusionR_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
     )
 
     # Total huCart19-IL18 Cell Dose
@@ -1140,19 +1142,39 @@ def DSMB15420(
         responseA_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseA_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS,
+        responseA_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseA_primary_SV_df = pd.concat([responseA_primary_SV_df, responseA_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseA_primary_SV_df = responseA_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseA_primary_SV_df = responseA_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseA_primary_SV_df = pd.merge(responseA_primary_SV_df, responseA_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseA_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_response_NHL_primary_df = pd.merge(
-            final_response_NHL_primary_df, responseA_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+            final_response_NHL_primary_df,
+            responseA_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
         final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_response_NHL_primary_df["Event Label"] = (
+            final_response_NHL_primary_df["Event Label"]
+            + final_response_NHL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
+        print(final_response_NHL_primary_df)
         # Select the columns needed only
         final_response_NHL_primary_df = final_response_NHL_primary_df[
             [
@@ -1396,16 +1418,30 @@ def DSMB15420(
         responseA_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseA_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseA_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseA_retreatment_SV_df = pd.concat([responseA_retreatment_SV_df, responseA_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseA_retreatment_SV_df = responseA_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseA_retreatment_SV_df = responseA_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseA_retreatment_SV_df = pd.merge(
+            responseA_retreatment_SV_df, responseA_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseA_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_responseA_retreatment_df = pd.merge(
             final_responseA_retreatment_df,
-            responseA_retreatment_SV_df[["Subject", "Event Label"]],
+            responseA_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -1413,7 +1449,11 @@ def DSMB15420(
         # * Formatting the dataframe
         # Rename the column Event Label to Event Label (Study Status)
         final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseA_retreatment_df["Event Label"] = (
+            final_responseA_retreatment_df["Event Label"]
+            + final_responseA_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseA_retreatment_df = final_responseA_retreatment_df[
             [
@@ -1673,15 +1713,37 @@ def DSMB15420(
         responseB_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseB_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseB_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseB_primary_SV_df = pd.concat([responseB_primary_SV_df, responseB_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseB_primary_SV_df = responseB_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseB_primary_SV_df = responseB_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseB_primary_SV_df = pd.merge(responseB_primary_SV_df, responseB_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseB_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_responseB_primary_df = pd.merge(
-            final_responseB_primary_df, responseB_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+            final_responseB_primary_df,
+            responseB_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
+        )
+        # * Formatting the dataframe
+        # Rename the column Event Label to Event Label (Study Status)
+        final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
+        # Add End of Study Date to Event Label if available
+        final_responseB_primary_df["Event Label"] = (
+            final_responseB_primary_df["Event Label"] + final_responseB_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
         )
         # Select the columns needed only
         final_responseB_primary_df = final_responseB_primary_df[
@@ -1702,10 +1764,6 @@ def DSMB15420(
             ]
         ]
         final_responseB_primary_df = final_responseB_primary_df.replace([np.nan, np.inf, -np.inf], "")
-
-        # * Formatting the dataframe
-        # Rename the column Event Label to Event Label (Study Status)
-        final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
 
     # TODO: Cohort B - CLL Retreatment
     # Filter to only Primary Treatment
@@ -1898,16 +1956,31 @@ def DSMB15420(
         responseB_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseB_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseB_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseB_retreatment_SV_df = pd.concat([responseB_retreatment_SV_df, responseB_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseB_retreatment_SV_df = responseB_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseB_retreatment_SV_df = responseB_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseB_retreatment_SV_df = pd.merge(
+            responseB_retreatment_SV_df, responseB_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseB_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseB_retreatment_df = pd.merge(
             final_responseB_retreatment_df,
-            responseB_retreatment_SV_df[["Subject", "Event Label"]],
+            responseB_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -1915,7 +1988,11 @@ def DSMB15420(
         # * Formatting the dataframe
         # Rename the column Event Label to Event Label (Study Status)
         final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseB_retreatment_df["Event Label"] = (
+            final_responseB_retreatment_df["Event Label"]
+            + final_responseB_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseB_retreatment_df = final_responseB_retreatment_df[
             [
@@ -2159,22 +2236,41 @@ def DSMB15420(
         responseBRT_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseBRT_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseBRT_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseBRT_primary_SV_df = pd.concat([responseBRT_primary_SV_df, responseBRT_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseBRT_primary_SV_df = responseBRT_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseBRT_primary_SV_df = responseBRT_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseBRT_primary_SV_df = pd.merge(
+            responseBRT_primary_SV_df, responseBRT_primary_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseBRT_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseBRT_primary_df = pd.merge(
             final_responseBRT_primary_df,
-            responseBRT_primary_SV_df[["Subject", "Event Label"]],
+            responseBRT_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
         final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseBRT_primary_df["Event Label"] = (
+            final_responseBRT_primary_df["Event Label"]
+            + final_responseBRT_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseBRT_primary_df = final_responseBRT_primary_df[
             [
@@ -2397,16 +2493,31 @@ def DSMB15420(
         responseBRT_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseBRT_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseBRT_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseBRT_retreatment_SV_df = pd.concat([responseBRT_retreatment_SV_df, responseBRT_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseBRT_retreatment_SV_df = responseBRT_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseBRT_retreatment_SV_df = responseBRT_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseBRT_retreatment_SV_df = pd.merge(
+            responseBRT_retreatment_SV_df, responseBRT_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseBRT_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseBRT_retreatment_df = pd.merge(
             final_responseBRT_retreatment_df,
-            responseBRT_retreatment_SV_df[["Subject", "Event Label"]],
+            responseBRT_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -2416,7 +2527,11 @@ def DSMB15420(
         final_responseBRT_retreatment_df["Event Label"] = final_responseBRT_retreatment_df["Event Label"].map(
             event_AB_dict
         )
-
+        # Add End of Study Date to Event Label if available
+        final_responseBRT_retreatment_df["Event Label"] = (
+            final_responseBRT_retreatment_df["Event Label"]
+            + final_responseBRT_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseBRT_retreatment_df = final_responseBRT_retreatment_df[
             [
@@ -2708,6 +2823,8 @@ def DSMB15420(
         responseC_primary_SV_df = data["SVALL"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFUALL, column Subject, Event Label and Event Date
         responseC_primary_DSSVLTFU_df = data["DSSVLTFUALL"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseC_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Drop columns that are entirely NA from both DataFrames
         responseC_primary_SV_df = responseC_primary_SV_df.dropna(axis=1, how="all")
         responseC_primary_DSSVLTFU_df = responseC_primary_DSSVLTFU_df.dropna(axis=1, how="all")
@@ -2717,13 +2834,31 @@ def DSMB15420(
         responseC_primary_SV_df = responseC_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseC_primary_SV_df = responseC_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseC_primary_SV_df = pd.merge(responseC_primary_SV_df, responseC_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseC_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_response_ALL_primary_df = pd.merge(
-            final_response_ALL_primary_df, responseC_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+            final_response_ALL_primary_df,
+            responseC_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
         final_response_ALL_primary_df["Event Label"] = final_response_ALL_primary_df["Event Label"].map(event_C_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_response_ALL_primary_df["Event Label"] = (
+            final_response_ALL_primary_df["Event Label"]
+            + final_response_ALL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_response_ALL_primary_df = final_response_ALL_primary_df[
             [
@@ -3018,6 +3153,8 @@ def DSMB15420(
         responseC_retreatment_SV_df = data["SVALL"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFUALL
         responseC_retreatment_DSSVLTFU_df = data["DSSVLTFUALL"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseC_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Drop columns that are entirely NA from both DataFrames
         responseC_retreatment_SV_df = responseC_retreatment_SV_df.dropna(axis=1, how="all")
         responseC_retreatment_DSSVLTFU_df = responseC_retreatment_DSSVLTFU_df.dropna(axis=1, how="all")
@@ -3027,15 +3164,32 @@ def DSMB15420(
         responseC_retreatment_SV_df = responseC_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseC_retreatment_SV_df = responseC_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseC_retreatment_SV_df = pd.merge(
+            responseC_retreatment_SV_df, responseC_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseC_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_responseC_retreatment_df = pd.merge(
             final_responseC_retreatment_df,
-            responseC_retreatment_SV_df[["Subject", "Event Label"]],
+            responseC_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
         # Map Event Label using event_C_dict
         final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df["Event Label"].map(event_C_dict)
+        # Add End of Study Date to Event Label if available
+        final_responseC_retreatment_df["Event Label"] = (
+            final_responseC_retreatment_df["Event Label"]
+            + final_responseC_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
 
         # Select the columns needed only
         final_responseC_retreatment_df = final_responseC_retreatment_df[
@@ -4229,6 +4383,7 @@ def DSMB15420(
                 writer, sheet_name="Response Listing CLL", index=False, startrow=2, startcol=0
             )
             worksheet7 = writer.sheets["Response Listing CLL"]
+            final_responseB_primary_df = final_responseB_primary_df.replace([np.nan, np.inf, -np.inf], "")
             # * FORMATING DATA
             for i in range(0, len(final_responseB_primary_df)):
                 for j in range(0, len(final_responseB_primary_df.columns)):
@@ -4423,65 +4578,65 @@ def DSMB15420(
                     writer, sheet_name="Response Listing Cohort D", index=False, header=False, startrow=3, startcol=15
                 )
 
-        # Get the worksheet
-        worksheet10 = writer.sheets["Response Listing Cohort D"]
+            # Get the worksheet
+            worksheet10 = writer.sheets["Response Listing Cohort D"]
 
-        # * FORMAT DATA
-        # Format NHL data
-        if final_subject_D_NHL_count > 0:
-            for i in range(0, len(final_responseD_NHL_df)):
-                for j in range(0, len(final_responseD_NHL_df.columns)):
-                    worksheet10.write(i + 3, j, final_responseD_NHL_df.iloc[i, j], normal_data_format)
+            # * FORMAT DATA
+            # Format NHL data
+            if final_subject_D_NHL_count > 0:
+                for i in range(0, len(final_responseD_NHL_df)):
+                    for j in range(0, len(final_responseD_NHL_df.columns)):
+                        worksheet10.write(i + 3, j, final_responseD_NHL_df.iloc[i, j], normal_data_format)
 
-        # Format ALL data
-        if final_subject_D_ALL_count > 0:
-            for i in range(0, len(final_responseD_ALL_df)):
-                for j in range(0, len(final_responseD_ALL_df.columns)):
-                    worksheet10.write(i + 3, j + 15, final_responseD_ALL_df.iloc[i, j], normal_data_format)
+            # Format ALL data
+            if final_subject_D_ALL_count > 0:
+                for i in range(0, len(final_responseD_ALL_df)):
+                    for j in range(0, len(final_responseD_ALL_df.columns)):
+                        worksheet10.write(i + 3, j + 15, final_responseD_ALL_df.iloc[i, j], normal_data_format)
 
-        # * WRITE HEADERS AND FORMATTING
+            # * WRITE HEADERS AND FORMATTING
 
-        # NHL Headers (columns A-M)
-        worksheet10.merge_range(
-            "A1:M1", f"Cohort D (NHL) - Primary Follow-up (N={final_subject_D_NHL_count})", bold_12_format
-        )
-        worksheet10.merge_range("A2:A3", "Subject ID", bold_11_format)
-        worksheet10.merge_range("B2:D2", "Current Response", bold_11_format)
-        worksheet10.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
-        worksheet10.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
-        worksheet10.write("B3", "PET-Based Response", bold_11_format)
-        worksheet10.write("C3", "CT-Based Response", bold_11_format)
-        worksheet10.write("D3", "Study Timepoint", bold_11_format)
-        worksheet10.write("E3", "PET-Based Response", bold_11_format)
-        worksheet10.write("F3", "Study Timepoint", bold_11_format)
-        worksheet10.write("G3", "CT-Based Response", bold_11_format)
-        worksheet10.write("H3", "Study Timepoint", bold_11_format)
-        worksheet10.write("I3", "PET-Based ORR", bold_11_format)
-        worksheet10.write("J3", "CT-Based ORR", bold_11_format)
-        worksheet10.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-        worksheet10.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-        worksheet10.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+            # NHL Headers (columns A-M)
+            worksheet10.merge_range(
+                "A1:M1", f"Cohort D (NHL) - Primary Follow-up (N={final_subject_D_NHL_count})", bold_12_format
+            )
+            worksheet10.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet10.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet10.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet10.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
+            worksheet10.write("B3", "PET-Based Response", bold_11_format)
+            worksheet10.write("C3", "CT-Based Response", bold_11_format)
+            worksheet10.write("D3", "Study Timepoint", bold_11_format)
+            worksheet10.write("E3", "PET-Based Response", bold_11_format)
+            worksheet10.write("F3", "Study Timepoint", bold_11_format)
+            worksheet10.write("G3", "CT-Based Response", bold_11_format)
+            worksheet10.write("H3", "Study Timepoint", bold_11_format)
+            worksheet10.write("I3", "PET-Based ORR", bold_11_format)
+            worksheet10.write("J3", "CT-Based ORR", bold_11_format)
+            worksheet10.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
 
-        # ALL Headers (starting at column P, which is index 15)
-        worksheet10.merge_range(
-            "P1:AB1", f"Cohort D (ALL) - Primary Follow-up (N={final_subject_D_ALL_count})", bold_12_format
-        )
-        worksheet10.merge_range("P2:P3", "Subject ID", bold_11_format)
-        worksheet10.merge_range("Q2:S2", "Current Response", bold_11_format)
-        worksheet10.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
-        worksheet10.merge_range("X2:Y2", "Overall Response/Day 28", bold_11_format)
-        worksheet10.write("Q3", "Overall Response", bold_11_format)
-        worksheet10.write("R3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-        worksheet10.write("S3", "Study Timepoint", bold_11_format)
-        worksheet10.write("T3", "Overall Response", bold_11_format)
-        worksheet10.write("U3", "Study Timepoint", bold_11_format)
-        worksheet10.write("V3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-        worksheet10.write("W3", "Study Timepoint", bold_11_format)
-        worksheet10.write("X3", "Overall Response", bold_11_format)
-        worksheet10.write("Y3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-        worksheet10.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-        worksheet10.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-        worksheet10.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
+            # ALL Headers (starting at column P, which is index 15)
+            worksheet10.merge_range(
+                "P1:AB1", f"Cohort D (ALL) - Primary Follow-up (N={final_subject_D_ALL_count})", bold_12_format
+            )
+            worksheet10.merge_range("P2:P3", "Subject ID", bold_11_format)
+            worksheet10.merge_range("Q2:S2", "Current Response", bold_11_format)
+            worksheet10.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+            worksheet10.merge_range("X2:Y2", "Overall Response/Day 28", bold_11_format)
+            worksheet10.write("Q3", "Overall Response", bold_11_format)
+            worksheet10.write("R3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.write("S3", "Study Timepoint", bold_11_format)
+            worksheet10.write("T3", "Overall Response", bold_11_format)
+            worksheet10.write("U3", "Study Timepoint", bold_11_format)
+            worksheet10.write("V3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.write("W3", "Study Timepoint", bold_11_format)
+            worksheet10.write("X3", "Overall Response", bold_11_format)
+            worksheet10.write("Y3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
 
-        # Autofit the worksheet
-        worksheet10.autofit()
+            # Autofit the worksheet
+            worksheet10.autofit()
