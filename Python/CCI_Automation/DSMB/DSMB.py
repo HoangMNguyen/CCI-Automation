@@ -94,7 +94,6 @@ class DSMB:
 
             DSMB15420(
                 data,
-                export=True,
                 output_dir=self.output_dir,
                 output_file_name=self.output_file_name,
             )

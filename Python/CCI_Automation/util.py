@@ -555,8 +555,8 @@ def convert_integers_to_strings(df, column_name):
     if column_name not in df.columns:
         raise ValueError(f"Column '{column_name}' does not exist in the dataframe")
 
-    # Convert integers to strings, if the value is an integer, else return Nan
-    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else np.NaN)
+    # Convert integers to strings, if the value is an integer, else keep it as is
+    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else x)
 
     return df
 
@@ -762,3 +762,65 @@ def get_excel_formats(workbook):
             }
         ),
     }
+
+
+def remove_leading_zeros_from_dates(df):
+    """
+    Process date columns in the dataframe to remove leading zeros for Windows compatibility.
+
+    This function:
+    1. Detects columns with 'date' in their name
+    2. Checks if values have leading zeros in month or day (mm/dd/yyyy format)
+    3. Reformats dates to remove leading zeros
+
+    Args:
+        df (DataFrame): The input dataframe to process
+
+    Returns:
+        DataFrame: The dataframe with date columns reformatted
+    """
+    # Create a copy of the dataframe to avoid modifying the original
+    df_copy = df.copy()
+
+    # Iterate through all columns
+    for col_name in df_copy.columns:
+        if "date" in str(col_name).lower():
+            # Convert column to string for pattern matching
+            date_strings = df_copy[col_name].astype(str)
+
+            # Check if any values match patterns with leading zeros in month or day
+            has_leading_zeros = date_strings.str.match(r"^0\d/|/0\d/|-0\d-").any()
+
+            if has_leading_zeros:
+                try:
+                    # First convert to datetime if not already
+                    if not pd.api.types.is_datetime64_any_dtype(df_copy[col_name]):
+                        df_copy[col_name] = pd.to_datetime(df_copy[col_name], errors="coerce")
+
+                    # Apply formatting to remove leading zeros
+                    df_copy[col_name] = df_copy[col_name].apply(
+                        lambda date_obj: format_date_without_leading_zeros_util(date_obj)
+                    )
+                except Exception as e:
+                    # If conversion fails, keep original data
+                    print(f"Could not process date column '{col_name}': {e}")
+
+    return df_copy
+
+
+def format_date_without_leading_zeros_util(date_obj):
+    """
+    Format dates without leading zeros for Windows compatibility.
+
+    Args:
+        date_obj: A datetime object or NaT
+
+    Returns:
+        str or original: Formatted date string (M/D/YYYY) or original value if NaT
+    """
+    if pd.notnull(date_obj):
+        month = date_obj.month
+        day = date_obj.day
+        year = date_obj.year
+        return f"{month}/{day}/{year}"
+    return date_obj

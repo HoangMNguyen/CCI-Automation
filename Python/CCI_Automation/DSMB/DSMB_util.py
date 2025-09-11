@@ -44,44 +44,6 @@ def add_rename_column_corelisting(
     return new_df
 
 
-def add_rename_column_df(
-    current_df,
-    input_df,
-    form_name,
-    column_name,
-    new_column_name,
-    key1="Subject",
-    key2=None,
-):
-    """Adding a new column (merge left) to the current dataframe with an updated new name from the data of corelisting
-
-    Args:
-        current_df (dataframe): current dataframe with subject ID list
-        input_df (dataframe):dataframe, with keys are form names
-        form_name (string): form name
-        column_name (string): exact column name in corelisting
-        new_column_name (string): the name of the column that would be updated
-        key (string): usually it's subject ID of the
-
-    Returns:
-        new_df (dataframe): the new dataframe that is added with the new column and renamed
-    """
-    if key2 == None:
-        df = input_df[[key1, column_name]].copy()
-    elif key2 != None:
-        df = input_df[[key1, key2, column_name]].copy()
-    # df = df[df['Form ILB Status'] == False]
-    # df = df[df['Form Status'] != 'Blank']
-    new_col_name = {column_name: new_column_name}
-    df = df.rename(columns=new_col_name)
-    # df = df.drop(columns = ['Form ILB Status'])
-    if key2 == None:
-        new_df = pd.merge(current_df, df, on=key1, how="left")
-    elif key2 != None:
-        new_df = pd.merge(current_df, df, on=[key1, key2], how="left")
-    return new_df
-
-
 def get_stats_percentage(column, *args):
     """
     Compute the percentage of each category in a specified column across multiple DataFrames.

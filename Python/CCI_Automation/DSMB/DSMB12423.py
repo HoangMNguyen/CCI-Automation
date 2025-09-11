@@ -14,6 +14,7 @@ from util import (
     age_calculation,
     add_rename_column_df,
     convert_integers_to_strings,
+    format_date_without_leading_zeros_util,
 )
 from datetime import datetime
 from typing import Optional
@@ -272,6 +273,7 @@ class DSMB12423:
         # !: Update this dictionary to the new study
         TCD_dict = {
             "Dose Level -1 (DL-1)": 2000000,
+            "Dose Level 1a (DL1a)": 5000000,
             "Dose Level 1 (DL1)": 7000000,
             "Dose Level 2 (DL2)": 20000000,
             "Dose Level 3 (DL3)": 60000000,
@@ -319,7 +321,9 @@ class DSMB12423:
         raw_infusion_df = get_data_from_dict(data, input_dict, "EXINF")
         # convert the date to datetime object and format it to MM-DD-YYYY
         raw_infusion_df["Date of TmCD19-IL18 Infusion"] = raw_infusion_df["Date of TmCD19-IL18 Infusion"].apply(
-            lambda x: datetime.strptime(x.strftime("%Y-%m-%d"), "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+            lambda x: format_date_without_leading_zeros_util(datetime.strptime(x.strftime("%Y-%m-%d"), "%Y-%m-%d"))
+            if pd.notna(x)
+            else x
         )
 
         # TODO: INFUSION LISTING Day 0
@@ -694,9 +698,7 @@ class DSMB12423:
             "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
         ].astype(int).astype(str)
         responseA_primary_df["Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)"] = (
-            responseA_primary_df[
-                "Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)"
-            ].fillna(
+            responseA_primary_df["Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)"].fillna(
                 responseA_primary_df[
                     "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
                 ]
