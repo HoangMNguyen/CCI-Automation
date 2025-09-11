@@ -107,6 +107,7 @@ class DSMB:
                 output_dir=self.output_dir,
                 output_file_name=self.output_file_name,
             )
+            x.run()
         if study_name == "03325":
             from .DSMB03325 import DSMB03325
 
