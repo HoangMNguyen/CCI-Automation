@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 import pandas as pd
 import numpy as np
-from util import *
-from DSMB.DSMB_util import *
-from dateutil.relativedelta import *
+from util import (
+    add_rename_column_corelisting,
+    convert_integers_to_strings,
+    convert_float_2_sci_notation,
+    add_rename_column_df,
+    get_excel_formats,
+    format_date_without_leading_zeros_util,
+)
+from DSMB.DSMB_util import get_stats_df, get_stats_perc_df, get_stats_percentage
+from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 from typing import Optional
 
 
 def DSMB15420(
     data,
-    export=False,
     output_dir="C:/Users/Hoang Nguyen/Dropbox/Current Work/Download",
     output_file_name=datetime.now().strftime("%Y%m%d%H%M%S") + "-15420-DSMB Report",
     debug=False,
@@ -27,6 +33,8 @@ def DSMB15420(
         "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_NH_CACHASCOD_cl_NS_COHORT1)",
         "Cohort Assignment",
     )
+    # Split Cohort Assignment by ":", keep the first part
+    enrollment_df["Cohort Assignment"] = enrollment_df["Cohort Assignment"].str.split(":").str[0]
     # Disease
     enrollment_df = add_rename_column_corelisting(
         enrollment_df, data, "PRDIAG", "Primary Diagnosis of CLL (ig_PRDIAG2.PRDIAGCLL)", "Disease CLL"
@@ -162,87 +170,55 @@ def DSMB15420(
     ] = "No"
     enrollment_df = enrollment_df.drop(columns=["End of Study Date (ig_EOS1.EOSDAT)"])
     enrollment_df = enrollment_df.drop_duplicates()
+
     final_enrollment_df = enrollment_df.copy()
 
-    ### TODO: Demo Stats Table
+    ###TODO: Demo Stats Table
     # Calculate Stats of enrollment table
     TT = enrollment_df["Subject"].count()
     TT_df = enrollment_df.copy()
+
     # Screen Failed
-    SF = enrollment_df[enrollment_df["Subject meets all study eligibility?"] == "No"].count()["Subject"]
-    SF_df = enrollment_df[enrollment_df["Subject meets all study eligibility?"] == "No"]
-    # Cohort A Enrolled & Infused
-    CAE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CAI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CAE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CAI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort A")) & (enrollment_df["Infused"] == "Yes")
-    ]
-    # Cohort B Enrolled & Infused
-    CBE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CBI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CBE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CBI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort B")) & (enrollment_df["Infused"] == "Yes")
-    ]
-    # Cohort C Enrolled & Infused
-    CCE = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-            & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CCI = (
-        enrollment_df.fillna("")
-        .loc[
-            (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-            & (enrollment_df["Infused"] == "Yes")
-        ]
-        .count()["Subject"]
-    )
-    CCE_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C"))
-        & (enrollment_df["Subject meets all study eligibility?"] == "Yes")
-    ]
-    CCI_df = enrollment_df.fillna("").loc[
-        (enrollment_df["Cohort Assignment"].fillna("").str.contains("Cohort C")) & (enrollment_df["Infused"] == "Yes")
-    ]
+    SF_filter = enrollment_df["Subject meets all study eligibility?"] == "No"
+    SF_df = enrollment_df[SF_filter]
+    SF = SF_df.count()["Subject"]
+
+    # Function to calculate cohort statistics
+    def get_cohort_stats(df, cohort_letter):
+        """
+        Calculate enrollment statistics for a specific cohort.
+
+        Args:
+            df: DataFrame with enrollment data
+            cohort_letter: Cohort letter (e.g., 'A', 'B', 'C', 'D')
+
+        Returns:
+            tuple: (enrolled_count, infused_count, enrolled_df, infused_df)
+        """
+        # Prepare DataFrame with empty strings instead of NaN
+        df_filled = df.fillna("")
+
+        # Filter for enrolled subjects
+        enrolled_filter = df_filled["Cohort Assignment"].str.contains(f"Cohort {cohort_letter}") & (
+            df_filled["Subject meets all study eligibility?"] == "Yes"
+        )
+        enrolled_df = df_filled.loc[enrolled_filter]
+        enrolled_count = enrolled_df.count()["Subject"]
+
+        # Filter for infused subjects
+        infused_filter = df_filled["Cohort Assignment"].str.contains(f"Cohort {cohort_letter}") & (
+            df_filled["Infused"] == "Yes"
+        )
+        infused_df = df_filled.loc[infused_filter]
+        infused_count = infused_df.count()["Subject"]
+
+        return enrolled_count, infused_count, enrolled_df, infused_df
+
+    # Calculate statistics for cohorts A, B, C, D
+    CAE, CAI, CAE_df, CAI_df = get_cohort_stats(enrollment_df, "A")
+    CBE, CBI, CBE_df, CBI_df = get_cohort_stats(enrollment_df, "B")
+    CCE, CCI, CCE_df, CCI_df = get_cohort_stats(enrollment_df, "C")
+    CDE, CDI, CDE_df, CDI_df = get_cohort_stats(enrollment_df, "D")
 
     # Fill NaN with empty string for enrollment_df
     final_enrollment_df = final_enrollment_df.fillna("")
@@ -257,18 +233,76 @@ def DSMB15420(
         "Cohort B Infused": CBI,
         "Cohort C Enrolled": CCE,
         "Cohort C Infused": CCI,
+        "Cohort D Enrolled": CDE,
+        "Cohort D Infused": CDI,
     }
 
-    # Create a new dataframe for Legal Sex table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
-    final_LegalSex_df = get_stats_percentage("Legal Sex", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create demographic statistics tables
+    # Note: The get_stats_percentage and get_stats_df functions need to be updated
+    # to include Cohort D statistics (CDE_df, CDI_df)
 
-    # Create a new dataframe for Age table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df for Age at Consent
-    final_Age_df = get_stats_df("Age", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create a new dataframe for Legal Sex table
+    final_LegalSex_df = get_stats_percentage(
+        "Legal Sex", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df
+    )
+
+    # Create a new dataframe for Age table
+    final_Age_df = get_stats_df("Age", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df)
     final_Age_df = final_Age_df.replace([np.inf, -np.inf], "")
     final_Age_df = final_Age_df.fillna("")
 
-    # Create a new dataframe for Race table with TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
-    final_Race_df = get_stats_percentage("Race", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    # Create a new dataframe for Race table
+    final_Race_df = get_stats_percentage(
+        "Race", TT_df, SF_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df, CDE_df, CDI_df
+    )
+
+    # * ===== NEW CODE: Create Cohort D only stats tables =====
+    # filter to only cohort D
+    TTD_df = TT_df[TT_df["Cohort Assignment"].str.contains("Cohort D")]
+    SFD_df = SF_df[SF_df["Cohort Assignment"].str.contains("Cohort D")]
+    TTD = TTD_df["Subject"].count()
+    SFD = SFD_df["Subject"].count()
+    # Create demo stats tables for Cohort D only
+    final_LegalSex_df_D = get_stats_percentage("Legal Sex", TTD_df, SFD_df, CDE_df, CDI_df)
+    final_Age_df_D = get_stats_df("Age", TTD_df, SFD_df, CDE_df, CDI_df)
+    final_Age_df_D = final_Age_df_D.replace([np.inf, -np.inf], "")
+    final_Age_df_D = final_Age_df_D.fillna("")
+    final_Race_df_D = get_stats_percentage("Race", TTD_df, SFD_df, CDE_df, CDI_df)
+
+    # Status dictionary for Cohort D
+    final_status_D = {
+        "Total Screened": TTD,
+        "Screen Failed": SFD,
+        "Cohort D Enrolled": CDE,
+        "Cohort D Infused": CDI,
+    }
+
+    # * ===== NEW CODE: Create Cohorts A, B, C combined stats tables =====
+    # Filter out cohort D
+    TTABC_df = TT_df[~TT_df["Cohort Assignment"].str.contains("Cohort D")]
+    SFABC_df = SF_df[~SF_df["Cohort Assignment"].str.contains("Cohort D")]
+    TTABC = TTABC_df["Subject"].count()
+    SFABC = SFABC_df["Subject"].count()
+    # Create demo stats tables for Cohorts A, B, C combined
+    final_LegalSex_df_ABC = get_stats_percentage(
+        "Legal Sex", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df
+    )
+    final_Age_df_ABC = get_stats_df("Age", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+    final_Age_df_ABC = final_Age_df_ABC.replace([np.inf, -np.inf], "")
+    final_Age_df_ABC = final_Age_df_ABC.fillna("")
+    final_Race_df_ABC = get_stats_percentage("Race", TTABC_df, SFABC_df, CAE_df, CAI_df, CBE_df, CBI_df, CCE_df, CCI_df)
+
+    # Status dictionary for Cohorts A, B, C combined
+    final_status_ABC = {
+        "Total Screened": TTABC,
+        "Screen Failed": SFABC,
+        "Cohort A Enrolled": CAE,
+        "Cohort A Infused": CAI,
+        "Cohort B Enrolled": CBE,
+        "Cohort B Infused": CBI,
+        "Cohort C Enrolled": CCE,
+        "Cohort C Infused": CCI,
+    }
 
     ### TODO: INFUSION LISTING
     # if not data['INF'].empty:
@@ -312,7 +346,7 @@ def DSMB15420(
     infusion_df = data["DM"][["Subject"]].copy()
     infusion_df = infusion_df.sort_values(["Subject"])
     infusion_df = add_rename_column_corelisting(infusion_df, data, "INF", "Event Group Label", "Event Group Label")
-    infusion_df = infusion_df[infusion_df["Event Group Label"] != "Day 0-R"]
+    infusion_df = infusion_df[infusion_df["Event Group Label"] == "Day 0"]
 
     # Cohort Assignment
     infusion_df = add_rename_column_corelisting(
@@ -347,7 +381,7 @@ def DSMB15420(
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
     infusion_df["Date of huCART19-IL18 Infusion"] = infusion_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
     )
 
     # adding Target Cell Dose using TCD_dict
@@ -450,28 +484,11 @@ def DSMB15420(
     infusion_df = infusion_df[infusion_df["Event Group Label"] != ""]
 
     # TODO: Infusion Listing Day 0-R
-    # prepare EXCHO_df
-    EXCHMO_df = data["EXCHMO"].copy()
-    # select unique subject and Event Group Label
-    grouped_df = EXCHMO_df.groupby(["Subject", "Event Group Label"])["Medication (ig_EXCHMO2.EXCCAT)"].unique()
-    # convert the unique list to string
-    grouped_df = grouped_df.apply(
-        lambda x: "+".join(str(val) for val in x if pd.notna(val)) if len(x) > 1 else x[0]
-    ).reset_index()
-    # replace the Event Group Label with Day 0 and Day 0-R
-    grouped_df.loc[grouped_df["Event Group Label"] == "Lymphodepleting Chemotherapy", "Event Group Label"] = "Day 0"
-    grouped_df.loc[
-        grouped_df["Event Group Label"] == "Retreatment Lymphodepleting Chemotherapy", "Event Group Label"
-    ] = "Day 0-R"
-    grouped_df.loc[grouped_df["Subject"] == "15420-01", "Event Group Label"] = "Day 0-R"
-    # reassign the dataframe to EXCHMO_df with subject, Study Day, and Medication
-    EXCHMO_df = grouped_df
-
     # Subject
     infusionR_df = data["DM"][["Subject"]].copy()
     infusionR_df = infusionR_df.sort_values(["Subject"])
     infusionR_df = add_rename_column_corelisting(infusionR_df, data, "INF", "Event Group Label", "Event Group Label")
-    infusionR_df = infusionR_df[infusionR_df["Event Group Label"] == "Day 0-R"]
+    infusionR_df = infusionR_df[infusionR_df["Event Group Label"] != "Day 0"]
 
     # Cohort Assignment
     infusionR_df = add_rename_column_corelisting(
@@ -484,7 +501,7 @@ def DSMB15420(
     # Lymphodepleting Chemotherapy Regimen
     infusionR_df = add_rename_column_df(
         infusionR_df,
-        EXCHMO_df[EXCHMO_df["Event Group Label"] == "Day 0-R"],
+        EXCHMO_df[EXCHMO_df["Event Group Label"] != "Day 0"],
         "EXCHMO",
         "Medication (ig_EXCHMO2.EXCCAT)",
         "Lymphodepleting Chemotherapy Regimen",
@@ -501,7 +518,7 @@ def DSMB15420(
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
     infusionR_df["Date of huCART19-IL18 Infusion"] = infusionR_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
+        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
     )
 
     # Total huCart19-IL18 Cell Dose
@@ -585,84 +602,103 @@ def DSMB15420(
     infusionR_df = infusionR_df[infusionR_df["Event Group Label"] != ""]
 
     # TODO: INFUSION STATISTICS
+    def calculate_cohort_infusion_stats(infusion_df, cohort_filter, cohort_name=None):
+        """
+        Calculate infusion statistics for a specific cohort.
+
+        Parameters:
+        -----------
+        infusion_df : pd.DataFrame
+            The main infusion dataframe
+        cohort_filter : str or callable
+            Either a string to match "Cohort Assignment" column or a callable filter function
+        cohort_name : str, optional
+            Name for logging/debugging purposes
+
+        Returns:
+        --------
+        tuple: (combined_stats_df, subject_count)
+            - combined_stats_df: DataFrame with all statistics
+            - subject_count: Number of unique subjects in the cohort
+        """
+        # Filter the dataframe based on cohort
+        if isinstance(cohort_filter, str):
+            cohort_df = infusion_df[infusion_df["Cohort Assignment"] == cohort_filter]
+        else:
+            cohort_df = infusion_df[cohort_filter(infusion_df)]
+
+        # Get subject count
+        total_subject_count = cohort_df["Subject"].nunique()
+
+        # If no subjects, return empty stats
+        if total_subject_count == 0:
+            empty_df = pd.DataFrame()
+            return empty_df, 0
+
+        # Calculate statistics for Total huCAR T Cell Dose Administered
+        stat1 = get_stats_df("Total huCAR T Cell Dose Administered", cohort_df)
+
+        # Calculate statistics for Total Cell Dose Administered
+        stat2 = get_stats_df("Total Cell Dose Administered", cohort_df)
+
+        # Calculate Met Target Dose percentage
+        met_target_dose_count = cohort_df[cohort_df["Met Target Dose"] == "Y"]["Subject"].nunique()
+        met_target_dose_pct = (
+            round(met_target_dose_count / total_subject_count * 100, 2) if total_subject_count > 0 else 0
+        )
+        stat2["Met Target Dose"] = f"{met_target_dose_count} ({met_target_dose_pct}%)"
+
+        # Calculate statistics for %scFv Flow
+        stat3 = get_stats_perc_df("%scFv Flow", cohort_df)
+
+        # Calculate Met Target %scFv percentage
+        met_target_scfv_count = cohort_df[cohort_df["Met Target %scFv"] == "Y"]["Subject"].nunique()
+        met_target_scfv_pct = (
+            round(met_target_scfv_count / total_subject_count * 100, 2) if total_subject_count > 0 else 0
+        )
+        stat3["Met Target %scFv"] = f"{met_target_scfv_count} ({met_target_scfv_pct}%)"
+
+        # Combine all statistics
+        combined_stats = pd.concat([stat1, stat2, stat3], axis=1)
+        combined_stats = combined_stats.replace([np.inf, -np.inf], "")
+        combined_stats = combined_stats.fillna("")
+
+        return combined_stats, total_subject_count
+
+    # TODO: INFUSION STATISTICS - REFACTORED VERSION
+    # Define cohort mappings
+    cohort_mappings = {
+        "A": "Cohort A: Non-Hodgkin Lymphoma (NHL)",
+        "B": "Cohort B: Chronic Lymphocytic Leukemia (CLL)",
+        "C": "Cohort C: Acute Lymphoblastic Leukemia (ALL)",
+        "D": "Cohort D",  # Add the exact string used for Cohort D in your data
+    }
+
+    # Initialize storage for results
+    infusion_stats = {}
     infusion_count = []
-    # * Cohort A
-    # Create a new dataframe for Total huCAR T Cell Dose Administered table with infusion_df
-    infusionA_df = infusion_df[infusion_df["Cohort Assignment"] == "Cohort A: Non-Hodgkin Lymphoma (NHL)"]
-    infusion_statA1 = get_stats_df("Total huCAR T Cell Dose Administered", infusionA_df)
-    # Create a new dataframe for Total Cell Dose Administered table with infusion_df
-    infusion_statA2 = get_stats_df("Total Cell Dose Administered", infusionA_df)
-    # Count the number of subjects that met the target dose
-    met_target_count = infusionA_df[infusionA_df["Met Target Dose"] == "Y"].count()["Subject"]
-    # Count the number of subjects
-    total_subject_count = infusionA_df["Subject"].nunique()
-    infusion_statA2["Met Target Dose"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Create a new dataframe for %scFv Flow table with infusion_df
-    infusion_statA3 = get_stats_perc_df("%scFv Flow", infusionA_df)
-    # Count the number of subjects that met the target %scFv
-    met_target_count = infusionA_df[infusionA_df["Met Target %scFv"] == "Y"].count()["Subject"]
-    infusion_statA3["Met Target %scFv"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Combine the three dataframes
-    infusion_statA = pd.concat([infusion_statA1, infusion_statA2, infusion_statA3], axis=1)
-    infusion_statA = infusion_statA.replace([np.inf, -np.inf], "")
-    infusion_statA = infusion_statA.fillna("")
-    infusion_count.append(total_subject_count)
 
-    # * Cohort B
-    # Create a new dataframe for Total huCAR T Cell Dose Administered table with infusion_df
-    infusionB_df = infusion_df[infusion_df["Cohort Assignment"] == "Cohort B: Chronic Lymphocytic Leukemia (CLL)"]
-    infusion_statB1 = get_stats_df("Total huCAR T Cell Dose Administered", infusionB_df)
-    # Create a new dataframe for Total Cell Dose Administered table with infusion_df
-    infusion_statB2 = get_stats_df("Total Cell Dose Administered", infusionB_df)
-    # Count the number of subjects that met the target dose
-    met_target_count = infusionB_df[infusionB_df["Met Target Dose"] == "Y"].count()["Subject"]
-    # Count the number of subjects
-    total_subject_count = infusionB_df["Subject"].nunique()
-    infusion_statB2["Met Target Dose"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Create a new dataframe for %scFv Flow table with infusion_df
-    infusion_statB3 = get_stats_perc_df("%scFv Flow", infusionB_df)
-    # Count the number of subjects that met the target %scFv
-    met_target_count = infusionB_df[infusionB_df["Met Target %scFv"] == "Y"].count()["Subject"]
-    infusion_statB3["Met Target %scFv"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Combine the three dataframes
-    infusion_statB = pd.concat([infusion_statB1, infusion_statB2, infusion_statB3], axis=1)
-    infusion_statB = infusion_statB.replace([np.inf, -np.inf], "")
-    infusion_statB = infusion_statB.fillna("")
-    infusion_count.append(total_subject_count)
+    # Process each cohort
+    for cohort_key, cohort_filter in cohort_mappings.items():
+        stats_df, subject_count = calculate_cohort_infusion_stats(
+            infusion_df, cohort_filter, cohort_name=f"Cohort {cohort_key}"
+        )
 
-    # * Cohort C
-    # Create a new dataframe for Total huCAR T Cell Dose Administered table with infusion_df
-    infusionC_df = infusion_df[infusion_df["Cohort Assignment"] == "Cohort C: Acute Lymphoblastic Leukemia (ALL)"]
-    infusion_statC1 = get_stats_df("Total huCAR T Cell Dose Administered", infusionC_df)
-    # Create a new dataframe for Total Cell Dose Administered table with infusion_df
-    infusion_statC2 = get_stats_df("Total Cell Dose Administered", infusionC_df)
-    # Count the number of subjects that met the target dose
-    met_target_count = infusionC_df[infusionC_df["Met Target Dose"] == "Y"].count()["Subject"]
-    # Count the number of subjects
-    total_subject_count = infusionC_df["Subject"].nunique()
-    infusion_statC2["Met Target Dose"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Create a new dataframe for %scFv Flow table with infusion_df
-    infusion_statC3 = get_stats_perc_df("%scFv Flow", infusionC_df)
-    # Count the number of subjects that met the target %scFv
-    met_target_count = infusionC_df[infusionC_df["Met Target %scFv"] == "Y"].count()["Subject"]
-    infusion_statC3["Met Target %scFv"] = (
-        str(met_target_count) + " (" + str(round(met_target_count / total_subject_count * 100, 2)) + "%)"
-    )
-    # Combine the three dataframes
-    infusion_statC = pd.concat([infusion_statC1, infusion_statC2, infusion_statC3], axis=1)
-    infusion_statC = infusion_statC.replace([np.inf, -np.inf], "")
-    infusion_statC = infusion_statC.fillna("")
-    infusion_count.append(total_subject_count)
+        # Store results using the naming convention from original code
+        infusion_stats[f"infusion_stat{cohort_key}"] = stats_df
+        infusion_count.append(subject_count)
+
+    # Assign to individual variables for backward compatibility
+    final_infusion_statA = infusion_stats.get("infusion_statA", pd.DataFrame())
+    final_infusion_statB = infusion_stats.get("infusion_statB", pd.DataFrame())
+    final_infusion_statC = infusion_stats.get("infusion_statC", pd.DataFrame())
+    final_infusion_statD = infusion_stats.get("infusion_statD", pd.DataFrame())
+
+    # For backward compatibility with original variable names
+    infusion_statA = final_infusion_statA
+    infusion_statB = final_infusion_statB
+    infusion_statC = final_infusion_statC
+    infusion_statD = final_infusion_statD
 
     ## TODO: FORMATTING THE DATAFRAME
     # TODO: Day 0
@@ -700,7 +736,7 @@ def DSMB15420(
     final_infusion_statA = infusion_statA
     final_infusion_statB = infusion_statB
     final_infusion_statC = infusion_statC
-    final_infusion_count = infusion_count
+    final_infusion_statD = infusion_statD
 
     # TODO: RESPONSE LISTING
     # if not data['RS'].empty:
@@ -786,7 +822,7 @@ def DSMB15420(
         "Primary Retreatment and Follow-up - ALL": "Primary Retreatment",
         "Pre-Retreatment Safety Visit - ALL": "Pre-Retreatment",
         "Retreatment Lymphodepleting Chemotherapy - ALL": "Retreatment Lymphodepleting",
-        "Long Term Follow-up Months 3-60 - ALL": "Long Term Follow-up",
+        " Long Term Follow-up Months 3-60 - ALL": "Long Term Follow-up",
         "Retreatment Long Term Follow-up Months 3-60 - ALL": "Retreatment Long Term Follow-up",
     }
 
@@ -842,10 +878,13 @@ def DSMB15420(
     DSINITRT_df = data["DSINITRT"][
         [
             "Subject",
+            "Will the Subject receive Retreatment? (ig_DSINITRT1.DSRTYN)",
             "From which Phase is the Subject entering Retreatment? (ig_DSINITRT1.DSPHASER)",
             "End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)",
         ]
     ].copy()
+    # Filter out subjects that will not receive retreatment
+    DSINITRT_df = DSINITRT_df[DSINITRT_df["Will the Subject receive Retreatment? (ig_DSINITRT1.DSRTYN)"] != "No"]
     # Convert End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT) to datetime object
     DSINITRT_df["End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)"] = pd.to_datetime(
         DSINITRT_df["End of Primary Follow-Up Date (ig_DSINITRT1.DSRENPFUDAT)"]
@@ -892,12 +931,10 @@ def DSMB15420(
     responseA_primary_df = convert_integers_to_strings(
         responseA_primary_df, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
     )
-    responseA_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = (
-        "Day "
-        + responseA_primary_df.loc[
-            temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
-        ].astype(str)
-    )
+
+    responseA_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = responseA_primary_df.loc[
+        temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
+    ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().isdigit() else x)
     # Remove rows with Pre-Treatment Safety Visit
     responseA_primary_df = responseA_primary_df[
         responseA_primary_df["Primary Treatment Time Point (ig_RS1.RSTPT)"] != "Pre-Treatment Safety Visit"
@@ -960,7 +997,7 @@ def DSMB15420(
             inplace=True,
         )
         # Merge left with the primary current response dataframe
-        final_responseA_primary_df = pd.merge(
+        final_response_NHL_primary_df = pd.merge(
             responseA_primary_current_df, responseA_best_PET_df, on="Subject", how="left"
         )
 
@@ -986,8 +1023,8 @@ def DSMB15420(
             inplace=True,
         )
         # Merge left with the primary response dataframe
-        final_responseA_primary_df = pd.merge(
-            final_responseA_primary_df, responseA_best_CT_df, on="Subject", how="left"
+        final_response_NHL_primary_df = pd.merge(
+            final_response_NHL_primary_df, responseA_best_CT_df, on="Subject", how="left"
         )
 
         ## Overall NHL Disease Response at Month 3 primary
@@ -1075,13 +1112,13 @@ def DSMB15420(
             inplace=True,
         )
         # Merge left with the current response dataframe
-        final_responseA_primary_df = pd.merge(
-            final_responseA_primary_df, responseA_primary_M3_df, on="Subject", how="left"
+        final_response_NHL_primary_df = pd.merge(
+            final_response_NHL_primary_df, responseA_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column PET-Based ORR
-        final_responseA_primary_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
+        final_response_NHL_primary_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
         # Fill NaN with "Not Reported" in column CT-Based ORR
-        final_responseA_primary_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
+        final_response_NHL_primary_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
 
         ## Checking AE and SAE for NHL primary
         # Getting AE and SAE dataframes
@@ -1089,11 +1126,11 @@ def DSMB15420(
             ["Subject", "Form ILB Status", "AE or SAE? (ig_AE2.AESEV)", "Event Onset (ig_AE1.AEONSET)"]
         ]
         # Check responseA_primary_AE_df if the subject of responseA_primary_df is in the AE dataframe. If yes, then add 'Y' to the column 'AE' in responseA_primary_df, else add 'N'
-        final_responseA_primary_df["AE"] = final_responseA_primary_df["Subject"].apply(
+        final_response_NHL_primary_df["AE"] = final_response_NHL_primary_df["Subject"].apply(
             lambda x: "Y" if x in responseA_primary_AE_df["Subject"].values else "N"
         )
         # Check responseA_primary_AE_df if the subject of responseA_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseA_primary_df, else add 'N'
-        final_responseA_primary_df["SAE"] = final_responseA_primary_df["Subject"].apply(
+        final_response_NHL_primary_df["SAE"] = final_response_NHL_primary_df["Subject"].apply(
             lambda x: "Y"
             if x
             in responseA_primary_AE_df[responseA_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values
@@ -1105,21 +1142,41 @@ def DSMB15420(
         responseA_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseA_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS,
+        responseA_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseA_primary_SV_df = pd.concat([responseA_primary_SV_df, responseA_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseA_primary_SV_df = responseA_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseA_primary_SV_df = responseA_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseA_primary_SV_df = pd.merge(responseA_primary_SV_df, responseA_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseA_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
-        final_responseA_primary_df = pd.merge(
-            final_responseA_primary_df, responseA_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+        final_response_NHL_primary_df = pd.merge(
+            final_response_NHL_primary_df,
+            responseA_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
-        final_responseA_primary_df["Event Label"] = final_responseA_primary_df["Event Label"].map(event_AB_dict)
-
+        final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df["Event Label"].map(event_AB_dict)
+        # Add End of Study Date to Event Label if available
+        final_response_NHL_primary_df["Event Label"] = (
+            final_response_NHL_primary_df["Event Label"]
+            + final_response_NHL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
+        print(final_response_NHL_primary_df)
         # Select the columns needed only
-        final_responseA_primary_df = final_responseA_primary_df[
+        final_response_NHL_primary_df = final_response_NHL_primary_df[
             [
                 "Subject",
                 "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)",
@@ -1136,7 +1193,25 @@ def DSMB15420(
                 "Event Label",
             ]
         ]
-        final_responseA_primary_df = final_responseA_primary_df.replace([np.nan, np.inf, -np.inf], "")
+        final_response_NHL_primary_df = final_response_NHL_primary_df.replace([np.nan, np.inf, -np.inf], "")
+        # Find subjects in Cohort D from enrollment listing
+        cohort_D_subjects = final_enrollment_df[final_enrollment_df["Cohort Assignment"].str.contains("Cohort D")][
+            "Subject"
+        ].tolist()
+        # Cohort A
+        cohort_A_subjects = final_enrollment_df[final_enrollment_df["Cohort Assignment"].str.contains("Cohort A")][
+            "Subject"
+        ].tolist()
+        # Subjects in Cohort D
+        final_responseD_NHL_df = final_response_NHL_primary_df[
+            final_response_NHL_primary_df["Subject"].isin(cohort_D_subjects)
+        ].copy()
+
+        # Subjects in Cohort A
+        final_responseA_primary_df = final_response_NHL_primary_df[
+            final_response_NHL_primary_df["Subject"].isin(cohort_A_subjects)
+        ].copy()
+
         # * Formatting the dataframe
 
     # TODO: Cohort A - NHL Retreatment
@@ -1148,12 +1223,9 @@ def DSMB15420(
     responseA_retreatment_df = convert_integers_to_strings(
         responseA_retreatment_df, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
     )
-    responseA_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RS1.RSTPTR)"] = (
-        "Day "
-        + responseA_retreatment_df.loc[
-            temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
-        ].astype(str)
-    )
+    responseA_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RS1.RSTPTR)"] = responseA_retreatment_df.loc[
+        temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
+    ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().replace("-R", "").isdigit() else x)
     # Remove rows with Pre-Treatment Safety Visit
     responseA_retreatment_df = responseA_retreatment_df[
         responseA_retreatment_df["Retreatment Time Point (ig_RS1.RSTPTR)"] != "Pre-Retreatment Safety Visit"
@@ -1346,16 +1418,30 @@ def DSMB15420(
         responseA_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseA_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseA_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseA_retreatment_SV_df = pd.concat([responseA_retreatment_SV_df, responseA_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseA_retreatment_SV_df = responseA_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseA_retreatment_SV_df = responseA_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseA_retreatment_SV_df = pd.merge(
+            responseA_retreatment_SV_df, responseA_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseA_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_responseA_retreatment_df = pd.merge(
             final_responseA_retreatment_df,
-            responseA_retreatment_SV_df[["Subject", "Event Label"]],
+            responseA_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -1363,7 +1449,11 @@ def DSMB15420(
         # * Formatting the dataframe
         # Rename the column Event Label to Event Label (Study Status)
         final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseA_retreatment_df["Event Label"] = (
+            final_responseA_retreatment_df["Event Label"]
+            + final_responseA_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseA_retreatment_df = final_responseA_retreatment_df[
             [
@@ -1434,12 +1524,9 @@ def DSMB15420(
         responseB_primary_df = convert_integers_to_strings(
             responseB_primary_df, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
         )
-        responseB_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = (
-            "Day "
-            + responseB_primary_df.loc[
-                temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
-            ].astype(str)
-        )
+        responseB_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = responseB_primary_df.loc[
+            temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
+        ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().isdigit() else x)
 
         # Fill NaN with "Not Reported" in column Overall CLL Disease Response (ig_RS2.RSCLLCAT)
         responseB_primary_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna("Not Reported", inplace=True)
@@ -1626,15 +1713,37 @@ def DSMB15420(
         responseB_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseB_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseB_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseB_primary_SV_df = pd.concat([responseB_primary_SV_df, responseB_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseB_primary_SV_df = responseB_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseB_primary_SV_df = responseB_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseB_primary_SV_df = pd.merge(responseB_primary_SV_df, responseB_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseB_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
         # Merge left with the current response dataframe
         final_responseB_primary_df = pd.merge(
-            final_responseB_primary_df, responseB_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+            final_responseB_primary_df,
+            responseB_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
+        )
+        # * Formatting the dataframe
+        # Rename the column Event Label to Event Label (Study Status)
+        final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
+        # Add End of Study Date to Event Label if available
+        final_responseB_primary_df["Event Label"] = (
+            final_responseB_primary_df["Event Label"] + final_responseB_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
         )
         # Select the columns needed only
         final_responseB_primary_df = final_responseB_primary_df[
@@ -1656,10 +1765,6 @@ def DSMB15420(
         ]
         final_responseB_primary_df = final_responseB_primary_df.replace([np.nan, np.inf, -np.inf], "")
 
-        # * Formatting the dataframe
-        # Rename the column Event Label to Event Label (Study Status)
-        final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
-
     # TODO: Cohort B - CLL Retreatment
     # Filter to only Primary Treatment
     responseB_retreatment_df = responseB_df[responseB_df["Study Phase (ig_RS1.STUDYPHS2)"] == "Retreatment"]
@@ -1669,12 +1774,9 @@ def DSMB15420(
     responseB_retreatment_df = convert_integers_to_strings(
         responseB_retreatment_df, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
     )
-    responseB_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RS1.RSTPTR)"] = (
-        "Day "
-        + responseB_retreatment_df.loc[
-            temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
-        ].astype(str)
-    )
+    responseB_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RS1.RSTPTR)"] = responseB_retreatment_df.loc[
+        temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
+    ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().replace("-R", "").isdigit() else x)
     # Remove rows with Pre-Treatment Safety Visit
     responseB_retreatment_df = responseB_retreatment_df[
         responseB_retreatment_df["Retreatment Time Point (ig_RS1.RSTPTR)"] != "Pre-Retreatment Safety Visit"
@@ -1854,16 +1956,31 @@ def DSMB15420(
         responseB_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseB_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseB_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseB_retreatment_SV_df = pd.concat([responseB_retreatment_SV_df, responseB_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseB_retreatment_SV_df = responseB_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseB_retreatment_SV_df = responseB_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseB_retreatment_SV_df = pd.merge(
+            responseB_retreatment_SV_df, responseB_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseB_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseB_retreatment_df = pd.merge(
             final_responseB_retreatment_df,
-            responseB_retreatment_SV_df[["Subject", "Event Label"]],
+            responseB_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -1871,7 +1988,11 @@ def DSMB15420(
         # * Formatting the dataframe
         # Rename the column Event Label to Event Label (Study Status)
         final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseB_retreatment_df["Event Label"] = (
+            final_responseB_retreatment_df["Event Label"]
+            + final_responseB_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseB_retreatment_df = final_responseB_retreatment_df[
             [
@@ -1902,12 +2023,9 @@ def DSMB15420(
     responseBRT_primary_df = convert_integers_to_strings(
         responseBRT_primary_df, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
     )
-    responseBRT_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = (
-        "Day "
-        + responseBRT_primary_df.loc[
-            temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
-        ].astype(str)
-    )
+    responseBRT_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RS1.RSTPT)"] = responseBRT_primary_df.loc[
+        temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day #  (ig_RS1.RSTPTDY)"
+    ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().isdigit() else x)
     # Remove rows with Pre-Treatment Safety Visit
     responseBRT_primary_df = responseBRT_primary_df[
         responseBRT_primary_df["Primary Treatment Time Point (ig_RS1.RSTPT)"] != "Pre-Treatment Safety Visit"
@@ -2118,22 +2236,41 @@ def DSMB15420(
         responseBRT_primary_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseBRT_primary_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseBRT_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseBRT_primary_SV_df = pd.concat([responseBRT_primary_SV_df, responseBRT_primary_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseBRT_primary_SV_df = responseBRT_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseBRT_primary_SV_df = responseBRT_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseBRT_primary_SV_df = pd.merge(
+            responseBRT_primary_SV_df, responseBRT_primary_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseBRT_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseBRT_primary_df = pd.merge(
             final_responseBRT_primary_df,
-            responseBRT_primary_SV_df[["Subject", "Event Label"]],
+            responseBRT_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
         final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df["Event Label"].map(event_AB_dict)
-
+        # Add End of Study Date to Event Label if available
+        final_responseBRT_primary_df["Event Label"] = (
+            final_responseBRT_primary_df["Event Label"]
+            + final_responseBRT_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseBRT_primary_df = final_responseBRT_primary_df[
             [
@@ -2165,10 +2302,9 @@ def DSMB15420(
         responseBRT_retreatment_df, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
     )
     responseBRT_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RS1.RSTPTR)"] = (
-        "Day "
-        + responseBRT_retreatment_df.loc[
+        responseBRT_retreatment_df.loc[
             temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RS1.UNSDAYR)"
-        ].astype(str)
+        ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().replace("-R", "").isdigit() else x)
     )
     # Remove rows with Pre-Treatment Safety Visit
     responseBRT_retreatment_df = responseBRT_retreatment_df[
@@ -2357,16 +2493,31 @@ def DSMB15420(
         responseBRT_retreatment_SV_df = data["SV"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         responseBRT_retreatment_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseBRT_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Combine DSSVLTFU with SV dataframe vertically
         responseBRT_retreatment_SV_df = pd.concat([responseBRT_retreatment_SV_df, responseBRT_retreatment_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
         responseBRT_retreatment_SV_df = responseBRT_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseBRT_retreatment_SV_df = responseBRT_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseBRT_retreatment_SV_df = pd.merge(
+            responseBRT_retreatment_SV_df, responseBRT_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseBRT_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
         final_responseBRT_retreatment_df = pd.merge(
             final_responseBRT_retreatment_df,
-            responseBRT_retreatment_SV_df[["Subject", "Event Label"]],
+            responseBRT_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
             on="Subject",
             how="left",
         )
@@ -2376,7 +2527,11 @@ def DSMB15420(
         final_responseBRT_retreatment_df["Event Label"] = final_responseBRT_retreatment_df["Event Label"].map(
             event_AB_dict
         )
-
+        # Add End of Study Date to Event Label if available
+        final_responseBRT_retreatment_df["Event Label"] = (
+            final_responseBRT_retreatment_df["Event Label"]
+            + final_responseBRT_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
         final_responseBRT_retreatment_df = final_responseBRT_retreatment_df[
             [
@@ -2427,12 +2582,9 @@ def DSMB15420(
     responseC_primary_df = convert_integers_to_strings(
         responseC_primary_df, "For Unscheduled Primary Treatment Time Point, Specify Day # (ig_RSALL1.UNSDAY)"
     )
-    responseC_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RSALL1.RSALLTPT)"] = (
-        "Day "
-        + responseC_primary_df.loc[
-            temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day # (ig_RSALL1.UNSDAY)"
-        ].astype(str)
-    )
+    responseC_primary_df.loc[temp_mask, "Primary Treatment Time Point (ig_RSALL1.RSALLTPT)"] = responseC_primary_df.loc[
+        temp_mask, "For Unscheduled Primary Treatment Time Point, Specify Day # (ig_RSALL1.UNSDAY)"
+    ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().isdigit() else x)
     # Remove rows with Pre-Treatment Safety Visit
     responseC_primary_df = responseC_primary_df[
         responseC_primary_df["Primary Treatment Time Point (ig_RSALL1.RSALLTPT)"] != "Pre-Treatment Safety Visit"
@@ -2515,7 +2667,7 @@ def DSMB15420(
         # Replace Nan with Not Applicable
         responseC_best_OV_df["Best Overall Response"].fillna("Not Applicable", inplace=True)
         # Merge left with the primary current response dataframe
-        final_responseC_primary_df = pd.merge(
+        final_response_ALL_primary_df = pd.merge(
             responseC_primary_current_df, responseC_best_OV_df, on="Subject", how="left"
         )
 
@@ -2543,8 +2695,8 @@ def DSMB15420(
         # Replace Nan with Not Applicable
         responseC_best_ED_df["Best ED Response"].fillna("Not Applicable", inplace=True)
         # Merge left with the primary response dataframe
-        final_responseC_primary_df = pd.merge(
-            final_responseC_primary_df, responseC_best_ED_df, on="Subject", how="left"
+        final_response_ALL_primary_df = pd.merge(
+            final_response_ALL_primary_df, responseC_best_ED_df, on="Subject", how="left"
         )
 
         ## * Overall ALL Disease Response at Day 28 primary
@@ -2637,15 +2789,15 @@ def DSMB15420(
             inplace=True,
         )
         # Merge left with the current response dataframe
-        final_responseC_primary_df = pd.merge(
-            final_responseC_primary_df, responseC_primary_M3_df, on="Subject", how="left"
+        final_response_ALL_primary_df = pd.merge(
+            final_response_ALL_primary_df, responseC_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Applicable" in column OV ORR
-        final_responseC_primary_df["OV ORR"].fillna("Not Applicable", inplace=True)
+        final_response_ALL_primary_df["OV ORR"].fillna("Not Applicable", inplace=True)
         # Fill NaN with "Not Applicable" in column ED ORR
-        final_responseC_primary_df["ED ORR"].fillna("Not Applicable", inplace=True)
+        final_response_ALL_primary_df["ED ORR"].fillna("Not Applicable", inplace=True)
         # Replace Extramedullary Disease Without Bone Marrow Involvement with Not Applicable
-        final_responseC_primary_df["OV ORR"] = final_responseC_primary_df["OV ORR"].replace(
+        final_response_ALL_primary_df["OV ORR"] = final_response_ALL_primary_df["OV ORR"].replace(
             "Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable"
         )
 
@@ -2655,11 +2807,11 @@ def DSMB15420(
             ["Subject", "Form ILB Status", "AE or SAE? (ig_AE2.AESEV)", "Event Onset (ig_AE1.AEONSET)"]
         ]
         # Check responseC_primary_AE_df if the subject of responseC_primary_df is in the AE dataframe. If yes, then add 'Y' to the column 'AE' in responseC_primary_df, else add 'N'
-        final_responseC_primary_df["AE"] = final_responseC_primary_df["Subject"].apply(
+        final_response_ALL_primary_df["AE"] = final_response_ALL_primary_df["Subject"].apply(
             lambda x: "Y" if x in responseC_primary_AE_df["Subject"].values else "N"
         )
         # Check responseC_primary_AE_df if the subject of responseC_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseC_primary_df, else add 'N'
-        final_responseC_primary_df["SAE"] = final_responseC_primary_df["Subject"].apply(
+        final_response_ALL_primary_df["SAE"] = final_response_ALL_primary_df["Subject"].apply(
             lambda x: "Y"
             if x
             in responseC_primary_AE_df[responseC_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values
@@ -2671,6 +2823,8 @@ def DSMB15420(
         responseC_primary_SV_df = data["SVALL"][["Subject", "Event Label", "Event Date"]]
         # Getting Study Status dataframe from DSSVLTFUALL, column Subject, Event Label and Event Date
         responseC_primary_DSSVLTFU_df = data["DSSVLTFUALL"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseC_primary_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
         # Drop columns that are entirely NA from both DataFrames
         responseC_primary_SV_df = responseC_primary_SV_df.dropna(axis=1, how="all")
         responseC_primary_DSSVLTFU_df = responseC_primary_DSSVLTFU_df.dropna(axis=1, how="all")
@@ -2680,15 +2834,33 @@ def DSMB15420(
         responseC_primary_SV_df = responseC_primary_SV_df.sort_values(by=["Subject", "Event Date"])
         # For each unique subject, get the last row of the dataframe
         responseC_primary_SV_df = responseC_primary_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseC_primary_SV_df = pd.merge(responseC_primary_SV_df, responseC_primary_EOS_df, on="Subject", how="left")
+        # Format the End of Study Date if available
+        responseC_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_primary_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+
         # Merge left with the current response dataframe
-        final_responseC_primary_df = pd.merge(
-            final_responseC_primary_df, responseC_primary_SV_df[["Subject", "Event Label"]], on="Subject", how="left"
+        final_response_ALL_primary_df = pd.merge(
+            final_response_ALL_primary_df,
+            responseC_primary_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
         )
         # Rename the column Event Label to Event Label (Study Status)
-        final_responseC_primary_df["Event Label"] = final_responseC_primary_df["Event Label"].map(event_C_dict)
-
+        final_response_ALL_primary_df["Event Label"] = final_response_ALL_primary_df["Event Label"].map(event_C_dict)
+        # Add End of Study Date to Event Label if available
+        final_response_ALL_primary_df["Event Label"] = (
+            final_response_ALL_primary_df["Event Label"]
+            + final_response_ALL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
         # Select the columns needed only
-        final_responseC_primary_df = final_responseC_primary_df[
+        final_response_ALL_primary_df = final_response_ALL_primary_df[
             [
                 "Subject",
                 "Current Overall Response",
@@ -2705,19 +2877,352 @@ def DSMB15420(
                 "Event Label",
             ]
         ]
-        final_responseC_primary_df = final_responseC_primary_df.replace([np.nan, np.inf, -np.inf], "")
-        # Count number of subject of column 'Best Overall Response' that is not 'Not Applicable'
+        final_response_ALL_primary_df = final_response_ALL_primary_df.replace([np.nan, np.inf, -np.inf], "")
+
+        cohort_C_subjects = final_enrollment_df[final_enrollment_df["Cohort Assignment"].str.contains("Cohort C")][
+            "Subject"
+        ].tolist()
+
+        # Subjects in Cohort D
+        final_responseD_ALL_df = final_response_ALL_primary_df[
+            final_response_ALL_primary_df["Subject"].isin(cohort_D_subjects)
+        ].copy()
+
+        # Subjects in cohort C
+        final_responseC_primary_df = final_response_ALL_primary_df[
+            final_response_ALL_primary_df["Subject"].isin(cohort_C_subjects)
+        ].copy()
+
+        # Count number of subject of column 'Best Overall Response' that is not 'Not Applicable' for cohort C
         final_subject_C_prim_OR_count = len(
             final_responseC_primary_df[final_responseC_primary_df["Best Overall Response"] != "Not Applicable"][
                 "Subject"
             ].unique()
         )
-        # Count number of subject of column 'Best ED Response' that is not 'Not Applicable'
+        # Count number of subject of column 'Best ED Response' that is not 'Not Applicable' for cohort C
         final_subject_C_prim_ED_count = len(
             final_responseC_primary_df[final_responseC_primary_df["Best ED Response"] != "Not Applicable"][
                 "Subject"
             ].unique()
         )
+
+        # Count number of subject of column 'Best Overall Response' that is not 'Not Applicable' for cohort D
+        final_subject_D_prim_OR_count = len(
+            final_responseD_ALL_df[final_responseD_ALL_df["Best Overall Response"] != "Not Applicable"][
+                "Subject"
+            ].unique()
+        )
+        # Count number of subject of column 'Best ED Response' that is not 'Not Applicable' for cohort D
+        final_subject_D_prim_ED_count = len(
+            final_responseD_ALL_df[final_responseD_ALL_df["Best ED Response"] != "Not Applicable"]["Subject"].unique()
+        )
+
+        # TODO: Cohort C - ALL Retreatment
+    # Filter to only Retreatment
+    responseC_retreatment_df = responseC_df[responseC_df["Study Phase (ig_RSALL1.STUDYPHS2)"] == "Retreatment"]
+    # Replace value of "Unscheduled" in column Retreatment Time Point with value of "For Unscheduled Retreatment Time Point, Specify Day #"
+    temp_mask = responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] == "Unscheduled"
+    # Convert the column For Unscheduled Retreatment Time Point, Specify Day # to string
+    responseC_retreatment_df = convert_integers_to_strings(
+        responseC_retreatment_df, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RSALL1.UNSDAYR)"
+    )
+    responseC_retreatment_df.loc[temp_mask, "Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] = (
+        responseC_retreatment_df.loc[
+            temp_mask, "For Unscheduled Retreatment Time Point, Specify Day # (ig_RSALL1.UNSDAYR)"
+        ].apply(lambda x: f"Day {x}-R" if pd.notna(x) and str(x).strip().replace("-R", "").isdigit() else x)
+    )
+    # Remove rows with Pre-Retreatment Safety Visit
+    responseC_retreatment_df = responseC_retreatment_df[
+        responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] != "Pre-Retreatment Safety Visit"
+    ]
+    # Remove rows with Post-Lymphodepleting Chemotherapy
+    responseC_retreatment_df = responseC_retreatment_df[
+        responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] != "Post-Lymphodepleting Chemotherapy"
+    ]
+    # replace all rows with Extramedullary Disease Without Bone Marrow Involvement to Not Applicable
+    responseC_retreatment_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = responseC_retreatment_df[
+        "Overall Disease Response (ig_RSALL2.RSALLCAT)"
+    ].replace("Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable")
+
+    # Convert Event Date to datetime object
+    responseC_retreatment_df["Event Date"] = pd.to_datetime(responseC_retreatment_df["Event Date"])
+    # Snapshot the responseC_retreatment_df
+    responseC_retreatment_df_snapshot = responseC_retreatment_df.copy()
+    # check the number of subject for cohort C - ALL Retreatment
+    final_subject_C_retx_count = len(responseC_retreatment_df["Subject"].unique())
+
+    # Check if there is any subject. If yes, then proceed, else skip
+    if final_subject_C_retx_count > 0:
+        # Fill NaN with "Not Applicable" in column Overall Disease Response (ig_RSALL2.RSALLCAT)
+        responseC_retreatment_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna("Not Applicable", inplace=True)
+        # Fill NaN with "Not Applicable" in column Radiographic Tumor Response for Extramedullary Disease
+        responseC_retreatment_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].fillna("Not Applicable", inplace=True)
+        # Convert to numeric values
+        responseC_retreatment_df["OV-Score"] = responseC_retreatment_df[
+            "Overall Disease Response (ig_RSALL2.RSALLCAT)"
+        ].map(DR_ALL_OV_dict)
+        responseC_retreatment_df["ED-Score"] = responseC_retreatment_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].map(DR_ALL_ED_dict)
+
+        # * CURRENT RESPONSE
+        # Get the indices of the rows with the maximum 'Event Date' for each 'Subject'
+        idx = responseC_retreatment_df.groupby("Subject")["Event Date"].idxmax()
+        # Select these rows for the current response
+        responseC_retreatment_current_df = responseC_retreatment_df.loc[idx].copy()
+        # Fill NaN with "Not Applicable"
+        responseC_retreatment_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna(
+            "Not Applicable", inplace=True
+        )
+        responseC_retreatment_current_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].fillna("Not Applicable", inplace=True)
+        # rename the columns
+        responseC_retreatment_current_df.rename(
+            columns={
+                "Overall Disease Response (ig_RSALL2.RSALLCAT)": "Current Overall Response",
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)": "Current ED Response",
+                "Retreatment Time Point (ig_RSALL1.RSALLTPTR)": "Current Response Time Point",
+            },
+            inplace=True,
+        )
+
+        # * BEST RESPONSE
+        ## Best OV ALL Disease Response retreatment
+        # Get the indices of the rows with the minimum 'OV-Score' for each 'Subject'
+        responseC_best_OV_idx = responseC_retreatment_df.groupby("Subject")["OV-Score"].idxmin()
+        # Select these rows for the best OV response
+        responseC_best_OV_df = responseC_retreatment_df.loc[responseC_best_OV_idx].copy()
+        # Select the columns
+        responseC_best_OV_df = responseC_best_OV_df[
+            [
+                "Subject",
+                "Overall Disease Response (ig_RSALL2.RSALLCAT)",
+                "Retreatment Time Point (ig_RSALL1.RSALLTPTR)",
+            ]
+        ]
+        # Rename the columns
+        responseC_best_OV_df.rename(
+            columns={
+                "Overall Disease Response (ig_RSALL2.RSALLCAT)": "Best Overall Response",
+                "Retreatment Time Point (ig_RSALL1.RSALLTPTR)": "Best Overall Response Time Point",
+            },
+            inplace=True,
+        )
+        # Replace Nan with Not Applicable
+        responseC_best_OV_df["Best Overall Response"].fillna("Not Applicable", inplace=True)
+        # Merge left with the current response dataframe
+        final_responseC_retreatment_df = pd.merge(
+            responseC_retreatment_current_df, responseC_best_OV_df, on="Subject", how="left"
+        )
+
+        ## Best ED ALL Disease Response retreatment
+        # Get the indices of the rows with the minimum 'ED-Score' for each 'Subject'
+        responseC_best_ED_idx = responseC_retreatment_df.groupby("Subject")["ED-Score"].idxmin()
+        # Select these rows for the best ED response
+        responseC_best_ED_df = responseC_retreatment_df.loc[responseC_best_ED_idx]
+        # Select the columns
+        responseC_best_ED_df = responseC_best_ED_df[
+            [
+                "Subject",
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)",
+                "Retreatment Time Point (ig_RSALL1.RSALLTPTR)",
+            ]
+        ]
+        # Rename the columns
+        responseC_best_ED_df.rename(
+            columns={
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)": "Best ED Response",
+                "Retreatment Time Point (ig_RSALL1.RSALLTPTR)": "Best ED Time Point",
+            },
+            inplace=True,
+        )
+        # Replace Nan with Not Applicable
+        responseC_best_ED_df["Best ED Response"].fillna("Not Applicable", inplace=True)
+        # Merge left with the retreatment response dataframe
+        final_responseC_retreatment_df = pd.merge(
+            final_responseC_retreatment_df, responseC_best_ED_df, on="Subject", how="left"
+        )
+
+        ## * Overall ALL Disease Response at Day 28-R retreatment
+        # Filter responseC_retreatment_df to only Day 28-R
+        responseC_retreatment_M3_df = responseC_df[
+            responseC_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] == "Day 28-R"
+        ]
+        # Select the columns
+        responseC_retreatment_M3_df = responseC_retreatment_M3_df[
+            [
+                "Subject",
+                "Overall Disease Response (ig_RSALL2.RSALLCAT)",
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)",
+            ]
+        ]
+        # Add subjects that are not in responseC_retreatment_M3_df
+        responseC_retreatment_M3_df = pd.concat(
+            [
+                responseC_retreatment_M3_df,
+                responseC_retreatment_df[
+                    ~responseC_retreatment_df["Subject"].isin(responseC_retreatment_M3_df["Subject"])
+                ][["Subject"]],
+            ]
+        )
+        # Remove duplicates
+        responseC_retreatment_M3_df = responseC_retreatment_M3_df.drop_duplicates(subset=["Subject"])
+
+        # Copy snapshot of responseC_retreatment_df to a temporary dataframe
+        temp_df = responseC_retreatment_df_snapshot
+        # Sort the temporary dataframe by Subject and Event Date
+        temp_df = temp_df.sort_values(by=["Subject", "Event Date"])
+        # remove all the rows that have nan in both responses
+        temp_df = temp_df[
+            temp_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].notna()
+            | temp_df["Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"].notna()
+        ]
+
+        # Check for PD in retreatment
+        for index, row in responseC_retreatment_M3_df.iterrows():
+            # check if both responses are nan
+            if pd.isna(row["Overall Disease Response (ig_RSALL2.RSALLCAT)"]) and pd.isna(
+                row["Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"]
+            ):
+                # if yes, check to see if the subject in in PD_Retx_df
+                if row["Subject"] in PD_Retx_df["Subject"].values:
+                    # get the End of Retreatment Date
+                    end_date = PD_Retx_df[PD_Retx_df["Subject"] == row["Subject"]][
+                        "End of Retreatment Date (ig_INITLF1.DSENRETXDAT)"
+                    ].values[0]
+                    # find the response of the same subject with the latest event date that is before the end date
+                    filtered_df = temp_df[(temp_df["Subject"] == row["Subject"]) & (temp_df["Event Date"] <= end_date)]
+                    # Check if the filtered DataFrame is empty
+                    if not filtered_df.empty:
+                        # Access the last row if the DataFrame is not empty
+                        temp_row = filtered_df.iloc[-1]
+                        # Replace the responses
+                        responseC_retreatment_M3_df.loc[index, "Overall Disease Response (ig_RSALL2.RSALLCAT)"] = (
+                            temp_row["Overall Disease Response (ig_RSALL2.RSALLCAT)"]
+                        )
+                        responseC_retreatment_M3_df.loc[
+                            index, "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+                        ] = temp_row[
+                            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+                        ]
+
+        # Rename the columns
+        responseC_retreatment_M3_df.rename(
+            columns={
+                "Overall Disease Response (ig_RSALL2.RSALLCAT)": "OV ORR",
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)": "ED ORR",
+            },
+            inplace=True,
+        )
+        # Merge left with the current response dataframe
+        final_responseC_retreatment_df = pd.merge(
+            final_responseC_retreatment_df, responseC_retreatment_M3_df, on="Subject", how="left"
+        )
+        # Fill NaN with "Not Applicable"
+        final_responseC_retreatment_df["OV ORR"].fillna("Not Applicable", inplace=True)
+        final_responseC_retreatment_df["ED ORR"].fillna("Not Applicable", inplace=True)
+        # Replace Extramedullary Disease Without Bone Marrow Involvement with Not Applicable
+        final_responseC_retreatment_df["OV ORR"] = final_responseC_retreatment_df["OV ORR"].replace(
+            "Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable"
+        )
+
+        ## Checking AE and SAE for ALL retreatment
+        # Getting AE and SAE dataframes
+        responseC_retreatment_AE_df = data["AE"][
+            ["Subject", "Form ILB Status", "AE or SAE? (ig_AE2.AESEV)", "Event Onset (ig_AE1.AEONSET)"]
+        ]
+        # Check if subject is in the AE dataframe
+        final_responseC_retreatment_df["AE"] = final_responseC_retreatment_df["Subject"].apply(
+            lambda x: "Y" if x in responseC_retreatment_AE_df["Subject"].values else "N"
+        )
+        # Check if subject has SAE
+        final_responseC_retreatment_df["SAE"] = final_responseC_retreatment_df["Subject"].apply(
+            lambda x: "Y"
+            if x
+            in responseC_retreatment_AE_df[responseC_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                "Subject"
+            ].values
+            else "N"
+        )
+
+        ## Checking Study Status for ALL retreatment
+        # Getting Study Status dataframe from SVALL
+        responseC_retreatment_SV_df = data["SVALL"][["Subject", "Event Label", "Event Date"]]
+        # Getting Study Status dataframe from DSSVLTFUALL
+        responseC_retreatment_DSSVLTFU_df = data["DSSVLTFUALL"][["Subject", "Event Label", "Event Date"]]
+        # Getting End of Study status from EOS
+        responseC_retreatment_EOS_df = data["EOS"][["Subject", "End of Study Date (ig_EOS1.EOSDAT)"]]
+        # Drop columns that are entirely NA from both DataFrames
+        responseC_retreatment_SV_df = responseC_retreatment_SV_df.dropna(axis=1, how="all")
+        responseC_retreatment_DSSVLTFU_df = responseC_retreatment_DSSVLTFU_df.dropna(axis=1, how="all")
+        # Combine DSSVLTFU with SV dataframe vertically
+        responseC_retreatment_SV_df = pd.concat([responseC_retreatment_SV_df, responseC_retreatment_DSSVLTFU_df])
+        # Sort the dataframe by Subject and Event Date
+        responseC_retreatment_SV_df = responseC_retreatment_SV_df.sort_values(by=["Subject", "Event Date"])
+        # For each unique subject, get the last row of the dataframe
+        responseC_retreatment_SV_df = responseC_retreatment_SV_df.groupby("Subject").tail(1)
+        # Merge with EOS data to get End of Study Date
+        responseC_retreatment_SV_df = pd.merge(
+            responseC_retreatment_SV_df, responseC_retreatment_EOS_df, on="Subject", how="left"
+        )
+        # Format the End of Study Date if available
+        responseC_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_retreatment_SV_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].apply(
+            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
+            if pd.notna(x)
+            else ""
+        )
+        # Merge left with the current response dataframe
+        final_responseC_retreatment_df = pd.merge(
+            final_responseC_retreatment_df,
+            responseC_retreatment_SV_df[["Subject", "Event Label", "End of Study Date (ig_EOS1.EOSDAT)"]],
+            on="Subject",
+            how="left",
+        )
+        # Map Event Label using event_C_dict
+        final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df["Event Label"].map(event_C_dict)
+        # Add End of Study Date to Event Label if available
+        final_responseC_retreatment_df["Event Label"] = (
+            final_responseC_retreatment_df["Event Label"]
+            + final_responseC_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        )
+
+        # Select the columns needed only
+        final_responseC_retreatment_df = final_responseC_retreatment_df[
+            [
+                "Subject",
+                "Current Overall Response",
+                "Current ED Response",
+                "Current Response Time Point",
+                "Best Overall Response",
+                "Best Overall Response Time Point",
+                "Best ED Response",
+                "Best ED Time Point",
+                "OV ORR",
+                "ED ORR",
+                "AE",
+                "SAE",
+                "Event Label",
+            ]
+        ]
+        final_responseC_retreatment_df = final_responseC_retreatment_df.replace([np.nan, np.inf, -np.inf], "")
+
+        # Count number of subjects with responses
+        final_subject_C_retx_OR_count = len(
+            final_responseC_retreatment_df[final_responseC_retreatment_df["Best Overall Response"] != "Not Applicable"][
+                "Subject"
+            ].unique()
+        )
+        final_subject_C_retx_ED_count = len(
+            final_responseC_retreatment_df[final_responseC_retreatment_df["Best ED Response"] != "Not Applicable"][
+                "Subject"
+            ].unique()
+        )
+
     ### TODO: REPONSE STATS
     # TODO: SAFETY STATS
 
@@ -2733,44 +3238,59 @@ def DSMB15420(
     total_infused_df["SAE"] = total_infused_df["Subject"].apply(
         lambda x: "Y" if x in AE_df[AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values else "N"
     )
+    # UPDATED: Filter for only Cohorts A, B, and C for ABC stats
+    abc_infused_df = total_infused_df[
+        total_infused_df["Cohort Assignment"].str.contains("Cohort A|Cohort B|Cohort C")
+    ].copy()
 
-    # # Total number of subjects in cohort A, B, and C
-    AE_total_count = get_stats_percentage("AE", total_infused_df).T
-    SAE_total_count = get_stats_percentage("SAE", total_infused_df).T
+    # Total number of subjects in cohort A, B, and C only
+    AE_abc_total_count = get_stats_percentage("AE", abc_infused_df).T
+    SAE_abc_total_count = get_stats_percentage("SAE", abc_infused_df).T
     # merge AE and SAE dataframes
-    final_safety_total_df = pd.concat([AE_total_count, SAE_total_count], axis=1)
+    final_safety_abc_total_df = pd.concat([AE_abc_total_count, SAE_abc_total_count], axis=1)
 
-    # # get stats for cohort A, B, and C
+    # get stats for cohort A, B, and C
     AE_A_count = get_stats_percentage(
-        "AE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort A: Non-Hodgkin Lymphoma (NHL)"]
+        "AE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort A: Non-Hodgkin Lymphoma (NHL)"]
     ).T
     SAE_A_count = get_stats_percentage(
-        "SAE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort A: Non-Hodgkin Lymphoma (NHL)"]
+        "SAE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort A: Non-Hodgkin Lymphoma (NHL)"]
     ).T
     # merge AE and SAE dataframes
     final_safety_A_df = pd.concat([AE_A_count, SAE_A_count], axis=1)
 
     AE_B_count = get_stats_percentage(
-        "AE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort B: Chronic Lymphocytic Leukemia (CLL)"]
+        "AE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort B: Chronic Lymphocytic Leukemia (CLL)"]
     ).T
     SAE_B_count = get_stats_percentage(
-        "SAE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort B: Chronic Lymphocytic Leukemia (CLL)"]
+        "SAE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort B: Chronic Lymphocytic Leukemia (CLL)"]
     ).T
     # merge AE and SAE dataframes
     final_safety_B_df = pd.concat([AE_B_count, SAE_B_count], axis=1)
 
     AE_C_count = get_stats_percentage(
-        "AE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort C: Acute Lymphoblastic Leukemia (ALL)"]
+        "AE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort C: Acute Lymphoblastic Leukemia (ALL)"]
     ).T
     SAE_C_count = get_stats_percentage(
-        "SAE", total_infused_df[total_infused_df["Cohort Assignment"] == "Cohort C: Acute Lymphoblastic Leukemia (ALL)"]
+        "SAE", abc_infused_df[abc_infused_df["Cohort Assignment"] == "Cohort C: Acute Lymphoblastic Leukemia (ALL)"]
     ).T
     # merge AE and SAE dataframes
     final_safety_C_df = pd.concat([AE_C_count, SAE_C_count], axis=1)
 
     final_safety_df = pd.concat(
-        [final_safety_total_df, final_safety_A_df, final_safety_B_df, final_safety_C_df], axis=0
+        [final_safety_abc_total_df, final_safety_A_df, final_safety_B_df, final_safety_C_df], axis=0
     )
+
+    # NEW: Create safety statistics for Cohort D only
+    d_infused_df = total_infused_df[total_infused_df["Cohort Assignment"].str.contains("Cohort D")].copy()
+
+    if len(d_infused_df) > 0:
+        AE_D_total_count = get_stats_percentage("AE", d_infused_df).T
+        SAE_D_total_count = get_stats_percentage("SAE", d_infused_df).T
+        final_safety_D_df = pd.concat([AE_D_total_count, SAE_D_total_count], axis=1)
+    else:
+        # Create empty dataframe with proper structure if no Cohort D subjects
+        final_safety_D_df = pd.DataFrame({"Y": ["0 (0%)"], "N": ["0 (0%)"]}, index=["Y"])
 
     # TODO: RESPONSE STATS
     if final_subject_A_prim_count > 0:
@@ -2814,6 +3334,58 @@ def DSMB15420(
         final_response_stat_BRT_BOR_CT = get_stats_percentage("CT-Based Response", responseBRT_stat)
         final_response_stat_BRT_ORR_PET = get_stats_percentage("PET-Based ORR", responseBRT_stat)
         final_response_stat_BRT_ORR_CT = get_stats_percentage("CT-Based ORR", responseBRT_stat)
+
+    # NEW: Create response statistics for Cohort D
+    # For Cohort D NHL subjects
+    if len(final_responseD_NHL_df) > 0:
+        responseD_NHL_stat = final_responseD_NHL_df.copy()
+        responseD_NHL_stat = responseD_NHL_stat.replace("Not Assessed", "Not Reported")
+        responseD_NHL_stat = responseD_NHL_stat.replace("Not Evaluable", "Not Reported")
+        final_response_stat_D_NHL_BOR_PET = get_stats_percentage("PET-Based Response", responseD_NHL_stat)
+        final_response_stat_D_NHL_BOR_CT = get_stats_percentage("CT-Based Response", responseD_NHL_stat)
+        final_response_stat_D_NHL_ORR_PET = get_stats_percentage("PET-Based ORR", responseD_NHL_stat)
+        final_response_stat_D_NHL_ORR_CT = get_stats_percentage("CT-Based ORR", responseD_NHL_stat)
+        final_subject_D_NHL_count = len(final_responseD_NHL_df["Subject"].unique())
+    else:
+        # Create empty dataframes if no Cohort D NHL subjects
+        empty_response_df = pd.DataFrame({"N": ["0 (0%)"]}, index=["Not Reported"])
+        final_response_stat_D_NHL_BOR_PET = empty_response_df.copy()
+        final_response_stat_D_NHL_BOR_CT = empty_response_df.copy()
+        final_response_stat_D_NHL_ORR_PET = empty_response_df.copy()
+        final_response_stat_D_NHL_ORR_CT = empty_response_df.copy()
+        final_subject_D_NHL_count = 0
+
+    if len(final_responseD_ALL_df) > 0:
+        responseD_ALL_stat = final_responseD_ALL_df.copy()
+        responseD_ALL_stat = responseD_ALL_stat.replace(
+            "Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable"
+        )
+        responseD_ALL_stat = responseD_ALL_stat.replace("No Clinical Evidence of Relapse", "Not Reported")
+        responseD_ALL_stat = responseD_ALL_stat.replace("Unknown/Not Assessed", "Not Reported")
+        responseD_ALL_stat = responseD_ALL_stat.replace("Not Assessed", "Not Reported")
+        final_response_stat_D_ALL_BOR_OV = get_stats_percentage("Best Overall Response", responseD_ALL_stat)
+        final_response_stat_D_ALL_BOR_ED = get_stats_percentage("Best ED Response", responseD_ALL_stat)
+        final_response_stat_D_ALL_ORR_OV = get_stats_percentage("OV ORR", responseD_ALL_stat)
+        final_response_stat_D_ALL_ORR_ED = get_stats_percentage("ED ORR", responseD_ALL_stat)
+
+        # Count subjects for headers
+        final_subject_D_ALL_OR_count = len(
+            final_responseD_ALL_df[final_responseD_ALL_df["Best Overall Response"] != "Not Applicable"][
+                "Subject"
+            ].unique()
+        )
+        final_subject_D_ALL_ED_count = len(
+            final_responseD_ALL_df[final_responseD_ALL_df["Best ED Response"] != "Not Applicable"]["Subject"].unique()
+        )
+    else:
+        # Create empty dataframes if no Cohort D ALL subjects
+        empty_response_df = pd.DataFrame({"N": ["0 (0%)"]}, index=["Not Reported"])
+        final_response_stat_D_ALL_BOR_OV = empty_response_df.copy()
+        final_response_stat_D_ALL_BOR_ED = empty_response_df.copy()
+        final_response_stat_D_ALL_ORR_OV = empty_response_df.copy()
+        final_response_stat_D_ALL_ORR_ED = empty_response_df.copy()
+        final_subject_D_ALL_OR_count = 0
+        final_subject_D_ALL_ED_count = 0
 
     # TODO: UPDATE FORMAT FOR NHL, CLL, and ALL after getting the stats
 
@@ -2897,719 +3469,1174 @@ def DSMB15420(
             "Primary Treatment Time Point (ig_RS1.RSTPT)",
         ] = "Transitioned to Retreatment"
 
-    if export:
-        # print(final_output_dir  + '/' + final_output_file_name + '.xlsx')
-        with pd.ExcelWriter(output_dir + "/" + output_file_name + ".xlsx", engine="xlsxwriter") as writer:
-            # TODO: - Add formatting and coloring
-            # TODO: - for each tab: write data, format data, write header, format header
+    with pd.ExcelWriter(output_dir + "/" + output_file_name + ".xlsx", engine="xlsxwriter") as writer:
+        # TODO: - Add formatting and coloring
+        # TODO: - for each tab: write data, format data, write header, format header
+        # Get the workbook
+        workbook = writer.book
+        # Get all format objects from util.py function
+        formats = get_excel_formats(workbook)
+        ## * FORMATING AND COLORING
+        # Extract individual formats for easier use
+        bold_11_format = formats["bold_11_format"]
+        bold_12_format = formats["bold_12_format"]
+        bold_12_wrap_format = formats["bold_12_wrap_format"]
+        bold_11_wrap_format = formats["bold_11_wrap_format"]
+        normal_data_format = formats["normal_data_format"]
+        normal_data_wrap_format = formats["normal_data_wrap_format"]
+        # Create a format for a black cell
+        black_cell = writer.book.add_format({"bg_color": "black"})
 
-            ## * FORMATING AND COLORING
-            bold_11_format = writer.book.add_format(
-                {
-                    "bg_color": "#FFFFFF",
-                    "text_wrap": True,
-                    "valign": "vcenter",
-                    "align": "center",
-                    "bold": True,
-                    "font_name": "Calibri",
-                    "font_size": 11,
-                    "border": 1,
-                }
-            )
-            bold_12_format = writer.book.add_format(
-                {
-                    "bg_color": "#FFFFFF",
-                    "text_wrap": False,
-                    "valign": "vcenter",
-                    "align": "center",
-                    "bold": True,
-                    "font_name": "Calibri",
-                    "font_size": 12,
-                    "border": 1,
-                }
-            )
-            bold_12_wrap_format = writer.book.add_format(
-                {
-                    "bg_color": "#FFFFFF",
-                    "text_wrap": True,
-                    "valign": "vcenter",
-                    "align": "center",
-                    "bold": True,
-                    "font_name": "Calibri",
-                    "font_size": 12,
-                    "border": 1,
-                }
-            )
-            bold_11_wrap_format = writer.book.add_format(
-                {
-                    "bg_color": "#FFFFFF",
-                    "text_wrap": True,
-                    "valign": "vcenter",
-                    "align": "center",
-                    "bold": True,
-                    "font_name": "Calibri",
-                    "font_size": 11,
-                    "border": 1,
-                }
-            )
-            normal_data_format = writer.book.add_format(
-                {
-                    "bg_color": "#FFFFFF",
-                    "text_wrap": False,
-                    "valign": "vcenter",
-                    "align": "center",
-                    "bold": False,
-                    "font_name": "Calibri",
-                    "font_size": 11,
-                    "border": 1,
-                }
-            )
-            # Create a format for a black cell
-            black_cell = writer.book.add_format({"bg_color": "black"})
+        ## TODO: DSMB-Demo Stats Table
+        # * WRITING DATA: LegalSex_df, Age_df, Race_df
+        final_LegalSex_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=2)
+        final_Age_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=7)
+        final_Race_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=11)
+        # assign worksheet to variable
+        worksheet1 = writer.sheets["DSMB-Demo Stats Table"]
 
-            ## TODO: DSMB-Demo Stats Table
-            # * WRITING DATA: LegalSex_df, Age_df, Race_df
-            final_LegalSex_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=2)
-            final_Age_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=7)
-            final_Race_df.to_excel(writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=1, startrow=11)
-            # assign worksheet to variable
-            worksheet1 = writer.sheets["DSMB-Demo Stats Table"]
+        # * FORMAT DATA
+        for i in range(0, len(final_LegalSex_df)):
+            for j in range(0, len(final_LegalSex_df.columns)):
+                worksheet1.write(i + 3, j + 1, final_LegalSex_df.iloc[i, j], normal_data_format)
+            for k in range(0, 8 - len(final_Age_df.columns)):
+                worksheet1.write(i + 3, len(final_Age_df.columns) + k + 1, "", normal_data_format)
+        for i in range(0, len(final_Age_df)):
+            for j in range(0, len(final_Age_df.columns)):
+                worksheet1.write(i + 8, j + 1, final_Age_df.iloc[i, j], normal_data_format)
+            for k in range(0, 8 - len(final_Age_df.columns)):
+                worksheet1.write(i + 8, len(final_Age_df.columns) + k + 1, "", normal_data_format)
+        for i in range(0, len(final_Race_df)):
+            for j in range(0, len(final_Race_df.columns)):
+                worksheet1.write(i + 12, j + 1, final_Race_df.iloc[i, j], normal_data_format)
+            for k in range(0, 8 - len(final_Age_df.columns)):
+                worksheet1.write(i + 12, len(final_Age_df.columns) + k + 1, "", normal_data_format)
 
-            # * FORMAT DATA
-            for i in range(0, len(final_LegalSex_df)):
-                for j in range(0, len(final_LegalSex_df.columns)):
-                    worksheet1.write(i + 3, j + 1, final_LegalSex_df.iloc[i, j], normal_data_format)
-                for k in range(0, 8 - len(final_Age_df.columns)):
-                    worksheet1.write(i + 3, len(final_Age_df.columns) + k + 1, "", normal_data_format)
-            for i in range(0, len(final_Age_df)):
-                for j in range(0, len(final_Age_df.columns)):
-                    worksheet1.write(i + 8, j + 1, final_Age_df.iloc[i, j], normal_data_format)
-                for k in range(0, 8 - len(final_Age_df.columns)):
-                    worksheet1.write(i + 8, len(final_Age_df.columns) + k + 1, "", normal_data_format)
-            for i in range(0, len(final_Race_df)):
-                for j in range(0, len(final_Race_df.columns)):
-                    worksheet1.write(i + 12, j + 1, final_Race_df.iloc[i, j], normal_data_format)
-                for k in range(0, 8 - len(final_Age_df.columns)):
-                    worksheet1.write(i + 12, len(final_Age_df.columns) + k + 1, "", normal_data_format)
+        # * WRITING HEADER AND FORMATTING
+        Sex_order = ["Male", "Female", "Nonbinary (X)", "Not Reported"]
+        Age_order = ["Mean SD", "Median", "Range"]
+        Race_order = [
+            "African American",
+            "Alaska Native",
+            "American Indian",
+            "Asian",
+            "Caucasian",
+            "Multiple Races",
+            "Pacific Islander",
+            "Other",
+            "Unknown",
+        ]
+        for i in range(0, len(Sex_order)):
+            worksheet1.write(i + 3, 0, Sex_order[i], bold_11_format)
+        for i in range(0, len(Age_order)):
+            worksheet1.write(i + 8, 0, Age_order[i], bold_11_format)
+        for i in range(0, len(Race_order)):
+            worksheet1.write(i + 12, 0, Race_order[i], bold_11_format)
 
-            # * WRITING HEADER AND FORMATTING
-            Sex_order = ["Male", "Female", "Nonbinary (X)", "Not Reported"]
-            Age_order = ["Mean SD", "Median", "Range"]
-            Race_order = [
-                "African American",
-                "Alaska Native",
-                "American Indian",
-                "Asian",
-                "Caucasian",
-                "Multiple Races",
-                "Pacific Islander",
-                "Other",
-                "Unknown",
-            ]
-            for i in range(0, len(Sex_order)):
-                worksheet1.write(i + 3, 0, Sex_order[i], bold_11_format)
-            for i in range(0, len(Age_order)):
-                worksheet1.write(i + 8, 0, Age_order[i], bold_11_format)
-            for i in range(0, len(Race_order)):
-                worksheet1.write(i + 12, 0, Race_order[i], bold_11_format)
+        worksheet1.merge_range("D1:E1", "Cohort A (NHL)", bold_12_format)
+        worksheet1.merge_range("F1:G1", "Cohort B (CLL)", bold_12_format)
+        worksheet1.merge_range("H1:I1", "Cohort C (ALL)", bold_12_format)
+        worksheet1.merge_range("J1:K1", "Cohort D (NHL/ALL)", bold_12_format)
+        worksheet1.write(1, 0, "Status", bold_11_format)
+        worksheet1.write(1, 1, "Total Screened\nN=" + str(final_status["Total Screened"]), bold_11_wrap_format)
+        worksheet1.write(1, 2, "Screen Failed\nN=" + str(final_status["Screen Failed"]), bold_11_wrap_format)
+        worksheet1.write(1, 3, "Eligible\nN=" + str(final_status["Cohort A Enrolled"]), bold_11_wrap_format)
+        worksheet1.write(1, 4, "Infused\nN=" + str(final_status["Cohort A Infused"]), bold_11_wrap_format)
+        worksheet1.write(1, 5, "Eligible\nN=" + str(final_status["Cohort B Enrolled"]), bold_11_wrap_format)
+        worksheet1.write(1, 6, "Infused\nN=" + str(final_status["Cohort B Infused"]), bold_11_wrap_format)
+        worksheet1.write(1, 7, "Eligible\nN=" + str(final_status["Cohort C Enrolled"]), bold_11_wrap_format)
+        worksheet1.write(1, 8, "Infused\nN=" + str(final_status["Cohort C Infused"]), bold_11_wrap_format)
+        worksheet1.write(1, 9, "Eligible\nN=" + str(final_status["Cohort D Enrolled"]), bold_11_wrap_format)
+        worksheet1.write(1, 10, "Infused\nN=" + str(final_status["Cohort D Infused"]), bold_11_wrap_format)
+        worksheet1.merge_range("A3:K3", "Legal Sex", bold_11_format)
+        worksheet1.merge_range("A8:K8", "Age at Consent", bold_11_format)
+        worksheet1.merge_range("A12:K12", "Race", bold_11_format)
 
-            worksheet1.merge_range("D1:E1", "Cohort A (NHL)", bold_12_format)
-            worksheet1.merge_range("F1:G1", "Cohort B (CLL)", bold_12_format)
-            worksheet1.merge_range("H1:I1", "Cohort C (ALL)", bold_12_format)
-            worksheet1.write(1, 0, "Status", bold_11_format)
-            worksheet1.write(1, 1, "Total Screened\nN=" + str(final_status["Total Screened"]), bold_11_wrap_format)
-            worksheet1.write(1, 2, "Screen Failed\nN=" + str(final_status["Screen Failed"]), bold_11_wrap_format)
-            worksheet1.write(1, 3, "Eligible\nN=" + str(final_status["Cohort A Enrolled"]), bold_11_wrap_format)
-            worksheet1.write(1, 4, "Infused\nN=" + str(final_status["Cohort A Infused"]), bold_11_wrap_format)
-            worksheet1.write(1, 5, "Eligible\nN=" + str(final_status["Cohort B Enrolled"]), bold_11_wrap_format)
-            worksheet1.write(1, 6, "Infused\nN=" + str(final_status["Cohort B Infused"]), bold_11_wrap_format)
-            worksheet1.write(1, 7, "Eligible\nN=" + str(final_status["Cohort C Enrolled"]), bold_11_wrap_format)
-            worksheet1.write(1, 8, "Infused\nN=" + str(final_status["Cohort C Infused"]), bold_11_wrap_format)
-            worksheet1.merge_range("A3:I3", "Legal Sex", bold_11_format)
-            worksheet1.merge_range("A8:I8", "Age at Consent", bold_11_format)
-            worksheet1.merge_range("A12:I12", "Race", bold_11_format)
-            worksheet1.autofit()
+        # ===== NEW CODE: Write Cohort D only and Cohorts A,B,C tables side-by-side =====
 
-            ## TODO: Enrollment Listing
-            # * WRITING DATA: enrollment_df
-            final_enrollment_df.to_excel(writer, sheet_name="DSMB-Enrollment Listing", index=False, startcol=0)
-            # assign worksheet to variable
-            worksheet2 = writer.sheets["DSMB-Enrollment Listing"]
+        # Calculate starting positions
+        # Original table spans columns A-K (0-10), so 11 columns total
+        original_table_width = 11  # A to K
+        gap_columns = 1  # One empty column between tables
 
-            # * FORMAT DATA
-            for i in range(0, len(final_enrollment_df)):
-                for j in range(0, len(final_enrollment_df.columns)):
-                    worksheet2.write(i + 1, j, final_enrollment_df.iloc[i, j], normal_data_format)
-            # Autofit
-            worksheet2.autofit()
+        # Cohort D table starts after original + gap
+        cohort_d_start_col = original_table_width + gap_columns  # Column M (index 12)
 
-            ## TODO: DSMB-New Infusion Statistics
-            # * WRITING DATA: new_infusion_df
-            final_infusion_statA.to_excel(
-                writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=2, startcol=0
-            )
-            final_infusion_statB.to_excel(
-                writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=6, startcol=0
-            )
-            final_infusion_statC.to_excel(
-                writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=10, startcol=0
-            )
+        # Cohort D table width (same structure as original but fewer columns)
+        # Total Screened, Screen Failed, Enrolled, Infused = 4 columns + row header = 5 columns
+        cohort_d_width = 5  # Adjust based on actual D-only table structure
 
-            # assign worksheet to variable
-            worksheet3 = writer.sheets["DSMB-New Infusion Statistics"]
+        # Cohorts ABC table starts after Cohort D + gap
+        cohorts_abc_start_col = cohort_d_start_col + cohort_d_width + gap_columns
 
-            # * FORMATING DATA
-            for i in range(0, len(final_infusion_statA)):
-                for j in range(0, len(final_infusion_statA.columns)):
-                    worksheet3.write(i + 3, j + 1, final_infusion_statA.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_infusion_statB)):
-                for j in range(0, len(final_infusion_statB.columns)):
-                    worksheet3.write(i + 7, j + 1, final_infusion_statB.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_infusion_statC)):
-                for j in range(0, len(final_infusion_statC.columns)):
-                    worksheet3.write(i + 11, j + 1, final_infusion_statC.iloc[i, j], normal_data_format)
-            # * WRITING HEADER AND FORMATTING
-            stat_order = ["Mean SD", "Median", "Range"]
+        # ===== Write Cohort D Only Table =====
 
-            worksheet3.merge_range("B1:D1", "Cells Infused", bold_12_wrap_format)
-            worksheet3.merge_range("E1:F1", "Transduction Efficiency", bold_12_wrap_format)
-            worksheet3.write("B2", "Total Cells", bold_12_wrap_format)
-            worksheet3.write("C2", "huCART19-IL18 Cells", bold_12_wrap_format)
-            worksheet3.write("D2", "Met Target Dose", bold_12_wrap_format)
-            worksheet3.write("E2", "%scFv Flow", bold_12_wrap_format)
-            worksheet3.write("F2", "Met Target %scFv", bold_12_wrap_format)
-            worksheet3.merge_range("A3:F3", "Cohort A (N=" + str(final_infusion_count[0]) + ")", bold_12_wrap_format)
-            worksheet3.merge_range("A7:F7", "Cohort B (N=" + str(final_infusion_count[1]) + ")", bold_12_wrap_format)
-            worksheet3.merge_range("A11:F11", "Cohort C (N=" + str(final_infusion_count[2]) + ")", bold_12_wrap_format)
-            # Merge and format data
+        # Write the data
+        final_LegalSex_df_D.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohort_d_start_col + 1, startrow=2
+        )
+        final_Age_df_D.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohort_d_start_col + 1, startrow=7
+        )
+        final_Race_df_D.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohort_d_start_col + 1, startrow=11
+        )
+
+        # Format Cohort D data
+        for i in range(0, len(final_LegalSex_df_D)):
+            for j in range(0, len(final_LegalSex_df_D.columns)):
+                worksheet1.write(i + 3, j + cohort_d_start_col + 1, final_LegalSex_df_D.iloc[i, j], normal_data_format)
+            # Fill empty cells if needed
+            for k in range(len(final_LegalSex_df_D.columns), 4):
+                worksheet1.write(i + 3, k + cohort_d_start_col + 1, "", normal_data_format)
+
+        for i in range(0, len(final_Age_df_D)):
+            for j in range(0, len(final_Age_df_D.columns)):
+                worksheet1.write(i + 8, j + cohort_d_start_col + 1, final_Age_df_D.iloc[i, j], normal_data_format)
+            for k in range(len(final_Age_df_D.columns), 4):
+                worksheet1.write(i + 8, k + cohort_d_start_col + 1, "", normal_data_format)
+
+        for i in range(0, len(final_Race_df_D)):
+            for j in range(0, len(final_Race_df_D.columns)):
+                worksheet1.write(i + 12, j + cohort_d_start_col + 1, final_Race_df_D.iloc[i, j], normal_data_format)
+            for k in range(len(final_Race_df_D.columns), 4):
+                worksheet1.write(i + 12, k + cohort_d_start_col + 1, "", normal_data_format)
+
+        # Write Cohort D headers
+        # Row labels (Sex, Age, Race categories)
+        for i in range(0, len(Sex_order)):
+            worksheet1.write(i + 3, cohort_d_start_col, Sex_order[i], bold_11_format)
+        for i in range(0, len(Age_order)):
+            worksheet1.write(i + 8, cohort_d_start_col, Age_order[i], bold_11_format)
+        for i in range(0, len(Race_order)):
+            worksheet1.write(i + 12, cohort_d_start_col, Race_order[i], bold_11_format)
+
+        # Column headers for Cohort D
+        d_end_col = cohort_d_start_col + 4  # Adjust based on actual columns
+        worksheet1.merge_range(0, cohort_d_start_col, 0, d_end_col, "Cohort D (NHL/ALL)", bold_12_format)
+        worksheet1.write(1, cohort_d_start_col, "Status", bold_11_format)
+        worksheet1.write(
+            1, cohort_d_start_col + 1, f"Total Screened\nN={final_status_D['Total Screened']}", bold_11_wrap_format
+        )
+        worksheet1.write(
+            1, cohort_d_start_col + 2, f"Screen Failed\nN={final_status_D['Screen Failed']}", bold_11_wrap_format
+        )
+        worksheet1.write(
+            1, cohort_d_start_col + 3, f"Eligible\nN={final_status_D['Cohort D Enrolled']}", bold_11_wrap_format
+        )
+        worksheet1.write(
+            1, cohort_d_start_col + 4, f"Infused\nN={final_status_D['Cohort D Infused']}", bold_11_wrap_format
+        )
+
+        # Section headers for Cohort D
+        worksheet1.merge_range(2, cohort_d_start_col, 2, d_end_col, "Legal Sex", bold_11_format)
+        worksheet1.merge_range(7, cohort_d_start_col, 7, d_end_col, "Age at Consent", bold_11_format)
+        worksheet1.merge_range(11, cohort_d_start_col, 11, d_end_col, "Race", bold_11_format)
+
+        # ===== Write Cohorts A, B, C Combined Table =====
+
+        # Write the data
+        final_LegalSex_df_ABC.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohorts_abc_start_col + 1, startrow=2
+        )
+        final_Age_df_ABC.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohorts_abc_start_col + 1, startrow=7
+        )
+        final_Race_df_ABC.to_excel(
+            writer, sheet_name="DSMB-Demo Stats Table", index=False, startcol=cohorts_abc_start_col + 1, startrow=11
+        )
+
+        # Format Cohorts ABC data
+        for i in range(0, len(final_LegalSex_df_ABC)):
+            for j in range(0, len(final_LegalSex_df_ABC.columns)):
+                worksheet1.write(
+                    i + 3, j + cohorts_abc_start_col + 1, final_LegalSex_df_ABC.iloc[i, j], normal_data_format
+                )
+            # Fill empty cells if columns are fewer than expected
+            for k in range(len(final_LegalSex_df_ABC.columns), 8):
+                worksheet1.write(i + 3, k + cohorts_abc_start_col + 1, "", normal_data_format)
+
+        for i in range(0, len(final_Age_df_ABC)):
+            for j in range(0, len(final_Age_df_ABC.columns)):
+                worksheet1.write(i + 8, j + cohorts_abc_start_col + 1, final_Age_df_ABC.iloc[i, j], normal_data_format)
+            for k in range(len(final_Age_df_ABC.columns), 8):
+                worksheet1.write(i + 8, k + cohorts_abc_start_col + 1, "", normal_data_format)
+
+        for i in range(0, len(final_Race_df_ABC)):
+            for j in range(0, len(final_Race_df_ABC.columns)):
+                worksheet1.write(
+                    i + 12, j + cohorts_abc_start_col + 1, final_Race_df_ABC.iloc[i, j], normal_data_format
+                )
+            for k in range(len(final_Race_df_ABC.columns), 8):
+                worksheet1.write(i + 12, k + cohorts_abc_start_col + 1, "", normal_data_format)
+
+        # Write Cohorts ABC headers
+        # Row labels (Sex, Age, Race categories)
+        for i in range(0, len(Sex_order)):
+            worksheet1.write(i + 3, cohorts_abc_start_col, Sex_order[i], bold_11_format)
+        for i in range(0, len(Age_order)):
+            worksheet1.write(i + 8, cohorts_abc_start_col, Age_order[i], bold_11_format)
+        for i in range(0, len(Race_order)):
+            worksheet1.write(i + 12, cohorts_abc_start_col, Race_order[i], bold_11_format)
+
+        # Column headers for Cohorts ABC
+        worksheet1.write(1, cohorts_abc_start_col, "Status", bold_11_format)
+        worksheet1.write(
+            1,
+            cohorts_abc_start_col + 1,
+            f"Total Screened\nN={final_status_ABC['Total Screened']}",
+            bold_11_wrap_format,
+        )
+        worksheet1.write(
+            1,
+            cohorts_abc_start_col + 2,
+            f"Screen Failed\nN={final_status_ABC['Screen Failed']}",
+            bold_11_wrap_format,
+        )
+
+        # Cohort-specific headers for A, B, C
+        worksheet1.merge_range(
+            0, cohorts_abc_start_col + 3, 0, cohorts_abc_start_col + 4, "Cohort A (NHL)", bold_12_format
+        )
+        worksheet1.write(
+            1,
+            cohorts_abc_start_col + 3,
+            f"Eligible\nN={final_status_ABC['Cohort A Enrolled']}",
+            bold_11_wrap_format,
+        )
+        worksheet1.write(
+            1, cohorts_abc_start_col + 4, f"Infused\nN={final_status_ABC['Cohort A Infused']}", bold_11_wrap_format
+        )
+
+        worksheet1.merge_range(
+            0, cohorts_abc_start_col + 5, 0, cohorts_abc_start_col + 6, "Cohort B (CLL)", bold_12_format
+        )
+        worksheet1.write(
+            1,
+            cohorts_abc_start_col + 5,
+            f"Eligible\nN={final_status_ABC['Cohort B Enrolled']}",
+            bold_11_wrap_format,
+        )
+        worksheet1.write(
+            1, cohorts_abc_start_col + 6, f"Infused\nN={final_status_ABC['Cohort B Infused']}", bold_11_wrap_format
+        )
+
+        worksheet1.merge_range(
+            0, cohorts_abc_start_col + 7, 0, cohorts_abc_start_col + 8, "Cohort C (ALL)", bold_12_format
+        )
+        worksheet1.write(
+            1,
+            cohorts_abc_start_col + 7,
+            f"Eligible\nN={final_status_ABC['Cohort C Enrolled']}",
+            bold_11_wrap_format,
+        )
+        worksheet1.write(
+            1, cohorts_abc_start_col + 8, f"Infused\nN={final_status_ABC['Cohort C Infused']}", bold_11_wrap_format
+        )
+
+        # Section headers for Cohorts ABC
+        abc_end_col = cohorts_abc_start_col + 8
+        worksheet1.merge_range(2, cohorts_abc_start_col, 2, abc_end_col, "Legal Sex", bold_11_format)
+        worksheet1.merge_range(7, cohorts_abc_start_col, 7, abc_end_col, "Age at Consent", bold_11_format)
+        worksheet1.merge_range(11, cohorts_abc_start_col, 11, abc_end_col, "Race", bold_11_format)
+
+        # Now call autofit after all tables are written
+        worksheet1.autofit()
+
+        ## TODO: Enrollment Listing
+        # * WRITING DATA: enrollment_df
+        final_enrollment_df.to_excel(writer, sheet_name="DSMB-Enrollment Listing", index=False, startcol=0)
+        # assign worksheet to variable
+        worksheet2 = writer.sheets["DSMB-Enrollment Listing"]
+
+        # * FORMAT DATA
+        for i in range(0, len(final_enrollment_df)):
+            for j in range(0, len(final_enrollment_df.columns)):
+                worksheet2.write(i + 1, j, final_enrollment_df.iloc[i, j], normal_data_format)
+        # Autofit
+        worksheet2.autofit()
+
+        ## TODO: DSMB-New Infusion Statistics
+        # * WRITING DATA: new_infusion_df
+        final_infusion_statA.to_excel(
+            writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=2, startcol=0
+        )
+        final_infusion_statB.to_excel(
+            writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=6, startcol=0
+        )
+        final_infusion_statC.to_excel(
+            writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=10, startcol=0
+        )
+        final_infusion_statD.to_excel(
+            writer, sheet_name="DSMB-New Infusion Statistics", index=False, startrow=14, startcol=0
+        )
+        # assign worksheet to variable
+        worksheet3 = writer.sheets["DSMB-New Infusion Statistics"]
+
+        # * FORMATING DATA
+        for i in range(0, len(final_infusion_statA)):
+            for j in range(0, len(final_infusion_statA.columns)):
+                worksheet3.write(i + 3, j + 1, final_infusion_statA.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_infusion_statB)):
+            for j in range(0, len(final_infusion_statB.columns)):
+                worksheet3.write(i + 7, j + 1, final_infusion_statB.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_infusion_statC)):
+            for j in range(0, len(final_infusion_statC.columns)):
+                worksheet3.write(i + 11, j + 1, final_infusion_statC.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_infusion_statD)):
+            for j in range(0, len(final_infusion_statD.columns)):
+                worksheet3.write(i + 15, j + 1, final_infusion_statD.iloc[i, j], normal_data_format)
+        # * WRITING HEADER AND FORMATTING
+        stat_order = ["Mean SD", "Median", "Range"]
+
+        worksheet3.merge_range("B1:D1", "Cells Infused", bold_12_wrap_format)
+        worksheet3.merge_range("E1:F1", "Transduction Efficiency", bold_12_wrap_format)
+        worksheet3.write("B2", "Total Cells", bold_12_wrap_format)
+        worksheet3.write("C2", "huCART19-IL18 Cells", bold_12_wrap_format)
+        worksheet3.write("D2", "Met Target Dose", bold_12_wrap_format)
+        worksheet3.write("E2", "%scFv Flow", bold_12_wrap_format)
+        worksheet3.write("F2", "Met Target %scFv", bold_12_wrap_format)
+        # Cohort headers with counts
+        cohort_a_count = infusion_count[0] if len(infusion_count) > 0 else 0
+        cohort_b_count = infusion_count[1] if len(infusion_count) > 1 else 0
+        cohort_c_count = infusion_count[2] if len(infusion_count) > 2 else 0
+        cohort_d_count = infusion_count[3] if len(infusion_count) > 3 else 0
+
+        worksheet3.merge_range("A3:F3", f"Cohort A (N={cohort_a_count})", bold_12_wrap_format)
+        worksheet3.merge_range("A7:F7", f"Cohort B (N={cohort_b_count})", bold_12_wrap_format)
+        worksheet3.merge_range("A11:F11", f"Cohort C (N={cohort_c_count})", bold_12_wrap_format)
+        worksheet3.merge_range("A15:F15", f"Cohort D (N={cohort_d_count})", bold_12_wrap_format)
+
+        # Merge and format "Met Target" data cells
+        if len(final_infusion_statA) > 0:
             worksheet3.merge_range("D4:D6", final_infusion_statA.iloc[0, 2], normal_data_format)
-            worksheet3.merge_range("D8:D10", final_infusion_statB.iloc[0, 2], normal_data_format)
-            worksheet3.merge_range("D12:D14", final_infusion_statC.iloc[0, 2], normal_data_format)
             worksheet3.merge_range("F4:F6", final_infusion_statA.iloc[0, 4], normal_data_format)
+
+        if len(final_infusion_statB) > 0:
+            worksheet3.merge_range("D8:D10", final_infusion_statB.iloc[0, 2], normal_data_format)
             worksheet3.merge_range("F8:F10", final_infusion_statB.iloc[0, 4], normal_data_format)
+
+        if len(final_infusion_statC) > 0:
+            worksheet3.merge_range("D12:D14", final_infusion_statC.iloc[0, 2], normal_data_format)
             worksheet3.merge_range("F12:F14", final_infusion_statC.iloc[0, 4], normal_data_format)
 
-            for i in range(0, len(stat_order)):
-                worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)
-            for i in range(0, len(stat_order)):
-                worksheet3.write(i + 7, 0, stat_order[i], bold_11_format)
-            for i in range(0, len(stat_order)):
-                worksheet3.write(i + 11, 0, stat_order[i], bold_11_format)
+        if len(final_infusion_statD) > 0:
+            worksheet3.merge_range("D16:D18", final_infusion_statD.iloc[0, 2], normal_data_format)
+            worksheet3.merge_range("F16:F18", final_infusion_statD.iloc[0, 4], normal_data_format)
 
-            # * Autofit
-            worksheet3.autofit()
+        # Row labels for all cohorts
+        for i in range(0, len(stat_order)):
+            worksheet3.write(i + 3, 0, stat_order[i], bold_11_format)  # Cohort A
+            worksheet3.write(i + 7, 0, stat_order[i], bold_11_format)  # Cohort B
+            worksheet3.write(i + 11, 0, stat_order[i], bold_11_format)  # Cohort C
+            worksheet3.write(i + 15, 0, stat_order[i], bold_11_format)  # Cohort D
 
-            ## TODO: DSMB-Infusion Listing
-            # * WRITING DATA: infusion_df, infusionR_df
-            final_infusion_df.to_excel(writer, sheet_name="DSMB-Infusion Listing", index=False, startrow=1, startcol=0)
-            final_infusionR_df.to_excel(
-                writer, sheet_name="DSMB-Infusion Listing", index=False, startrow=1, startcol=14
+        # * Autofit
+        worksheet3.autofit()
+
+        ## TODO: DSMB-Infusion Listing
+        # * WRITING DATA: infusion_df, infusionR_df
+        final_infusion_df.to_excel(writer, sheet_name="DSMB-Infusion Listing", index=False, startrow=1, startcol=0)
+        final_infusionR_df.to_excel(writer, sheet_name="DSMB-Infusion Listing", index=False, startrow=1, startcol=14)
+        # assign worksheet to variable
+        worksheet4 = writer.sheets["DSMB-Infusion Listing"]
+        # * FORMATING DATA
+        for i in range(0, len(final_infusion_df)):
+            for j in range(0, len(final_infusion_df.columns)):
+                worksheet4.write(i + 2, j, final_infusion_df.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_infusionR_df)):
+            for j in range(0, len(final_infusionR_df.columns)):
+                worksheet4.write(i + 2, j + 14, final_infusionR_df.iloc[i, j], normal_data_format)
+        # * WRITING HEADER AND FORMATTING
+        worksheet4.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+        worksheet4.merge_range("B1:B2", "Study Day (Primary)", bold_12_wrap_format)
+        worksheet4.merge_range("C1:C2", "Cohort Assignment", bold_12_wrap_format)
+        worksheet4.merge_range("D1:D2", "Dose Level Assignment", bold_12_wrap_format)
+        worksheet4.merge_range("E1:E2", "Lymphodepleting Chemotherapy Regimen", bold_12_wrap_format)
+        worksheet4.merge_range("F1:F2", "Date of huCART19-IL18 Infusion", bold_12_wrap_format)
+        worksheet4.merge_range("G1:J1", "Cells Infused", bold_12_wrap_format)
+        worksheet4.merge_range("K1:L1", "Transduction Efficiency", bold_12_wrap_format)
+
+        worksheet4.merge_range("O1:O2", "Subject ID", bold_12_wrap_format)
+        worksheet4.merge_range("P1:P2", "Study Day (Retreatment)", bold_12_wrap_format)
+        worksheet4.merge_range("Q1:Q2", "Cohort Assignment", bold_12_wrap_format)
+        worksheet4.merge_range("R1:R2", "Lymphodepleting Chemotherapy Regimen", bold_12_wrap_format)
+        worksheet4.merge_range("S1:S2", "Date of huCART19-IL18 Retreatment Infusion", bold_12_wrap_format)
+        worksheet4.merge_range("T1:U1", "Cells Infused", bold_12_wrap_format)
+        worksheet4.merge_range("V1:W1", "Transduction Efficiency", bold_12_wrap_format)
+
+        # Autofit
+        worksheet4.autofit()
+
+        ## TODO: DSMB-Response Stats
+        # * WRITING DATA
+        # Safety Data
+        final_safety_df.to_excel(writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=2, startcol=1)
+        # Response Data Cohort A
+        if final_subject_A_prim_count > 0:
+            final_response_stat_A_BOR_PET.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=10, startcol=1
             )
-            # assign worksheet to variable
-            worksheet4 = writer.sheets["DSMB-Infusion Listing"]
+            final_response_stat_A_BOR_CT.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=10, startcol=3
+            )
+            final_response_stat_A_ORR_PET.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=17, startcol=1
+            )
+            final_response_stat_A_ORR_CT.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=17, startcol=3
+            )
+        # Resposne Data Cohort B
+        if final_subject_B_prim_count > 0:
+            final_response_stat_B_BOR_OV.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=10, startcol=5
+            )
+            final_response_stat_B_BOR_BM.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=10, startcol=7
+            )
+            final_response_stat_B_ORR_OV.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=17, startcol=5
+            )
+            final_response_stat_B_ORR_BM.to_excel(
+                writer, sheet_name="Cohorts ABC Response Stats", index=False, startrow=17, startcol=7
+            )
+        # Resposne Data Cohort C
+
+        # assign worksheet to variable
+        worksheet5 = writer.sheets["Cohorts ABC Response Stats"]
+
+        # * FORMATING DATA
+        # Safety Data
+        for i in range(0, len(final_safety_df)):
+            for j in range(0, len(final_safety_df.columns)):
+                worksheet5.write(i + 3, j + 1, final_safety_df.iloc[i, j], normal_data_format)
+        # Response Data Cohort A
+        for i in range(0, len(final_response_stat_A_BOR_PET)):
+            for j in range(0, len(final_response_stat_A_BOR_PET.columns)):
+                worksheet5.write(i + 11, j + 1, final_response_stat_A_BOR_PET.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_response_stat_A_BOR_CT)):
+            for j in range(0, len(final_response_stat_A_BOR_CT.columns)):
+                worksheet5.write(i + 11, j + 3, final_response_stat_A_BOR_CT.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_response_stat_A_ORR_PET)):
+            for j in range(0, len(final_response_stat_A_ORR_PET.columns)):
+                worksheet5.write(i + 18, j + 1, final_response_stat_A_ORR_PET.iloc[i, j], normal_data_format)
+        for i in range(0, len(final_response_stat_A_ORR_CT)):
+            for j in range(0, len(final_response_stat_A_ORR_CT.columns)):
+                worksheet5.write(i + 18, j + 3, final_response_stat_A_ORR_CT.iloc[i, j], normal_data_format)
+        if final_subject_B_prim_count == 0:
+            for i in range(0, 6):
+                worksheet5.write(i + 11, 5, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 11, 7, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 18, 5, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 18, 7, "0 (0%)", normal_data_format)
+        elif final_subject_B_prim_count > 0:
+            # Response Data Cohort B
+            for i in range(0, len(final_response_stat_B_BOR_OV)):
+                for j in range(0, len(final_response_stat_B_BOR_OV.columns)):
+                    worksheet5.write(i + 11, j + 5, final_response_stat_B_BOR_OV.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_B_BOR_BM)):
+                for j in range(0, len(final_response_stat_B_BOR_BM.columns)):
+                    worksheet5.write(i + 11, j + 7, final_response_stat_B_BOR_BM.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_B_ORR_OV)):
+                for j in range(0, len(final_response_stat_B_ORR_OV.columns)):
+                    worksheet5.write(i + 18, j + 5, final_response_stat_B_ORR_OV.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_B_ORR_BM)):
+                for j in range(0, len(final_response_stat_B_ORR_BM.columns)):
+                    worksheet5.write(i + 18, j + 7, final_response_stat_B_ORR_BM.iloc[i, j], normal_data_format)
+        if final_subject_C_prim_count == 0:
+            for i in range(0, 6):
+                worksheet5.write(i + 11, 9, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 11, 11, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 18, 9, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 18, 11, "0 (0%)", normal_data_format)
+        elif final_subject_C_prim_count > 0:
+            # Response Data Cohort C
+            for i in range(0, len(final_response_stat_C_BOR_OV)):
+                for j in range(0, len(final_response_stat_C_BOR_OV.columns)):
+                    worksheet5.write(i + 11, j + 9, final_response_stat_C_BOR_OV.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_C_BOR_ED)):
+                for j in range(0, len(final_response_stat_C_BOR_ED.columns)):
+                    worksheet5.write(i + 11, j + 11, final_response_stat_C_BOR_ED.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_C_ORR_OV)):
+                for j in range(0, len(final_response_stat_C_ORR_OV.columns)):
+                    worksheet5.write(i + 18, j + 9, final_response_stat_C_ORR_OV.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_C_ORR_ED)):
+                for j in range(0, len(final_response_stat_C_ORR_ED.columns)):
+                    worksheet5.write(i + 18, j + 11, final_response_stat_C_ORR_ED.iloc[i, j], normal_data_format)
+        if final_subject_BRT_prim_count == 0:
+            for i in range(0, 6):
+                worksheet5.write(i + 28, 1, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 28, 3, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 35, 1, "0 (0%)", normal_data_format)
+                worksheet5.write(i + 35, 3, "0 (0%)", normal_data_format)
+        elif final_subject_BRT_prim_count > 0:
+            # Response Data Cohort B- RT
+            for i in range(0, len(final_response_stat_BRT_BOR_PET)):
+                for j in range(0, len(final_response_stat_BRT_BOR_PET.columns)):
+                    worksheet5.write(i + 28, j + 1, final_response_stat_BRT_BOR_PET.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_BRT_BOR_CT)):
+                for j in range(0, len(final_response_stat_BRT_BOR_CT.columns)):
+                    worksheet5.write(i + 28, j + 3, final_response_stat_BRT_BOR_CT.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_BRT_ORR_PET)):
+                for j in range(0, len(final_response_stat_BRT_ORR_PET.columns)):
+                    worksheet5.write(i + 35, j + 1, final_response_stat_BRT_ORR_PET.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_response_stat_BRT_ORR_CT)):
+                for j in range(0, len(final_response_stat_BRT_ORR_CT.columns)):
+                    worksheet5.write(i + 35, j + 3, final_response_stat_BRT_ORR_CT.iloc[i, j], normal_data_format)
+        # * WRITING HEADER AND FORMATTING
+        # Safety Headers
+        # number of subject of final_safety_total_df
+        safety_abc_subject_count = len(abc_infused_df["Subject"].unique())
+        worksheet5.merge_range(
+            "B1:E1",
+            "Safety Statistics - Cohorts A, B, C (N=" + str(safety_abc_subject_count) + ")",
+            bold_12_wrap_format,
+        )
+        worksheet5.merge_range("B2:C2", "Adverse Events", bold_11_format)
+        worksheet5.merge_range("D2:E2", "Serious Adverse Events ", bold_11_format)
+        worksheet5.write("B3", "Yes", bold_11_format)
+        worksheet5.write("C3", "No", bold_11_format)
+        worksheet5.write("D3", "Yes", bold_11_format)
+        worksheet5.write("E3", "No", bold_11_format)
+        worksheet5.write("A4", "All Cohorts", bold_11_format)
+        worksheet5.write("A5", "Cohort A", bold_11_format)
+        worksheet5.write("A6", "Cohort B", bold_11_format)
+        worksheet5.write("A7", "Cohort C", bold_11_format)
+
+        # Response Headers
+        worksheet5.merge_range(
+            "A9:D9", "NHL Subject Response (N=" + str(final_subject_A_prim_count) + ")", bold_12_format
+        )
+        worksheet5.merge_range(
+            "E9:H9", "CLL Subject Response (N=" + str(final_subject_B_prim_count) + ")", bold_12_format
+        )
+        worksheet5.merge_range("I9:L9", "ALL Subject Response", bold_12_format)
+        worksheet5.merge_range(
+            "A26:D26",
+            "Richter's Transformation Subject Response (N=" + str(final_subject_BRT_prim_count) + ")",
+            bold_12_format,
+        )
+        worksheet5.merge_range("A10:B10", "PET-Based Response", bold_11_format)
+        worksheet5.merge_range("C10:D10", "CT-Based Response", bold_11_format)
+        worksheet5.merge_range("E10:F10", "Overall Response", bold_11_format)
+        worksheet5.merge_range("G10:H10", "Bone Marrow Response", bold_11_format)
+        if final_subject_C_prim_count > 0:
+            worksheet5.merge_range(
+                "I10:J10", "Overall Response (N=" + str(final_subject_C_prim_OR_count) + ")", bold_11_format
+            )
+            worksheet5.merge_range(
+                "K10:L10",
+                "Extramedullary Disease without Bone Marrow Involvement (N=" + str(final_subject_C_prim_ED_count) + ")",
+                bold_11_format,
+            )
+        else:
+            worksheet5.merge_range("I10:J10", "Overall Response (N=0)", bold_11_format)
+            worksheet5.merge_range(
+                "K10:L10", "Extramedullary Disease without Bone Marrow Involvement (N=0)", bold_11_format
+            )
+        worksheet5.merge_range("A27:B27", "PET-Based Response", bold_11_format)
+        worksheet5.merge_range("C27:D27", "CT-Based Response", bold_11_format)
+        worksheet5.merge_range("A11:D11", "Best Overall Response (BOR)", bold_11_format)
+        worksheet5.merge_range("E11:H11", "Best Overall Response (BOR)", bold_11_format)
+        worksheet5.merge_range("I11:L11", "Best Overall Response (BOR)", bold_11_format)
+        worksheet5.merge_range("A28:D28", "Best Overall Response (BOR)", bold_11_format)
+        worksheet5.merge_range("A18:D18", "Overall Response Rate (ORR) at Month 3", bold_11_format)
+        worksheet5.merge_range("E18:H18", "Overall Response Rate (ORR) at Month 3", bold_11_format)
+        worksheet5.merge_range("I18:L18", "Overall Response Rate (ORR) at Day 28", bold_11_format)
+        worksheet5.merge_range("A35:D35", "Overall Response Rate (ORR) at Month 3", bold_11_format)
+        # Listing Response Criteria
+        response_A_PET = [
+            "Complete Metabolic Response (CMR)",
+            "Partial Metabolic Response (PMR)",
+            "No Metabolic Response (NMR)",
+            "Indeterminate Response (IR)",
+            "Progressive Metabolic Disease (PMD)",
+            "Not Reported",
+        ]
+        response_A_CT = [
+            "Complete Radiologic Response (CR)",
+            "Partial Response (PR)",
+            "Stable Disease (SD)",
+            "Indeterminate Response (IR)",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+        resposne_B_OV = [
+            "Complete Remission (CR)",
+            "Complete Remission with Incomplete Marrow Recovery (CRi)",
+            "Partial Remission (PR)",
+            "Stable Disease (SD)",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+        response_B_BM = [
+            "Complete Remission (CR)",
+            "Partial Remission (PR)",
+            "Progressive Disease (PD)",
+            "Stable Disease (SD)",
+            "Not Reported",
+        ]
+        response_C_OV = [
+            "Complete Remission (CR)",
+            "Complete Remission with Incomplete Blood Count Recovery (CRi)",
+            "Complete Remission with Residual Mediastinal Disease (CRu)",
+            "Treatment Failure (TF)",
+            "Relapsed Disease (RD)",
+            "Not Reported",
+        ]
+        response_C_ED = [
+            "Complete Remission (CR)",
+            "Partial Remission (PR)",
+            "Stable Disease (SD)",
+            "Indeterminate Response",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+        for i in range(0, len(response_A_PET)):
+            worksheet5.write(i + 11, 0, response_A_PET[i], bold_11_format)
+            worksheet5.write(i + 18, 0, response_A_PET[i], bold_11_format)
+            worksheet5.write(i + 28, 0, response_A_PET[i], bold_11_format)
+            worksheet5.write(i + 35, 0, response_A_PET[i], bold_11_format)
+        for i in range(0, len(response_A_CT)):
+            worksheet5.write(i + 11, 2, response_A_CT[i], bold_11_format)
+            worksheet5.write(i + 18, 2, response_A_CT[i], bold_11_format)
+            worksheet5.write(i + 28, 2, response_A_CT[i], bold_11_format)
+            worksheet5.write(i + 35, 2, response_A_CT[i], bold_11_format)
+        for i in range(0, len(resposne_B_OV)):
+            worksheet5.write(i + 11, 4, resposne_B_OV[i], bold_11_format)
+            worksheet5.write(i + 18, 4, resposne_B_OV[i], bold_11_format)
+        for i in range(0, len(response_B_BM)):
+            worksheet5.write(i + 11, 6, response_B_BM[i], bold_11_format)
+            worksheet5.write(i + 18, 6, response_B_BM[i], bold_11_format)
+        worksheet5.write("G17", "black cell", black_cell)
+        worksheet5.write("H17", "black cell", black_cell)
+        worksheet5.write("G24", "black cell", black_cell)
+        worksheet5.write("H24", "black cell", black_cell)
+        for i in range(0, len(response_C_OV)):
+            worksheet5.write(i + 11, 8, response_C_OV[i], bold_11_format)
+            worksheet5.write(i + 18, 8, response_C_OV[i], bold_11_format)
+        for i in range(0, len(response_C_ED)):
+            worksheet5.write(i + 11, 10, response_C_ED[i], bold_11_format)
+            worksheet5.write(i + 18, 10, response_C_ED[i], bold_11_format)
+
+        worksheet5.autofit()
+
+        ## NEW: COHORT D RESPONSE STATS WORKSHEET
+        # Create worksheet for Cohort D Response Stats
+
+        # Write Safety Data for Cohort D
+        final_safety_D_df.to_excel(writer, sheet_name="Cohort D Response Stats", index=False, startrow=2, startcol=1)
+
+        # Write NHL Response Data for Cohort D
+        if final_subject_D_NHL_count > 0:
+            final_response_stat_D_NHL_BOR_PET.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=7, startcol=1
+            )
+            final_response_stat_D_NHL_BOR_CT.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=7, startcol=3
+            )
+            final_response_stat_D_NHL_ORR_PET.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=14, startcol=1
+            )
+            final_response_stat_D_NHL_ORR_CT.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=14, startcol=3
+            )
+
+        # Write ALL Response Data for Cohort D (side by side with NHL)
+        if final_subject_D_ALL_OR_count > 0 or final_subject_D_ALL_ED_count > 0:
+            final_response_stat_D_ALL_BOR_OV.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=7, startcol=6
+            )
+            final_response_stat_D_ALL_BOR_ED.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=7, startcol=8
+            )
+            final_response_stat_D_ALL_ORR_OV.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=14, startcol=6
+            )
+            final_response_stat_D_ALL_ORR_ED.to_excel(
+                writer, sheet_name="Cohort D Response Stats", index=False, startrow=14, startcol=8
+            )
+
+        # Get worksheet
+        worksheet_d_stats = writer.sheets["Cohort D Response Stats"]
+
+        # FORMAT DATA
+        # Safety Data
+        for i in range(0, len(final_safety_D_df)):
+            for j in range(0, len(final_safety_D_df.columns)):
+                worksheet_d_stats.write(i + 3, j + 1, final_safety_D_df.iloc[i, j], normal_data_format)
+
+        # NHL Response Data
+        if final_subject_D_NHL_count > 0:
+            for i in range(0, len(final_response_stat_D_NHL_BOR_PET)):
+                for j in range(0, len(final_response_stat_D_NHL_BOR_PET.columns)):
+                    worksheet_d_stats.write(
+                        i + 8, j + 1, final_response_stat_D_NHL_BOR_PET.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_NHL_BOR_CT)):
+                for j in range(0, len(final_response_stat_D_NHL_BOR_CT.columns)):
+                    worksheet_d_stats.write(
+                        i + 8, j + 3, final_response_stat_D_NHL_BOR_CT.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_NHL_ORR_PET)):
+                for j in range(0, len(final_response_stat_D_NHL_ORR_PET.columns)):
+                    worksheet_d_stats.write(
+                        i + 15, j + 1, final_response_stat_D_NHL_ORR_PET.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_NHL_ORR_CT)):
+                for j in range(0, len(final_response_stat_D_NHL_ORR_CT.columns)):
+                    worksheet_d_stats.write(
+                        i + 15, j + 3, final_response_stat_D_NHL_ORR_CT.iloc[i, j], normal_data_format
+                    )
+        else:
+            # Write zeros if no data
+            for i in range(0, 6):
+                worksheet_d_stats.write(i + 8, 1, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 8, 3, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 15, 1, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 15, 3, "0 (0%)", normal_data_format)
+
+        # ALL Response Data
+        if final_subject_D_ALL_OR_count > 0 or final_subject_D_ALL_ED_count > 0:
+            for i in range(0, len(final_response_stat_D_ALL_BOR_OV)):
+                for j in range(0, len(final_response_stat_D_ALL_BOR_OV.columns)):
+                    worksheet_d_stats.write(
+                        i + 8, j + 6, final_response_stat_D_ALL_BOR_OV.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_ALL_BOR_ED)):
+                for j in range(0, len(final_response_stat_D_ALL_BOR_ED.columns)):
+                    worksheet_d_stats.write(
+                        i + 8, j + 8, final_response_stat_D_ALL_BOR_ED.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_ALL_ORR_OV)):
+                for j in range(0, len(final_response_stat_D_ALL_ORR_OV.columns)):
+                    worksheet_d_stats.write(
+                        i + 15, j + 6, final_response_stat_D_ALL_ORR_OV.iloc[i, j], normal_data_format
+                    )
+            for i in range(0, len(final_response_stat_D_ALL_ORR_ED)):
+                for j in range(0, len(final_response_stat_D_ALL_ORR_ED.columns)):
+                    worksheet_d_stats.write(
+                        i + 15, j + 8, final_response_stat_D_ALL_ORR_ED.iloc[i, j], normal_data_format
+                    )
+        else:
+            # Write zeros if no data
+            for i in range(0, 6):
+                worksheet_d_stats.write(i + 8, 6, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 8, 8, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 15, 6, "0 (0%)", normal_data_format)
+                worksheet_d_stats.write(i + 15, 8, "0 (0%)", normal_data_format)
+
+        # WRITE HEADERS AND FORMATTING
+        # Safety Headers for Cohort D
+        safety_d_subject_count = len(d_infused_df["Subject"].unique())
+        worksheet_d_stats.merge_range(
+            "B1:E1", f"Safety Statistics - Cohort D (N={safety_d_subject_count})", bold_12_wrap_format
+        )
+        worksheet_d_stats.merge_range("B2:C2", "Adverse Events", bold_11_format)
+        worksheet_d_stats.merge_range("D2:E2", "Serious Adverse Events", bold_11_format)
+        worksheet_d_stats.write("B3", "Yes", bold_11_format)
+        worksheet_d_stats.write("C3", "No", bold_11_format)
+        worksheet_d_stats.write("D3", "Yes", bold_11_format)
+        worksheet_d_stats.write("E3", "No", bold_11_format)
+        worksheet_d_stats.write("A4", "Cohort D", bold_11_format)
+
+        # Response Headers
+        worksheet_d_stats.merge_range("A6:D6", f"NHL Subject Response (N={final_subject_D_NHL_count})", bold_12_format)
+        worksheet_d_stats.merge_range("F6:I6", f"ALL Subject Response", bold_12_format)
+
+        # NHL Headers
+        worksheet_d_stats.merge_range("A7:B7", "PET-Based Response", bold_11_format)
+        worksheet_d_stats.merge_range("C7:D7", "CT-Based Response", bold_11_format)
+        worksheet_d_stats.merge_range("A8:D8", "Best Overall Response (BOR)", bold_11_format)
+        worksheet_d_stats.merge_range("A15:D15", "Overall Response Rate (ORR) at Month 3", bold_11_format)
+
+        # ALL Headers
+        worksheet_d_stats.merge_range("F7:G7", f"Overall Response (N={final_subject_D_ALL_OR_count})", bold_11_format)
+        worksheet_d_stats.merge_range(
+            "H7:I7",
+            f"Extramedullary Disease without Bone Marrow Involvement (N={final_subject_D_ALL_ED_count})",
+            bold_11_format,
+        )
+        worksheet_d_stats.merge_range("F8:I8", "Best Overall Response (BOR)", bold_11_format)
+        worksheet_d_stats.merge_range("F15:I15", "Overall Response Rate (ORR) at Day 28", bold_11_format)
+
+        # Response criteria labels for NHL
+        response_D_NHL_PET = [
+            "Complete Metabolic Response (CMR)",
+            "Partial Metabolic Response (PMR)",
+            "No Metabolic Response (NMR)",
+            "Indeterminate Response (IR)",
+            "Progressive Metabolic Disease (PMD)",
+            "Not Reported",
+        ]
+        response_D_NHL_CT = [
+            "Complete Radiologic Response (CR)",
+            "Partial Response (PR)",
+            "Stable Disease (SD)",
+            "Indeterminate Response (IR)",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+
+        # Response criteria labels for ALL
+        response_D_ALL_OV = [
+            "Complete Remission (CR)",
+            "Complete Remission with Incomplete Blood Count Recovery (CRi)",
+            "Complete Remission with Residual Mediastinal Disease (CRu)",
+            "Treatment Failure (TF)",
+            "Relapsed Disease (RD)",
+            "Not Reported",
+        ]
+        response_D_ALL_ED = [
+            "Complete Remission (CR)",
+            "Partial Remission (PR)",
+            "Stable Disease (SD)",
+            "Indeterminate Response",
+            "Progressive Disease (PD)",
+            "Not Reported",
+        ]
+
+        # Write NHL labels
+        for i in range(0, len(response_D_NHL_PET)):
+            worksheet_d_stats.write(i + 8, 0, response_D_NHL_PET[i], bold_11_format)
+            worksheet_d_stats.write(i + 15, 0, response_D_NHL_PET[i], bold_11_format)
+        for i in range(0, len(response_D_NHL_CT)):
+            worksheet_d_stats.write(i + 8, 2, response_D_NHL_CT[i], bold_11_format)
+            worksheet_d_stats.write(i + 15, 2, response_D_NHL_CT[i], bold_11_format)
+
+        # Write ALL labels
+        for i in range(0, len(response_D_ALL_OV)):
+            worksheet_d_stats.write(i + 8, 5, response_D_ALL_OV[i], bold_11_format)
+            worksheet_d_stats.write(i + 15, 5, response_D_ALL_OV[i], bold_11_format)
+        for i in range(0, len(response_D_ALL_ED)):
+            worksheet_d_stats.write(i + 8, 7, response_D_ALL_ED[i], bold_11_format)
+            worksheet_d_stats.write(i + 15, 7, response_D_ALL_ED[i], bold_11_format)
+
+        # Autofit the worksheet
+        worksheet_d_stats.autofit()
+
+        ## TODO: Response Listing NHL
+        # * WRITING DATA
+        if final_subject_A_prim_count > 0:
+            final_responseA_primary_df.to_excel(
+                writer, sheet_name="Response Listing NHL", index=False, header=False, startrow=3, startcol=0
+            )
+        if final_subject_A_retx_count > 0:
+            final_responseA_retreatment_df.to_excel(
+                writer, sheet_name="Response Listing NHL", index=False, header=False, startrow=3, startcol=15
+            )
+        # assigning the worksheet
+        worksheet6 = writer.sheets["Response Listing NHL"]
+        # * FORMATING DATA
+        if final_subject_A_prim_count > 0:
+            for i in range(0, len(final_responseA_primary_df)):
+                for j in range(0, len(final_responseA_primary_df.columns)):
+                    worksheet6.write(i + 3, j, final_responseA_primary_df.iloc[i, j], normal_data_format)
+        if final_subject_A_retx_count > 0:
+            for i in range(0, len(final_responseA_retreatment_df)):
+                for j in range(0, len(final_responseA_retreatment_df.columns)):
+                    worksheet6.write(i + 3, j + 15, final_responseA_retreatment_df.iloc[i, j], normal_data_format)
+        # * WRITING HEADER AND FORMATTING
+        if final_subject_A_prim_count > 0:
+            worksheet6.merge_range("A1:M1", "Cohort A (NHL)- Primary Follow-up", bold_12_format)
+            worksheet6.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet6.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet6.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet6.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
+            worksheet6.write("B3", "PET-Based Response", bold_11_format)
+            worksheet6.write("C3", "CT-Based Response", bold_11_format)
+            worksheet6.write("D3", "Study Timepoint", bold_11_format)
+            worksheet6.write("E3", "PET-Based Response", bold_11_format)
+            worksheet6.write("F3", "Study Timepoint", bold_11_format)
+            worksheet6.write("G3", "CT-Based Response", bold_11_format)
+            worksheet6.write("H3", "Study Timepoint", bold_11_format)
+            worksheet6.write("I3", "PET-Based ORR", bold_11_format)
+            worksheet6.write("J3", "CT-Based ORR", bold_11_format)
+            worksheet6.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet6.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet6.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+        if final_subject_A_retx_count > 0:
+            worksheet6.merge_range("P1:AB1", "Cohort A (NHL)- Retreatment Follow-up", bold_12_format)
+            worksheet6.merge_range("P2:P3", "Subject ID", bold_11_format)
+            worksheet6.merge_range("Q2:S2", "Current Response", bold_11_format)
+            worksheet6.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+            worksheet6.merge_range("X2:Y2", "Overall Response/Month 3-R", bold_11_format)
+            worksheet6.write("Q3", "PET-Based Response", bold_11_format)
+            worksheet6.write("R3", "CT-Based Response", bold_11_format)
+            worksheet6.write("S3", "Study Timepoint", bold_11_format)
+            worksheet6.write("T3", "PET-Based Response", bold_11_format)
+            worksheet6.write("U3", "Study Timepoint", bold_11_format)
+            worksheet6.write("V3", "CT-Based Response", bold_11_format)
+            worksheet6.write("W3", "Study Timepoint", bold_11_format)
+            worksheet6.write("X3", "PET-Based ORR", bold_11_format)
+            worksheet6.write("Y3", "CT-Based ORR", bold_11_format)
+            worksheet6.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet6.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet6.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
+        # Autofit
+        worksheet6.autofit()
+
+        ## TODO:
+        # * WRITING DATA
+        if final_subject_B_prim_count > 0:
+            final_responseB_primary_df.to_excel(
+                writer, sheet_name="Response Listing CLL", index=False, startrow=2, startcol=0
+            )
+            worksheet7 = writer.sheets["Response Listing CLL"]
+            final_responseB_primary_df = final_responseB_primary_df.replace([np.nan, np.inf, -np.inf], "")
             # * FORMATING DATA
-            for i in range(0, len(final_infusion_df)):
-                for j in range(0, len(final_infusion_df.columns)):
-                    worksheet4.write(i + 2, j, final_infusion_df.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_infusionR_df)):
-                for j in range(0, len(final_infusionR_df.columns)):
-                    worksheet4.write(i + 2, j + 14, final_infusionR_df.iloc[i, j], normal_data_format)
+            for i in range(0, len(final_responseB_primary_df)):
+                for j in range(0, len(final_responseB_primary_df.columns)):
+                    worksheet7.write(i + 3, j, final_responseB_primary_df.iloc[i, j], normal_data_format)
+
             # * WRITING HEADER AND FORMATTING
-            worksheet4.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
-            worksheet4.merge_range("B1:B2", "Study Day (Primary)", bold_12_wrap_format)
-            worksheet4.merge_range("C1:C2", "Cohort Assignment", bold_12_wrap_format)
-            worksheet4.merge_range("D1:D2", "Dose Level Assignment", bold_12_wrap_format)
-            worksheet4.merge_range("E1:E2", "Lymphodepleting Chemotherapy Regimen", bold_12_wrap_format)
-            worksheet4.merge_range("F1:F2", "Date of huCART19-IL18 Infusion", bold_12_wrap_format)
-            worksheet4.merge_range("G1:J1", "Cells Infused", bold_12_wrap_format)
-            worksheet4.merge_range("K1:L1", "Transduction Efficiency", bold_12_wrap_format)
+            worksheet7.merge_range("A1:M1", "Cohort B (CLL) - Primary Follow-up", bold_12_format)
+            worksheet7.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet7.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet7.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet7.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
+            worksheet7.write("B3", "Overall Response", bold_11_format)
+            worksheet7.write("C3", "Bone Marrow Response", bold_11_format)
+            worksheet7.write("D3", "Study Timepoint", bold_11_format)
+            worksheet7.write("E3", "Overall Response", bold_11_format)
+            worksheet7.write("F3", "Study Timepoint", bold_11_format)
+            worksheet7.write("G3", "Bone Marrow Response", bold_11_format)
+            worksheet7.write("H3", "Study Timepoint", bold_11_format)
+            worksheet7.write("I3", "Overall Response", bold_11_format)
+            worksheet7.write("J3", "Bone Marrow Response", bold_11_format)
+            worksheet7.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet7.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet7.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
 
-            worksheet4.merge_range("O1:O2", "Subject ID", bold_12_wrap_format)
-            worksheet4.merge_range("P1:P2", "Study Day (Retreatment)", bold_12_wrap_format)
-            worksheet4.merge_range("Q1:Q2", "Cohort Assignment", bold_12_wrap_format)
-            worksheet4.merge_range("R1:R2", "Lymphodepleting Chemotherapy Regimen", bold_12_wrap_format)
-            worksheet4.merge_range("S1:S2", "Date of huCART19-IL18 Retreatment Infusion", bold_12_wrap_format)
-            worksheet4.merge_range("T1:U1", "Cells Infused", bold_12_wrap_format)
-            worksheet4.merge_range("V1:W1", "Transduction Efficiency", bold_12_wrap_format)
-
-            # Autofit
-            worksheet4.autofit()
-
-            ## TODO: DSMB-Response Stats
-            # * WRITING DATA
-            # Safety Data
-            final_safety_df.to_excel(writer, sheet_name="DSMB-Response Stats", index=False, startrow=2, startcol=1)
-            # Response Data Cohort A
-            if final_subject_A_prim_count > 0:
-                final_response_stat_A_BOR_PET.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=10, startcol=1
-                )
-                final_response_stat_A_BOR_CT.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=10, startcol=3
-                )
-                final_response_stat_A_ORR_PET.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=17, startcol=1
-                )
-                final_response_stat_A_ORR_CT.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=17, startcol=3
-                )
-            # Resposne Data Cohort B
-            if final_subject_B_prim_count > 0:
-                final_response_stat_B_BOR_OV.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=10, startcol=5
-                )
-                final_response_stat_B_BOR_BM.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=10, startcol=7
-                )
-                final_response_stat_B_ORR_OV.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=17, startcol=5
-                )
-                final_response_stat_B_ORR_BM.to_excel(
-                    writer, sheet_name="DSMB-Response Stats", index=False, startrow=17, startcol=7
-                )
-            # Resposne Data Cohort C
-
-            # assign worksheet to variable
-            worksheet5 = writer.sheets["DSMB-Response Stats"]
-
-            # * FORMATING DATA
-            # Safety Data
-            for i in range(0, len(final_safety_df)):
-                for j in range(0, len(final_safety_df.columns)):
-                    worksheet5.write(i + 3, j + 1, final_safety_df.iloc[i, j], normal_data_format)
-            # Response Data Cohort A
-            for i in range(0, len(final_response_stat_A_BOR_PET)):
-                for j in range(0, len(final_response_stat_A_BOR_PET.columns)):
-                    worksheet5.write(i + 11, j + 1, final_response_stat_A_BOR_PET.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_response_stat_A_BOR_CT)):
-                for j in range(0, len(final_response_stat_A_BOR_CT.columns)):
-                    worksheet5.write(i + 11, j + 3, final_response_stat_A_BOR_CT.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_response_stat_A_ORR_PET)):
-                for j in range(0, len(final_response_stat_A_ORR_PET.columns)):
-                    worksheet5.write(i + 18, j + 1, final_response_stat_A_ORR_PET.iloc[i, j], normal_data_format)
-            for i in range(0, len(final_response_stat_A_ORR_CT)):
-                for j in range(0, len(final_response_stat_A_ORR_CT.columns)):
-                    worksheet5.write(i + 18, j + 3, final_response_stat_A_ORR_CT.iloc[i, j], normal_data_format)
-            if final_subject_B_prim_count == 0:
-                for i in range(0, 6):
-                    worksheet5.write(i + 11, 5, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 11, 7, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 18, 5, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 18, 7, "0 (0%)", normal_data_format)
-            elif final_subject_B_prim_count > 0:
-                # Response Data Cohort B
-                for i in range(0, len(final_response_stat_B_BOR_OV)):
-                    for j in range(0, len(final_response_stat_B_BOR_OV.columns)):
-                        worksheet5.write(i + 11, j + 5, final_response_stat_B_BOR_OV.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_B_BOR_BM)):
-                    for j in range(0, len(final_response_stat_B_BOR_BM.columns)):
-                        worksheet5.write(i + 11, j + 7, final_response_stat_B_BOR_BM.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_B_ORR_OV)):
-                    for j in range(0, len(final_response_stat_B_ORR_OV.columns)):
-                        worksheet5.write(i + 18, j + 5, final_response_stat_B_ORR_OV.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_B_ORR_BM)):
-                    for j in range(0, len(final_response_stat_B_ORR_BM.columns)):
-                        worksheet5.write(i + 18, j + 7, final_response_stat_B_ORR_BM.iloc[i, j], normal_data_format)
-            if final_subject_C_prim_count == 0:
-                for i in range(0, 6):
-                    worksheet5.write(i + 11, 9, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 11, 11, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 18, 9, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 18, 11, "0 (0%)", normal_data_format)
-            elif final_subject_C_prim_count > 0:
-                # Response Data Cohort C
-                for i in range(0, len(final_response_stat_C_BOR_OV)):
-                    for j in range(0, len(final_response_stat_C_BOR_OV.columns)):
-                        worksheet5.write(i + 11, j + 9, final_response_stat_C_BOR_OV.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_C_BOR_ED)):
-                    for j in range(0, len(final_response_stat_C_BOR_ED.columns)):
-                        worksheet5.write(i + 11, j + 11, final_response_stat_C_BOR_ED.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_C_ORR_OV)):
-                    for j in range(0, len(final_response_stat_C_ORR_OV.columns)):
-                        worksheet5.write(i + 18, j + 9, final_response_stat_C_ORR_OV.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_C_ORR_ED)):
-                    for j in range(0, len(final_response_stat_C_ORR_ED.columns)):
-                        worksheet5.write(i + 18, j + 11, final_response_stat_C_ORR_ED.iloc[i, j], normal_data_format)
-            if final_subject_BRT_prim_count == 0:
-                for i in range(0, 6):
-                    worksheet5.write(i + 28, 1, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 28, 3, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 35, 1, "0 (0%)", normal_data_format)
-                    worksheet5.write(i + 35, 3, "0 (0%)", normal_data_format)
-            elif final_subject_BRT_prim_count > 0:
-                # Response Data Cohort B- RT
-                for i in range(0, len(final_response_stat_BRT_BOR_PET)):
-                    for j in range(0, len(final_response_stat_BRT_BOR_PET.columns)):
-                        worksheet5.write(i + 28, j + 1, final_response_stat_BRT_BOR_PET.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_BRT_BOR_CT)):
-                    for j in range(0, len(final_response_stat_BRT_BOR_CT.columns)):
-                        worksheet5.write(i + 28, j + 3, final_response_stat_BRT_BOR_CT.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_BRT_ORR_PET)):
-                    for j in range(0, len(final_response_stat_BRT_ORR_PET.columns)):
-                        worksheet5.write(i + 35, j + 1, final_response_stat_BRT_ORR_PET.iloc[i, j], normal_data_format)
-                for i in range(0, len(final_response_stat_BRT_ORR_CT)):
-                    for j in range(0, len(final_response_stat_BRT_ORR_CT.columns)):
-                        worksheet5.write(i + 35, j + 3, final_response_stat_BRT_ORR_CT.iloc[i, j], normal_data_format)
-            # * WRITING HEADER AND FORMATTING
-            # Safety Headers
-            # number of subject of final_safety_total_df
-            safety_total_df_subject_count = len(final_infusion_df["Subject"].unique())
-            worksheet5.merge_range(
-                "B1:E1", "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")", bold_12_wrap_format
-            )
-            worksheet5.merge_range("B2:C2", "Adverse Events", bold_11_format)
-            worksheet5.merge_range("D2:E2", "Serious Adverse Events ", bold_11_format)
-            worksheet5.write("B3", "Yes", bold_11_format)
-            worksheet5.write("C3", "No", bold_11_format)
-            worksheet5.write("D3", "Yes", bold_11_format)
-            worksheet5.write("E3", "No", bold_11_format)
-            worksheet5.write("A4", "All Cohorts", bold_11_format)
-            worksheet5.write("A5", "Cohort A", bold_11_format)
-            worksheet5.write("A6", "Cohort B", bold_11_format)
-            worksheet5.write("A7", "Cohort C", bold_11_format)
-
-            # Response Headers
-            worksheet5.merge_range(
-                "A9:D9", "NHL Subject Response (N=" + str(final_subject_A_prim_count) + ")", bold_12_format
-            )
-            worksheet5.merge_range(
-                "E9:H9", "CLL Subject Response (N=" + str(final_subject_B_prim_count) + ")", bold_12_format
-            )
-            worksheet5.merge_range("I9:L9", "ALL Subject Response", bold_12_format)
-            worksheet5.merge_range(
-                "A26:D26",
-                "Richter's Transformation Subject Response (N=" + str(final_subject_BRT_prim_count) + ")",
-                bold_12_format,
-            )
-            worksheet5.merge_range("A10:B10", "PET-Based Response", bold_11_format)
-            worksheet5.merge_range("C10:D10", "CT-Based Response", bold_11_format)
-            worksheet5.merge_range("E10:F10", "Overall Response", bold_11_format)
-            worksheet5.merge_range("G10:H10", "Bone Marrow Response", bold_11_format)
-            if final_subject_C_prim_count > 0:
-                worksheet5.merge_range(
-                    "I10:J10", "Overall Response (N=" + str(final_subject_C_prim_OR_count) + ")", bold_11_format
-                )
-                worksheet5.merge_range(
-                    "K10:L10",
-                    "Extramedullary Disease without Bone Marrow Involvement (N="
-                    + str(final_subject_C_prim_ED_count)
-                    + ")",
-                    bold_11_format,
-                )
-            else:
-                worksheet5.merge_range("I10:J10", "Overall Response (N=0)", bold_11_format)
-                worksheet5.merge_range(
-                    "K10:L10", "Extramedullary Disease without Bone Marrow Involvement (N=0)", bold_11_format
-                )
-            worksheet5.merge_range("A27:B27", "PET-Based Response", bold_11_format)
-            worksheet5.merge_range("C27:D27", "CT-Based Response", bold_11_format)
-            worksheet5.merge_range("A11:D11", "Best Overall Response (BOR)", bold_11_format)
-            worksheet5.merge_range("E11:H11", "Best Overall Response (BOR)", bold_11_format)
-            worksheet5.merge_range("I11:L11", "Best Overall Response (BOR)", bold_11_format)
-            worksheet5.merge_range("A28:D28", "Best Overall Response (BOR)", bold_11_format)
-            worksheet5.merge_range("A18:D18", "Overall Response Rate (ORR) at Month 3", bold_11_format)
-            worksheet5.merge_range("E18:H18", "Overall Response Rate (ORR) at Month 3", bold_11_format)
-            worksheet5.merge_range("I18:L18", "Overall Response Rate (ORR) at Day 28", bold_11_format)
-            worksheet5.merge_range("A35:D35", "Overall Response Rate (ORR) at Month 3", bold_11_format)
-            # Listing Response Criteria
-            response_A_PET = [
-                "Complete Metabolic Response (CMR)",
-                "Partial Metabolic Response (PMR)",
-                "No Metabolic Response (NMR)",
-                "Indeterminate Response (IR)",
-                "Progressive Metabolic Disease (PMD)",
-                "Not Reported",
-            ]
-            response_A_CT = [
-                "Complete Radiologic Response (CR)",
-                "Partial Response (PR)",
-                "Stable Disease (SD)",
-                "Indeterminate Response (IR)",
-                "Progressive Disease (PD)",
-                "Not Reported",
-            ]
-            resposne_B_OV = [
-                "Complete Remission (CR)",
-                "Complete Remission with Incomplete Marrow Recovery (CRi)",
-                "Partial Remission (PR)",
-                "Stable Disease (SD)",
-                "Progressive Disease (PD)",
-                "Not Reported",
-            ]
-            response_B_BM = [
-                "Complete Remission (CR)",
-                "Partial Remission (PR)",
-                "Progressive Disease (PD)",
-                "Stable Disease (SD)",
-                "Not Reported",
-            ]
-            response_C_OV = [
-                "Complete Remission (CR)",
-                "Complete Remission with Incomplete Blood Count Recovery (CRi)",
-                "Complete Remission with Residual Mediastinal Disease (CRu)",
-                "Treatment Failure (TF)",
-                "Relapsed Disease (RD)",
-                "Not Reported",
-            ]
-            response_C_ED = [
-                "Complete Remission (CR)",
-                "Partial Remission (PR)",
-                "Stable Disease (SD)",
-                "Indeterminate Response",
-                "Progressive Disease (PD)",
-                "Not Reported",
-            ]
-            for i in range(0, len(response_A_PET)):
-                worksheet5.write(i + 11, 0, response_A_PET[i], bold_11_format)
-                worksheet5.write(i + 18, 0, response_A_PET[i], bold_11_format)
-                worksheet5.write(i + 28, 0, response_A_PET[i], bold_11_format)
-                worksheet5.write(i + 35, 0, response_A_PET[i], bold_11_format)
-            for i in range(0, len(response_A_CT)):
-                worksheet5.write(i + 11, 2, response_A_CT[i], bold_11_format)
-                worksheet5.write(i + 18, 2, response_A_CT[i], bold_11_format)
-                worksheet5.write(i + 28, 2, response_A_CT[i], bold_11_format)
-                worksheet5.write(i + 35, 2, response_A_CT[i], bold_11_format)
-            for i in range(0, len(resposne_B_OV)):
-                worksheet5.write(i + 11, 4, resposne_B_OV[i], bold_11_format)
-                worksheet5.write(i + 18, 4, resposne_B_OV[i], bold_11_format)
-            for i in range(0, len(response_B_BM)):
-                worksheet5.write(i + 11, 6, response_B_BM[i], bold_11_format)
-                worksheet5.write(i + 18, 6, response_B_BM[i], bold_11_format)
-            worksheet5.write("G17", "black cell", black_cell)
-            worksheet5.write("H17", "black cell", black_cell)
-            worksheet5.write("G24", "black cell", black_cell)
-            worksheet5.write("H24", "black cell", black_cell)
-            for i in range(0, len(response_C_OV)):
-                worksheet5.write(i + 11, 8, response_C_OV[i], bold_11_format)
-                worksheet5.write(i + 18, 8, response_C_OV[i], bold_11_format)
-            for i in range(0, len(response_C_ED)):
-                worksheet5.write(i + 11, 10, response_C_ED[i], bold_11_format)
-                worksheet5.write(i + 18, 10, response_C_ED[i], bold_11_format)
-
-            worksheet5.autofit()
-
-            ## TODO: Response Listing NHL
-            # * WRITING DATA
-            if final_subject_A_prim_count > 0:
-                final_responseA_primary_df.to_excel(
-                    writer, sheet_name="Response Listing NHL", index=False, header=False, startrow=3, startcol=0
-                )
-            if final_subject_A_retx_count > 0:
-                final_responseA_retreatment_df.to_excel(
-                    writer, sheet_name="Response Listing NHL", index=False, header=False, startrow=3, startcol=15
-                )
-            # assigning the worksheet
-            worksheet6 = writer.sheets["Response Listing NHL"]
-            # * FORMATING DATA
-            if final_subject_A_prim_count > 0:
-                for i in range(0, len(final_responseA_primary_df)):
-                    for j in range(0, len(final_responseA_primary_df.columns)):
-                        worksheet6.write(i + 3, j, final_responseA_primary_df.iloc[i, j], normal_data_format)
-            if final_subject_A_retx_count > 0:
-                for i in range(0, len(final_responseA_retreatment_df)):
-                    for j in range(0, len(final_responseA_retreatment_df.columns)):
-                        worksheet6.write(i + 3, j + 15, final_responseA_retreatment_df.iloc[i, j], normal_data_format)
-            # * WRITING HEADER AND FORMATTING
-            if final_subject_A_prim_count > 0:
-                worksheet6.merge_range("A1:M1", "Cohort A (NHL)- Primary Follow-up", bold_12_format)
-                worksheet6.merge_range("A2:A3", "Subject ID", bold_11_format)
-                worksheet6.merge_range("B2:D2", "Current Response", bold_11_format)
-                worksheet6.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
-                worksheet6.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
-                worksheet6.write("B3", "PET-Based Response", bold_11_format)
-                worksheet6.write("C3", "CT-Based Response", bold_11_format)
-                worksheet6.write("D3", "Study Timepoint", bold_11_format)
-                worksheet6.write("E3", "PET-Based Response", bold_11_format)
-                worksheet6.write("F3", "Study Timepoint", bold_11_format)
-                worksheet6.write("G3", "CT-Based Response", bold_11_format)
-                worksheet6.write("H3", "Study Timepoint", bold_11_format)
-                worksheet6.write("I3", "PET-Based ORR", bold_11_format)
-                worksheet6.write("J3", "CT-Based ORR", bold_11_format)
-                worksheet6.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet6.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet6.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
-            if final_subject_A_retx_count > 0:
-                worksheet6.merge_range("P1:AB1", "Cohort A (NHL)- Retreatment Follow-up", bold_12_format)
-                worksheet6.merge_range("P2:P3", "Subject ID", bold_11_format)
-                worksheet6.merge_range("Q2:S2", "Current Response", bold_11_format)
-                worksheet6.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
-                worksheet6.merge_range("X2:Y2", "Overall Response/Month 3-R", bold_11_format)
-                worksheet6.write("Q3", "PET-Based Response", bold_11_format)
-                worksheet6.write("R3", "CT-Based Response", bold_11_format)
-                worksheet6.write("S3", "Study Timepoint", bold_11_format)
-                worksheet6.write("T3", "PET-Based Response", bold_11_format)
-                worksheet6.write("U3", "Study Timepoint", bold_11_format)
-                worksheet6.write("V3", "CT-Based Response", bold_11_format)
-                worksheet6.write("W3", "Study Timepoint", bold_11_format)
-                worksheet6.write("X3", "PET-Based ORR", bold_11_format)
-                worksheet6.write("Y3", "CT-Based ORR", bold_11_format)
-                worksheet6.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet6.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet6.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
-            # Autofit
-            worksheet6.autofit()
-
-            ## TODO:
-            # * WRITING DATA
-            if final_subject_B_prim_count > 0:
-                final_responseB_primary_df.to_excel(
+            if final_subject_B_retx_count > 0:
+                final_responseB_retreatment_df.to_excel(
                     writer, sheet_name="Response Listing CLL", index=False, startrow=2, startcol=0
                 )
-                worksheet7 = writer.sheets["Response Listing CLL"]
                 # * FORMATING DATA
-                for i in range(0, len(final_responseB_primary_df)):
-                    for j in range(0, len(final_responseB_primary_df.columns)):
-                        worksheet7.write(i + 3, j, final_responseB_primary_df.iloc[i, j], normal_data_format)
+                for i in range(0, len(final_responseB_retreatment_df)):
+                    for j in range(0, len(final_responseB_retreatment_df.columns)):
+                        worksheet7.write(i + 3, j + 15, final_responseB_retreatment_df.iloc[i, j], normal_data_format)
 
                 # * WRITING HEADER AND FORMATTING
-                worksheet7.merge_range("A1:M1", "Cohort B (CLL) - Primary Follow-up", bold_12_format)
-                worksheet7.merge_range("A2:A3", "Subject ID", bold_11_format)
-                worksheet7.merge_range("B2:D2", "Current Response", bold_11_format)
-                worksheet7.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
-                worksheet7.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
-                worksheet7.write("B3", "Overall Response", bold_11_format)
-                worksheet7.write("C3", "Bone Marrow Response", bold_11_format)
-                worksheet7.write("D3", "Study Timepoint", bold_11_format)
-                worksheet7.write("E3", "Overall Response", bold_11_format)
-                worksheet7.write("F3", "Study Timepoint", bold_11_format)
-                worksheet7.write("G3", "Bone Marrow Response", bold_11_format)
-                worksheet7.write("H3", "Study Timepoint", bold_11_format)
-                worksheet7.write("I3", "Overall Response", bold_11_format)
-                worksheet7.write("J3", "Bone Marrow Response", bold_11_format)
-                worksheet7.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet7.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet7.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
-
                 if final_subject_B_retx_count > 0:
-                    final_responseB_retreatment_df.to_excel(
-                        writer, sheet_name="Response Listing CLL", index=False, startrow=2, startcol=0
-                    )
-                    # * FORMATING DATA
-                    for i in range(0, len(final_responseB_retreatment_df)):
-                        for j in range(0, len(final_responseB_retreatment_df.columns)):
-                            worksheet7.write(
-                                i + 3, j + 15, final_responseB_retreatment_df.iloc[i, j], normal_data_format
-                            )
-
-                    # * WRITING HEADER AND FORMATTING
-                    if final_subject_B_retx_count > 0:
-                        worksheet7.merge_range("P1:AB1", "Cohort B (CLL) - Retreatment Follow-up", bold_12_format)
-                        worksheet7.merge_range("P2:P3", "Subject ID", bold_11_format)
-                        worksheet7.merge_range("Q2:S2", "Current Response", bold_11_format)
-                        worksheet7.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
-                        worksheet7.merge_range("X2:Y2", "Overall Response/Month 3", bold_11_format)
-                        worksheet7.write("Q3", "Overall Response", bold_11_format)
-                        worksheet7.write("R3", "Bone Marrow Response", bold_11_format)
-                        worksheet7.write("S3", "Study Timepoint", bold_11_format)
-                        worksheet7.write("T3", "Overall Response", bold_11_format)
-                        worksheet7.write("U3", "Study Timepoint", bold_11_format)
-                        worksheet7.write("V3", "Bone Marrow Response", bold_11_format)
-                        worksheet7.write("W3", "Study Timepoint", bold_11_format)
-                        worksheet7.write("X3", "Overall Response", bold_11_format)
-                        worksheet7.write("Y3", "Bone Marrow Response", bold_11_format)
-                        worksheet7.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                        worksheet7.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                        worksheet7.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
-                # Autofit
-                worksheet7.autofit()
-
-            ## TODO: Response Listing Richter's Transformation
-            # * WRITING DATA
-            if final_subject_BRT_prim_count > 0:
-                final_responseBRT_primary_df.to_excel(
-                    writer, sheet_name="Response Listing Richter", index=False, header=False, startrow=3, startcol=0
-                )
-                # assigning the worksheet
-                worksheet8 = writer.sheets["Response Listing Richter"]
-                for i in range(0, len(final_responseBRT_primary_df)):
-                    for j in range(0, len(final_responseBRT_primary_df.columns)):
-                        worksheet8.write(i + 3, j, final_responseBRT_primary_df.iloc[i, j], normal_data_format)
-                worksheet8.merge_range(
-                    "A1:M1", "Cohort B (Richter's Transformation)- Primary Follow-up", bold_12_format
-                )
-                worksheet8.merge_range("A2:A3", "Subject ID", bold_11_format)
-                worksheet8.merge_range("B2:D2", "Current Response", bold_11_format)
-                worksheet8.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
-                worksheet8.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
-                worksheet8.write("B3", "PET-Based Response", bold_11_format)
-                worksheet8.write("C3", "CT-Based Response", bold_11_format)
-                worksheet8.write("D3", "Study Timepoint", bold_11_format)
-                worksheet8.write("E3", "PET-Based Response", bold_11_format)
-                worksheet8.write("F3", "Study Timepoint", bold_11_format)
-                worksheet8.write("G3", "CT-Based Response", bold_11_format)
-                worksheet8.write("H3", "Study Timepoint", bold_11_format)
-                worksheet8.write("I3", "PET-Based ORR", bold_11_format)
-                worksheet8.write("J3", "CT-Based ORR", bold_11_format)
-                worksheet8.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet8.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet8.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
-                worksheet8.autofit()
-            if final_subject_BRT_retx_count > 0:
-                final_responseBRT_retreatment_df.to_excel(
-                    writer, sheet_name="Response Listing Richter", index=False, header=False, startrow=3, startcol=15
-                )
-                for i in range(0, len(final_responseBRT_retreatment_df)):
-                    for j in range(0, len(final_responseBRT_retreatment_df.columns)):
-                        worksheet8.write(i + 3, j + 15, final_responseBRT_retreatment_df.iloc[i, j], normal_data_format)
-                worksheet8.merge_range("P1:AB1", "Cohort A (NHL)- Retreatment Follow-up", bold_12_format)
-                worksheet8.merge_range("P2:P3", "Subject ID", bold_11_format)
-                worksheet8.merge_range("Q2:S2", "Current Response", bold_11_format)
-                worksheet8.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
-                worksheet8.merge_range("X2:Y2", "Overall Response/Month 3-R", bold_11_format)
-                worksheet8.write("Q3", "PET-Based Response", bold_11_format)
-                worksheet8.write("R3", "CT-Based Response", bold_11_format)
-                worksheet8.write("S3", "Study Timepoint", bold_11_format)
-                worksheet8.write("T3", "PET-Based Response", bold_11_format)
-                worksheet8.write("U3", "Study Timepoint", bold_11_format)
-                worksheet8.write("V3", "CT-Based Response", bold_11_format)
-                worksheet8.write("W3", "Study Timepoint", bold_11_format)
-                worksheet8.write("X3", "PET-Based ORR", bold_11_format)
-                worksheet8.write("Y3", "CT-Based ORR", bold_11_format)
-                worksheet8.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet8.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet8.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
-                worksheet8.autofit()
-
-            ## TODO:
-            # * WRITING DATA
-            # * FORMATING DATA
-            # * WRITING HEADER AND FORMATTING
+                    worksheet7.merge_range("P1:AB1", "Cohort B (CLL) - Retreatment Follow-up", bold_12_format)
+                    worksheet7.merge_range("P2:P3", "Subject ID", bold_11_format)
+                    worksheet7.merge_range("Q2:S2", "Current Response", bold_11_format)
+                    worksheet7.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+                    worksheet7.merge_range("X2:Y2", "Overall Response/Month 3", bold_11_format)
+                    worksheet7.write("Q3", "Overall Response", bold_11_format)
+                    worksheet7.write("R3", "Bone Marrow Response", bold_11_format)
+                    worksheet7.write("S3", "Study Timepoint", bold_11_format)
+                    worksheet7.write("T3", "Overall Response", bold_11_format)
+                    worksheet7.write("U3", "Study Timepoint", bold_11_format)
+                    worksheet7.write("V3", "Bone Marrow Response", bold_11_format)
+                    worksheet7.write("W3", "Study Timepoint", bold_11_format)
+                    worksheet7.write("X3", "Overall Response", bold_11_format)
+                    worksheet7.write("Y3", "Bone Marrow Response", bold_11_format)
+                    worksheet7.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+                    worksheet7.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+                    worksheet7.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
             # Autofit
-            if final_subject_C_prim_count > 0:
-                final_responseC_primary_df.to_excel(
-                    writer, sheet_name="Response Listing ALL", index=False, startrow=2, startcol=0
+            worksheet7.autofit()
+
+        ## TODO: Response Listing Richter's Transformation
+        # * WRITING DATA
+        if final_subject_BRT_prim_count > 0:
+            final_responseBRT_primary_df.to_excel(
+                writer, sheet_name="Response Listing Richter", index=False, header=False, startrow=3, startcol=0
+            )
+            # assigning the worksheet
+            worksheet8 = writer.sheets["Response Listing Richter"]
+            for i in range(0, len(final_responseBRT_primary_df)):
+                for j in range(0, len(final_responseBRT_primary_df.columns)):
+                    worksheet8.write(i + 3, j, final_responseBRT_primary_df.iloc[i, j], normal_data_format)
+            worksheet8.merge_range("A1:M1", "Cohort B (Richter's Transformation)- Primary Follow-up", bold_12_format)
+            worksheet8.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet8.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet8.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet8.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
+            worksheet8.write("B3", "PET-Based Response", bold_11_format)
+            worksheet8.write("C3", "CT-Based Response", bold_11_format)
+            worksheet8.write("D3", "Study Timepoint", bold_11_format)
+            worksheet8.write("E3", "PET-Based Response", bold_11_format)
+            worksheet8.write("F3", "Study Timepoint", bold_11_format)
+            worksheet8.write("G3", "CT-Based Response", bold_11_format)
+            worksheet8.write("H3", "Study Timepoint", bold_11_format)
+            worksheet8.write("I3", "PET-Based ORR", bold_11_format)
+            worksheet8.write("J3", "CT-Based ORR", bold_11_format)
+            worksheet8.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet8.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet8.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+            worksheet8.autofit()
+        if final_subject_BRT_retx_count > 0:
+            final_responseBRT_retreatment_df.to_excel(
+                writer, sheet_name="Response Listing Richter", index=False, header=False, startrow=3, startcol=15
+            )
+            for i in range(0, len(final_responseBRT_retreatment_df)):
+                for j in range(0, len(final_responseBRT_retreatment_df.columns)):
+                    worksheet8.write(i + 3, j + 15, final_responseBRT_retreatment_df.iloc[i, j], normal_data_format)
+            worksheet8.merge_range("P1:AB1", "Cohort A (NHL)- Retreatment Follow-up", bold_12_format)
+            worksheet8.merge_range("P2:P3", "Subject ID", bold_11_format)
+            worksheet8.merge_range("Q2:S2", "Current Response", bold_11_format)
+            worksheet8.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+            worksheet8.merge_range("X2:Y2", "Overall Response/Month 3-R", bold_11_format)
+            worksheet8.write("Q3", "PET-Based Response", bold_11_format)
+            worksheet8.write("R3", "CT-Based Response", bold_11_format)
+            worksheet8.write("S3", "Study Timepoint", bold_11_format)
+            worksheet8.write("T3", "PET-Based Response", bold_11_format)
+            worksheet8.write("U3", "Study Timepoint", bold_11_format)
+            worksheet8.write("V3", "CT-Based Response", bold_11_format)
+            worksheet8.write("W3", "Study Timepoint", bold_11_format)
+            worksheet8.write("X3", "PET-Based ORR", bold_11_format)
+            worksheet8.write("Y3", "CT-Based ORR", bold_11_format)
+            worksheet8.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet8.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet8.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
+            worksheet8.autofit()
+
+        ## TODO: Response Listing ALL
+        # * WRITING DATA
+        if final_subject_C_prim_count > 0:
+            final_responseC_primary_df.to_excel(
+                writer, sheet_name="Response Listing ALL", index=False, startrow=2, startcol=0
+            )
+        if final_subject_C_retx_count > 0:
+            final_responseC_retreatment_df.to_excel(
+                writer, sheet_name="Response Listing ALL", index=False, startrow=2, startcol=15
+            )
+
+        worksheet9 = writer.sheets["Response Listing ALL"]
+
+        # * FORMATING DATA
+        if final_subject_C_prim_count > 0:
+            for i in range(0, len(final_responseC_primary_df)):
+                for j in range(0, len(final_responseC_primary_df.columns)):
+                    worksheet9.write(i + 3, j, final_responseC_primary_df.iloc[i, j], normal_data_format)
+
+        if final_subject_C_retx_count > 0:
+            for i in range(0, len(final_responseC_retreatment_df)):
+                for j in range(0, len(final_responseC_retreatment_df.columns)):
+                    worksheet9.write(i + 3, j + 15, final_responseC_retreatment_df.iloc[i, j], normal_data_format)
+
+        # * WRITING HEADER AND FORMATTING
+        # Primary headers
+        if final_subject_C_prim_count > 0:
+            worksheet9.merge_range("A1:M1", "Cohort C (ALL) - Primary Follow-up", bold_12_format)
+            worksheet9.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet9.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet9.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet9.merge_range("I2:J2", "Overall Response/Day 28", bold_11_format)
+            worksheet9.write("B3", "Overall Response", bold_11_format)
+            worksheet9.write("C3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.write("D3", "Study Timepoint", bold_11_format)
+            worksheet9.write("E3", "Overall Response", bold_11_format)
+            worksheet9.write("F3", "Study Timepoint", bold_11_format)
+            worksheet9.write("G3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.write("H3", "Study Timepoint", bold_11_format)
+            worksheet9.write("I3", "Overall Response", bold_11_format)
+            worksheet9.write("J3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet9.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet9.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+
+        # Retreatment headers (starting at column P)
+        if final_subject_C_retx_count > 0:
+            worksheet9.merge_range("P1:AB1", "Cohort C (ALL) - Retreatment Follow-up", bold_12_format)
+            worksheet9.merge_range("P2:P3", "Subject ID", bold_11_format)
+            worksheet9.merge_range("Q2:S2", "Current Response", bold_11_format)
+            worksheet9.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+            worksheet9.merge_range("X2:Y2", "Overall Response/Day 28-R", bold_11_format)
+            worksheet9.write("Q3", "Overall Response", bold_11_format)
+            worksheet9.write("R3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.write("S3", "Study Timepoint", bold_11_format)
+            worksheet9.write("T3", "Overall Response", bold_11_format)
+            worksheet9.write("U3", "Study Timepoint", bold_11_format)
+            worksheet9.write("V3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.write("W3", "Study Timepoint", bold_11_format)
+            worksheet9.write("X3", "Overall Response", bold_11_format)
+            worksheet9.write("Y3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet9.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet9.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet9.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
+
+        # Autofit
+        worksheet9.autofit()
+
+        # * WRITE TO EXCEL
+        final_subject_D_ALL_count = final_subject_D_prim_OR_count + final_subject_D_prim_ED_count
+        final_subject_D_NHL_count = len(final_responseD_NHL_df["Subject"].unique())
+        if final_subject_D_NHL_count > 0 or final_subject_D_ALL_count > 0:
+            # Create the worksheet
+            if final_subject_D_NHL_count > 0:
+                final_responseD_NHL_df.to_excel(
+                    writer, sheet_name="Response Listing Cohort D", index=False, header=False, startrow=3, startcol=0
                 )
-                worksheet9 = writer.sheets["Response Listing ALL"]
-                # * FORMATING DATA
-                for i in range(0, len(final_responseC_primary_df)):
-                    for j in range(0, len(final_responseC_primary_df.columns)):
-                        worksheet9.write(i + 3, j, final_responseC_primary_df.iloc[i, j], normal_data_format)
 
-                # * WRITING HEADER AND FORMATTING
-                worksheet9.merge_range("A1:M1", "Cohort C (ALL) - Primary Follow-up", bold_12_format)
-                worksheet9.merge_range("A2:A3", "Subject ID", bold_11_format)
-                worksheet9.merge_range("B2:D2", "Current Response", bold_11_format)
-                worksheet9.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
-                worksheet9.merge_range("I2:J2", "Overall Response/Day 28", bold_11_format)
-                worksheet9.write("B3", "Overall Response", bold_11_format)
-                worksheet9.write("C3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-                worksheet9.write("D3", "Study Timepoint", bold_11_format)
-                worksheet9.write("E3", "Overall Response", bold_11_format)
-                worksheet9.write("F3", "Study Timepoint", bold_11_format)
-                worksheet9.write("G3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-                worksheet9.write("H3", "Study Timepoint", bold_11_format)
-                worksheet9.write("I3", "Overall Response", bold_11_format)
-                worksheet9.write("J3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
-                worksheet9.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet9.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
-                worksheet9.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+            if final_subject_D_ALL_count > 0:
+                # ALL table starts at column 15 (NHL table is columns 0-12, 2 empty columns 13-14)
+                final_responseD_ALL_df.to_excel(
+                    writer, sheet_name="Response Listing Cohort D", index=False, header=False, startrow=3, startcol=15
+                )
 
-                # if final_subject_C_retx_count > 0:
-                #     final_responseB_retreatment_df.to_excel(writer, sheet_name='Response Listing CLL', index = False, startrow=2, startcol=0)
-                #     # * FORMATING DATA
-                #     for i in range(0, len(final_responseC_retreatment_df)):
-                #         for j in range(0, len(final_responseB_retreatment_df.columns)):
-                #             worksheet7.write(i + 3, j + 15, final_responseB_retreatment_df.iloc[i, j], normal_data_format)
+            # Get the worksheet
+            worksheet10 = writer.sheets["Response Listing Cohort D"]
 
-                # Autofit
-                worksheet9.autofit()
+            # * FORMAT DATA
+            # Format NHL data
+            if final_subject_D_NHL_count > 0:
+                for i in range(0, len(final_responseD_NHL_df)):
+                    for j in range(0, len(final_responseD_NHL_df.columns)):
+                        worksheet10.write(i + 3, j, final_responseD_NHL_df.iloc[i, j], normal_data_format)
+
+            # Format ALL data
+            if final_subject_D_ALL_count > 0:
+                for i in range(0, len(final_responseD_ALL_df)):
+                    for j in range(0, len(final_responseD_ALL_df.columns)):
+                        worksheet10.write(i + 3, j + 15, final_responseD_ALL_df.iloc[i, j], normal_data_format)
+
+            # * WRITE HEADERS AND FORMATTING
+
+            # NHL Headers (columns A-M)
+            worksheet10.merge_range(
+                "A1:M1", f"Cohort D (NHL) - Primary Follow-up (N={final_subject_D_NHL_count})", bold_12_format
+            )
+            worksheet10.merge_range("A2:A3", "Subject ID", bold_11_format)
+            worksheet10.merge_range("B2:D2", "Current Response", bold_11_format)
+            worksheet10.merge_range("E2:H2", "Best Response/Timepoint", bold_11_format)
+            worksheet10.merge_range("I2:J2", "Overall Response/Month 3", bold_11_format)
+            worksheet10.write("B3", "PET-Based Response", bold_11_format)
+            worksheet10.write("C3", "CT-Based Response", bold_11_format)
+            worksheet10.write("D3", "Study Timepoint", bold_11_format)
+            worksheet10.write("E3", "PET-Based Response", bold_11_format)
+            worksheet10.write("F3", "Study Timepoint", bold_11_format)
+            worksheet10.write("G3", "CT-Based Response", bold_11_format)
+            worksheet10.write("H3", "Study Timepoint", bold_11_format)
+            worksheet10.write("I3", "PET-Based ORR", bold_11_format)
+            worksheet10.write("J3", "CT-Based ORR", bold_11_format)
+            worksheet10.merge_range("K2:K3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("L2:L3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("M2:M3", "Study Status", bold_11_wrap_format)
+
+            # ALL Headers (starting at column P, which is index 15)
+            worksheet10.merge_range(
+                "P1:AB1", f"Cohort D (ALL) - Primary Follow-up (N={final_subject_D_ALL_count})", bold_12_format
+            )
+            worksheet10.merge_range("P2:P3", "Subject ID", bold_11_format)
+            worksheet10.merge_range("Q2:S2", "Current Response", bold_11_format)
+            worksheet10.merge_range("T2:W2", "Best Response/Timepoint", bold_11_format)
+            worksheet10.merge_range("X2:Y2", "Overall Response/Day 28", bold_11_format)
+            worksheet10.write("Q3", "Overall Response", bold_11_format)
+            worksheet10.write("R3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.write("S3", "Study Timepoint", bold_11_format)
+            worksheet10.write("T3", "Overall Response", bold_11_format)
+            worksheet10.write("U3", "Study Timepoint", bold_11_format)
+            worksheet10.write("V3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.write("W3", "Study Timepoint", bold_11_format)
+            worksheet10.write("X3", "Overall Response", bold_11_format)
+            worksheet10.write("Y3", "Extramedullary Disease without Bone Marrow Involvement", bold_11_format)
+            worksheet10.merge_range("Z2:Z3", "Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("AA2:AA3", "Serious Adverse Events \n(Y/N)", bold_11_wrap_format)
+            worksheet10.merge_range("AB2:AB3", "Study Status", bold_11_wrap_format)
+
+            # Autofit the worksheet
+            worksheet10.autofit()

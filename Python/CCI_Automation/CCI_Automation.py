@@ -26,7 +26,7 @@ class Widget(QWidget):
             "DSMB Report",
             "Clockify Dashboard",
             "Add templated tasks",
-            "Format .csv to .xlsx for lab range issue",
+            "Format for lab range issue and no leading 0 date",
         ]
         self.ui.comboBox.addItems(comboBox_options)
 
@@ -95,13 +95,13 @@ class Widget(QWidget):
             if file_path:
                 self.ui.label_2.setText(file_path)
                 self.input_file_path = file_path
-        elif self.selected_option == "Format .csv to .xlsx for lab range issue":
+        elif self.selected_option == "Format for lab range issue and no leading 0 date":
             default_dir = os.path.join(os.path.expanduser("~"), "Downloads")
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
-                "Select the raw .csv file",
+                "Select the raw .csv or .xlsx file",
                 default_dir,
-                "CSV files (*.csv)",
+                "All files (*.csv *.xlsx)",
             )
             # output filename to screen
             if file_path:
@@ -146,7 +146,7 @@ class Widget(QWidget):
         elif self.selected_option == "Clockify Dashboard" or self.selected_option == "Add templated tasks":
             self.ui.comboBox_2.addItems(clockify_get_list_projects(clockify_get_api_key(), clockify_get_workplace_id()))
             self.ui.comboBox_2.setVisible(True)
-        elif self.selected_option == "Format .csv to .xlsx for lab range issue":
+        elif self.selected_option == "Format for lab range issue and no leading 0 date":
             # Hide comboBox_2
             self.ui.comboBox_2.setVisible(False)
 
@@ -182,7 +182,7 @@ class Widget(QWidget):
             self.ui.lineEdit.setEnabled(False)
             self.ui.pushButton.setEnabled(False)
             self.ui.pushButton_2.setEnabled(False)
-        elif self.selected_option == "Format .csv to .xlsx for lab range issue":
+        elif self.selected_option == "Format for lab range issue and no leading 0 date":
             self.ui.checkBox.setVisible(False)
             self.ui.dateEdit.setVisible(False)
             self.ui.pushButton.setEnabled(True)
@@ -327,7 +327,7 @@ class Widget(QWidget):
                 except Exception as e:
                     self.ui.label_5.setText("Error encountered.")
                     QMessageBox.warning(self, "Error", str(e) + traceback.format_exc())
-        elif self.selected_option == "Format .csv to .xlsx for lab range issue":
+        elif self.selected_option == "Format for lab range issue and no leading 0 date":
             from Format.change_type import change_type
 
             if not self.input_file_path or not self.output_folder_name or not self.output_file_name:
