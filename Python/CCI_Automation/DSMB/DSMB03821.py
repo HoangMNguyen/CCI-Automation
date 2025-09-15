@@ -486,9 +486,7 @@ def DSMB03821(
             }
             infusionV_df = infusionV_df.rename(columns=EXVCNINF_new_col_name)
             # convert the date to datetime object and format it to MM-DD-YYYY
-            infusionV_df["Date of VCN-01 Infusion"] = infusionV_df["Date of VCN-01 Infusion"].apply(
-                lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
-            )
+            infusionV_df = remove_leading_zeros_from_dates(infusionV_df)
             infusion_df = pd.merge(infusion_df, infusionV_df, on="Subject", how="left")
 
             # adding VCN-01 Dose Received using TCD_dict
@@ -515,9 +513,7 @@ def DSMB03821(
             }
             infusionM_df = infusionM_df.rename(columns=EXMESOINF_new_col_name)
             # convert the date to datetime object and format it to MM-DD-YYYY
-            infusionM_df["Date of HuCART-meso Infusion"] = infusionM_df["Date of HuCART-meso Infusion"].apply(
-                lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
-            )
+            infusionM_df = remove_leading_zeros_from_dates(infusionM_df)
             # combine Total huCART-Meso Cell Dose Administered and x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1) columns
             infusionM_df["Total huCART-meso Cell Dose Administered"] = infusionM_df[
                 "Total huCART-meso Cell Dose Administered"
@@ -590,11 +586,7 @@ def DSMB03821(
             "Event Group Label",
         )
         # convert the date to datetime object and format it to MM-DD-YYYY
-        infusionR_df["Date of HuCART-meso Retreatment Infusion"] = infusionR_df[
-            "Date of HuCART-meso Retreatment Infusion"
-        ].apply(
-            lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
-        )
+        infusionR_df = remove_leading_zeros_from_dates(infusionR_df)
 
         # Total huCart19-IL18 Cell Dose
         infusionR_df = add_rename_column_corelisting(

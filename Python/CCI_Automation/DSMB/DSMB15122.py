@@ -464,9 +464,7 @@ def DSMB15122(
         "Event Label",
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
-    infusion_df["Date Study Treatment Administered"] = infusion_df["Date Study Treatment Administered"].apply(
-        lambda x: datetime.strptime(x, "%Y-%m-%d").strftime("%m-%d-%Y") if pd.notna(x) else x
-    )
+    infusion_df = remove_leading_zeros_from_dates(infusion_df)
 
     # adding Target Cell Dose using TCD_dict
     infusion_df["Target Cell Dose"] = infusion_df["Dose Level Assignment"].map(TCD_dict)
