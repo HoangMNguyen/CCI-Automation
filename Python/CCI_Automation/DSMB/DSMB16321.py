@@ -306,12 +306,29 @@ class DSMB16321:
     def EGFR_listing(self):
         data = self.data
         # Find eligible subjects
-        IE_df = data["IE"][["Subject", "Subject Meets All Study Eligibility (ig_IE3.IEYN)"]].copy()
+        IE_df = data["IE"][
+            [
+                "Subject",
+                "Subject Meets All Study Eligibility (ig_IE3.IEYN)",
+                "Date of Completion of Monitoring Visit for Eligibility (ig_IE5.ELIGMONDAT)",
+            ]
+        ].copy()
         IE_new_col_name = {
             "Subject Meets All Study Eligibility (ig_IE3.IEYN)": "Subject meets all study eligibility?",
+            "Date of Completion of Monitoring Visit for Eligibility (ig_IE5.ELIGMONDAT)": "Date of Completion of Monitoring Visit for Eligibility",
         }
         IE_df = IE_df.rename(columns=IE_new_col_name)
         Eligible_df = IE_df[IE_df["Subject meets all study eligibility?"] == "Yes"].copy()
+
+        # sort by "Date of Completion of Monitoring Visit for Eligibility" ascending, then by "Subject" ascending
+        Eligible_df = Eligible_df.sort_values(
+            by=["Date of Completion of Monitoring Visit for Eligibility", "Subject"],
+            ascending=[True, True],
+        ).reset_index(drop=True)
+        # print(Eligible_df)
+
+        # Drop helper column if not needed
+        Eligible_df = Eligible_df.drop(columns=["Date of Completion of Monitoring Visit for Eligibility"])
 
         # *: Get latest date from Sugery in Initial Study Enrollment/Apheresis event
         MHSG_subject_df = Eligible_df["Subject"].copy()
@@ -346,7 +363,7 @@ class DSMB16321:
         # Sort and get the last row for each subject, need test result from last collection date
         filtered_MHSGINIT_df = filtered_MHSGINIT_df.sort_values(["Date of Surgery"])
         filtered_MHSGINIT_df = filtered_MHSGINIT_df.groupby("Subject").tail(1)  # Get the last row per subject
-        filtered_MHSGINIT_df = filtered_MHSGINIT_df.sort_values(["Subject"])
+        # filtered_MHSGINIT_df = filtered_MHSGINIT_df.sort_values(["Subject"])
         # print(filtered_MHSGINIT_df)
         # drop "Event Group Label" and "Was EGFR amplification testing performed on this sample?" column
         filtered_MHSGINIT_df = filtered_MHSGINIT_df.drop(
@@ -445,8 +462,9 @@ class DSMB16321:
         )
 
         EGFR_final2_df = pd.merge(EGFR_final_df, MHDIAG_df, on="Subject", how="right")
+        # EGFR_final2_df = pd.merge(EGFR_df, MHDIAG_df, on="Subject", how="right")
         EGFR_final2_df["Collection Date"] = EGFR_final2_df["Collection Date"].fillna(replacement_date)
-        EGFR_final2_df = EGFR_final2_df.sort_values(["Subject"])
+        #  EGFR_final2_df = EGFR_final2_df.sort_values(["Subject"])
         EGFR_final2_df = EGFR_final2_df.fillna("")
 
         # replace "" with "Not Done" for all columns except "Subject" and "Collection Date"
@@ -522,10 +540,24 @@ class DSMB16321:
                 "Cohort Assignment (ig_DSCA1.CACHASCOD)",
                 "Cohort Assignment",
             )
+        # Add each Subject's first treatment date
+        raw_infusion_df["First Treatment Date"] = raw_infusion_df.groupby("Subject")["Study Treatment Date"].transform(
+            "min"
+        )
 
-        raw_infusion_df["Study Treatment Date"] = pd.to_datetime(
-            raw_infusion_df["Study Treatment Date"], errors="coerce"
-        ).dt.strftime("%m-%d-%Y")
+        # Sort so that subjects are ordered by their first treatment date,
+        # and within each subject, rows are ordered by Study Treatment Date
+        raw_infusion_df = raw_infusion_df.sort_values(
+            by=["First Treatment Date", "Subject", "Study Treatment Date"], ascending=[True, True, True]
+        ).reset_index(drop=True)
+
+        # Drop helper column if not needed
+        raw_infusion_df = raw_infusion_df.drop(columns=["First Treatment Date"])
+
+        # # format the date field to be no leading 0
+        # raw_infusion_df["Study Treatment Date"] = pd.to_datetime(
+        #     raw_infusion_df["Study Treatment Date"], errors="coerce"
+        # ).dt.strftime("%m-%d-%Y")
 
         # print(raw_infusion_df)
         # TODO: INFUSION LISTING Day 0
@@ -573,9 +605,6 @@ class DSMB16321:
 
         # Only keep the rows that have Event Group Label
         infusion_df = infusion_df[infusion_df["Event Group Label"] != ""]
-        infusion_df = infusion_df.sort_values(by=["Subject", "Study Treatment Date"], ascending=True).reset_index(
-            drop=True
-        )
 
         # *Re-order the columns and remove the columns that are not needed
         infusion_df = infusion_df[
@@ -601,6 +630,17 @@ class DSMB16321:
         infusionR_df = raw_infusion_df[
             (raw_infusion_df["Event Group Label"] == "Day 0-R1") | (raw_infusion_df["Event Group Label"] == "Day 0-R2")
         ]
+        # Add each Subject's first treatment date
+        infusionR_df["First Treatment Date"] = infusionR_df.groupby("Subject")["Study Treatment Date"].transform("min")
+
+        # Sort so that subjects are ordered by their first treatment date,
+        # and within each subject, rows are ordered by Study Treatment Date
+        infusionR_df = infusionR_df.sort_values(
+            by=["First Treatment Date", "Subject", "Study Treatment Date"], ascending=[True, True, True]
+        ).reset_index(drop=True)
+
+        # Drop helper column if not needed
+        infusionR_df = infusionR_df.drop(columns=["First Treatment Date"])
 
         # combine CART-EGFR-IL13Rα2 Cell Dose and x 10 to the power of (ig_EXINF1.INFDOSXP) columns, compare the new value with 'Target Cell Dose', and convert the CART-EGFR-IL13Rα2 Cell Dose column to string
         infusionR_df["CART-EGFR-IL13Rα2 Cell Dose"] = infusionR_df["CART-EGFR-IL13Rα2 Cell Dose"].multiply(
@@ -632,9 +672,9 @@ class DSMB16321:
 
         # Only keep the rows that have Event Group Label
         infusionR_df = infusionR_df[infusionR_df["Event Group Label"] != ""]
-        infusionR_df = infusionR_df.sort_values(by=["Subject", "Study Treatment Date"], ascending=True).reset_index(
-            drop=True
-        )
+        # infusionR_df = infusionR_df.sort_values(by=["Subject", "Study Treatment Date"], ascending=True).reset_index(
+        #     drop=True
+        # )
 
         # *Re-order the columns and remove the columns that are not needed
         infusionR_df = infusionR_df[
@@ -667,7 +707,14 @@ class DSMB16321:
                 return str(x)  # fallback, just keep original string
 
         # Apply formatting
+        # format the date field to be no leading 0
+        infusion_df["Study Treatment Date"] = pd.to_datetime(
+            infusion_df["Study Treatment Date"], errors="coerce"
+        ).dt.strftime("%m-%d-%Y")
         infusion_df["Study Treatment Date"] = infusion_df["Study Treatment Date"].apply(format_date)
+        infusionR_df["Study Treatment Date"] = pd.to_datetime(
+            infusionR_df["Study Treatment Date"], errors="coerce"
+        ).dt.strftime("%m-%d-%Y")
         infusionR_df["Study Treatment Date"] = infusionR_df["Study Treatment Date"].apply(format_date)
 
         return infusion_df, infusionR_df
@@ -814,7 +861,7 @@ class DSMB16321:
         infusion_statD3["Met Target % scFV Flow (Y/N) (≥2%)"] = (
             str(met_targetFlow_count) + " (" + str(round(met_targetFlow_count / total_subject_count * 100, 2)) + "%)"
         )
-
+        # print(infusion4_df)
         # Create a new dataframe for %scFV (Il13Rα2) with infusion_df
         infusion_statD4 = get_stats_perc_df("%scFV (Il13Rα2)", infusion4_df)
         # Combine the three dataframes
@@ -1129,7 +1176,7 @@ class DSMB16321:
         AE_df = AE_df.rename(columns=AE_new_col_name)
 
         TXSUB_status_df = self.infusion_df["Subject"].copy()
-        TXSUB_status_df = TXSUB_status_df.sort_values()
+        # TXSUB_status_df = TXSUB_status_df.sort_values()
 
         # Merge left with the TXSUB_status_df and keep unique rows
         TXSUB_status_df = (
