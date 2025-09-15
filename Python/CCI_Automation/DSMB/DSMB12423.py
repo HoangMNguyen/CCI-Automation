@@ -14,7 +14,7 @@ from util import (
     age_calculation,
     add_rename_column_df,
     convert_integers_to_strings,
-    format_date_without_leading_zeros_util,
+    remove_leading_zeros_from_dates,
 )
 from datetime import datetime
 from typing import Optional
@@ -320,11 +320,7 @@ class DSMB12423:
         }
         raw_infusion_df = get_data_from_dict(data, input_dict, "EXINF")
         # convert the date to datetime object and format it to MM-DD-YYYY
-        raw_infusion_df["Date of TmCD19-IL18 Infusion"] = raw_infusion_df["Date of TmCD19-IL18 Infusion"].apply(
-            lambda x: format_date_without_leading_zeros_util(datetime.strptime(x.strftime("%Y-%m-%d"), "%Y-%m-%d"))
-            if pd.notna(x)
-            else x
-        )
+        raw_infusion_df = remove_leading_zeros_from_dates(raw_infusion_df)
 
         # TODO: INFUSION LISTING Day 0
 
