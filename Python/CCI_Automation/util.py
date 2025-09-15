@@ -785,25 +785,18 @@ def remove_leading_zeros_from_dates(df):
     # Iterate through all columns
     for col_name in df_copy.columns:
         if "date" in str(col_name).lower():
-            # Convert column to string for pattern matching
-            date_strings = df_copy[col_name].astype(str)
+            try:
+                # First convert to datetime if not already
+                if not pd.api.types.is_datetime64_any_dtype(df_copy[col_name]):
+                    df_copy[col_name] = pd.to_datetime(df_copy[col_name], errors="coerce")
 
-            # Check if any values match patterns with leading zeros in month or day
-            has_leading_zeros = date_strings.str.match(r"^0\d/|/0\d/|-0\d-").any()
-
-            if has_leading_zeros:
-                try:
-                    # First convert to datetime if not already
-                    if not pd.api.types.is_datetime64_any_dtype(df_copy[col_name]):
-                        df_copy[col_name] = pd.to_datetime(df_copy[col_name], errors="coerce")
-
-                    # Apply formatting to remove leading zeros
-                    df_copy[col_name] = df_copy[col_name].apply(
-                        lambda date_obj: format_date_without_leading_zeros_util(date_obj)
-                    )
-                except Exception as e:
-                    # If conversion fails, keep original data
-                    print(f"Could not process date column '{col_name}': {e}")
+                # Apply formatting to remove leading zeros if it's not ""
+                df_copy[col_name] = df_copy[col_name].apply(
+                    lambda date_obj: format_date_without_leading_zeros_util(date_obj)
+                )
+            except Exception as e:
+                # If conversion fails, keep original data
+                print(f"Could not process date column '{col_name}': {e}")
 
     return df_copy
 
@@ -818,7 +811,10 @@ def format_date_without_leading_zeros_util(date_obj):
     Returns:
         str or original: Formatted date string (M/D/YYYY) or original value if NaT
     """
-    if pd.notnull(date_obj):
+    # if date_obj does not have
+    if pd.isna(date_obj):
+        return ""
+    elif pd.notnull(date_obj):
         month = date_obj.month
         day = date_obj.day
         year = date_obj.year

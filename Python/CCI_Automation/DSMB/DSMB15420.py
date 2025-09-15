@@ -7,7 +7,7 @@ from util import (
     convert_float_2_sci_notation,
     add_rename_column_df,
     get_excel_formats,
-    format_date_without_leading_zeros_util,
+    remove_leading_zeros_from_dates,
 )
 from DSMB.DSMB_util import get_stats_df, get_stats_perc_df, get_stats_percentage
 from dateutil.relativedelta import relativedelta
@@ -380,9 +380,7 @@ def DSMB15420(
         "Event Group Label",
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
-    infusion_df["Date of huCART19-IL18 Infusion"] = infusion_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
-    )
+    infusion_df = remove_leading_zeros_from_dates(infusion_df)
 
     # adding Target Cell Dose using TCD_dict
     infusion_df["Target Cell Dose"] = infusion_df["Dose Level Assignment"].map(TCD_dict)
@@ -517,9 +515,7 @@ def DSMB15420(
         "Event Group Label",
     )
     # convert the date to datetime object and format it to MM-DD-YYYY
-    infusionR_df["Date of huCART19-IL18 Infusion"] = infusionR_df["Date of huCART19-IL18 Infusion"].apply(
-        lambda x: format_date_without_leading_zeros_util(datetime.strptime(x, "%Y-%m-%d")) if pd.notna(x) else x
-    )
+    infusionR_df = remove_leading_zeros_from_dates(infusionR_df)
 
     # Total huCart19-IL18 Cell Dose
     infusionR_df = add_rename_column_corelisting(
@@ -1153,13 +1149,7 @@ def DSMB15420(
         # Merge with EOS data to get End of Study Date
         responseA_primary_SV_df = pd.merge(responseA_primary_SV_df, responseA_primary_EOS_df, on="Subject", how="left")
         # Format the End of Study Date if available
-        responseA_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_primary_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseA_primary_SV_df = remove_leading_zeros_from_dates(responseA_primary_SV_df)
         # Merge left with the current response dataframe
         final_response_NHL_primary_df = pd.merge(
             final_response_NHL_primary_df,
@@ -1170,11 +1160,12 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
-        final_response_NHL_primary_df["Event Label"] = (
-            final_response_NHL_primary_df["Event Label"]
-            + final_response_NHL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
-        print(final_response_NHL_primary_df)
         # Select the columns needed only
         final_response_NHL_primary_df = final_response_NHL_primary_df[
             [
@@ -1431,13 +1422,7 @@ def DSMB15420(
             responseA_retreatment_SV_df, responseA_retreatment_EOS_df, on="Subject", how="left"
         )
         # Format the End of Study Date if available
-        responseA_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseA_retreatment_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseA_retreatment_SV_df = remove_leading_zeros_from_dates(responseA_retreatment_SV_df)
         # Merge left with the current response dataframe
         final_responseA_retreatment_df = pd.merge(
             final_responseA_retreatment_df,
@@ -1450,9 +1435,11 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
-        final_responseA_retreatment_df["Event Label"] = (
-            final_responseA_retreatment_df["Event Label"]
-            + final_responseA_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_responseA_retreatment_df = final_responseA_retreatment_df[
@@ -1724,13 +1711,7 @@ def DSMB15420(
         # Merge with EOS data to get End of Study Date
         responseB_primary_SV_df = pd.merge(responseB_primary_SV_df, responseB_primary_EOS_df, on="Subject", how="left")
         # Format the End of Study Date if available
-        responseB_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_primary_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseB_primary_SV_df = remove_leading_zeros_from_dates(responseB_primary_SV_df)
         # Merge left with the current response dataframe
         final_responseB_primary_df = pd.merge(
             final_responseB_primary_df,
@@ -1742,8 +1723,11 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
-        final_responseB_primary_df["Event Label"] = (
-            final_responseB_primary_df["Event Label"] + final_responseB_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_responseB_primary_df["Event Label"] = final_responseB_primary_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_responseB_primary_df = final_responseB_primary_df[
@@ -1969,13 +1953,7 @@ def DSMB15420(
             responseB_retreatment_SV_df, responseB_retreatment_EOS_df, on="Subject", how="left"
         )
         # Format the End of Study Date if available
-        responseB_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseB_retreatment_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseB_retreatment_SV_df = remove_leading_zeros_from_dates(responseB_retreatment_SV_df)
 
         # Merge left with the current response dataframe
         final_responseB_retreatment_df = pd.merge(
@@ -1989,9 +1967,11 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
-        final_responseB_retreatment_df["Event Label"] = (
-            final_responseB_retreatment_df["Event Label"]
-            + final_responseB_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_responseB_retreatment_df = final_responseB_retreatment_df[
@@ -2249,14 +2229,7 @@ def DSMB15420(
             responseBRT_primary_SV_df, responseBRT_primary_EOS_df, on="Subject", how="left"
         )
         # Format the End of Study Date if available
-        responseBRT_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_primary_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
-
+        responseBRT_primary_SV_df = remove_leading_zeros_from_dates(responseBRT_primary_SV_df)
         # Merge left with the current response dataframe
         final_responseBRT_primary_df = pd.merge(
             final_responseBRT_primary_df,
@@ -2267,9 +2240,11 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
-        final_responseBRT_primary_df["Event Label"] = (
-            final_responseBRT_primary_df["Event Label"]
-            + final_responseBRT_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_responseBRT_primary_df = final_responseBRT_primary_df[
@@ -2506,13 +2481,7 @@ def DSMB15420(
             responseBRT_retreatment_SV_df, responseBRT_retreatment_EOS_df, on="Subject", how="left"
         )
         # Format the End of Study Date if available
-        responseBRT_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseBRT_retreatment_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseBRT_retreatment_SV_df = remove_leading_zeros_from_dates(responseBRT_retreatment_SV_df)
 
         # Merge left with the current response dataframe
         final_responseBRT_retreatment_df = pd.merge(
@@ -2528,9 +2497,11 @@ def DSMB15420(
             event_AB_dict
         )
         # Add End of Study Date to Event Label if available
-        final_responseBRT_retreatment_df["Event Label"] = (
-            final_responseBRT_retreatment_df["Event Label"]
-            + final_responseBRT_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_responseBRT_retreatment_df["Event Label"] = final_responseBRT_retreatment_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_responseBRT_retreatment_df = final_responseBRT_retreatment_df[
@@ -2837,13 +2808,7 @@ def DSMB15420(
         # Merge with EOS data to get End of Study Date
         responseC_primary_SV_df = pd.merge(responseC_primary_SV_df, responseC_primary_EOS_df, on="Subject", how="left")
         # Format the End of Study Date if available
-        responseC_primary_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_primary_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseC_primary_SV_df = remove_leading_zeros_from_dates(responseC_primary_SV_df)
 
         # Merge left with the current response dataframe
         final_response_ALL_primary_df = pd.merge(
@@ -2855,9 +2820,14 @@ def DSMB15420(
         # Rename the column Event Label to Event Label (Study Status)
         final_response_ALL_primary_df["Event Label"] = final_response_ALL_primary_df["Event Label"].map(event_C_dict)
         # Add End of Study Date to Event Label if available
-        final_response_ALL_primary_df["Event Label"] = (
-            final_response_ALL_primary_df["Event Label"]
-            + final_response_ALL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        final_response_ALL_primary_df["End of Study Date (ig_EOS1.EOSDAT)"] = final_response_ALL_primary_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].fillna("")
+        final_response_ALL_primary_df["Event Label"] = final_response_ALL_primary_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"]
+            else row["Event Label"],
+            axis=1,
         )
         # Select the columns needed only
         final_response_ALL_primary_df = final_response_ALL_primary_df[
@@ -3168,14 +3138,10 @@ def DSMB15420(
         responseC_retreatment_SV_df = pd.merge(
             responseC_retreatment_SV_df, responseC_retreatment_EOS_df, on="Subject", how="left"
         )
+        responseC_retreatment_SV_df = responseC_retreatment_SV_df.fillna("")
         # Format the End of Study Date if available
-        responseC_retreatment_SV_df["End of Study Date (ig_EOS1.EOSDAT)"] = responseC_retreatment_SV_df[
-            "End of Study Date (ig_EOS1.EOSDAT)"
-        ].apply(
-            lambda x: f" (EOS: {format_date_without_leading_zeros_util(datetime.strptime(x, '%Y-%m-%d'))})"
-            if pd.notna(x)
-            else ""
-        )
+        responseC_retreatment_SV_df = remove_leading_zeros_from_dates(responseC_retreatment_SV_df)
+
         # Merge left with the current response dataframe
         final_responseC_retreatment_df = pd.merge(
             final_responseC_retreatment_df,
@@ -3183,12 +3149,18 @@ def DSMB15420(
             on="Subject",
             how="left",
         )
+        # Add End of Study Date to Event Label if available
+        final_responseC_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"] = final_responseC_retreatment_df[
+            "End of Study Date (ig_EOS1.EOSDAT)"
+        ].fillna("")
         # Map Event Label using event_C_dict
         final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df["Event Label"].map(event_C_dict)
-        # Add End of Study Date to Event Label if available
-        final_responseC_retreatment_df["Event Label"] = (
-            final_responseC_retreatment_df["Event Label"]
-            + final_responseC_retreatment_df["End of Study Date (ig_EOS1.EOSDAT)"]
+        # replace all NaT of pandas with ""
+        final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df.apply(
+            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+            if row["End of Study Date (ig_EOS1.EOSDAT)"] != ""
+            else row["Event Label"],
+            axis=1,
         )
 
         # Select the columns needed only

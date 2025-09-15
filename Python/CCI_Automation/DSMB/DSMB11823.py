@@ -408,9 +408,10 @@ class DSMB11823:
                     exchmo_df.groupby("Subject").agg({start_date_col: "min", end_date_col: "max"}).reset_index()
                 )
                 # Format dates as MM/DD/YYYY only if they're not null
+                chemo_dates = remove_leading_zeros_from_dates(chemo_dates)
                 chemo_dates["Lymphodepleting Chemotherapy Dates"] = chemo_dates.apply(
                     lambda row: (
-                        f"{format_date_without_leading_zeros_util(row[start_date_col])} to {format_date_without_leading_zeros_util(row[end_date_col])}"
+                        f"{row[start_date_col]} to {row[end_date_col]}"
                         if pd.notna(row[start_date_col]) and pd.notna(row[end_date_col])
                         else ""
                     ),
