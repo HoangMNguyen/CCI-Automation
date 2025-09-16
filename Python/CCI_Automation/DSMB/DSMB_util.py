@@ -3,6 +3,8 @@ import numpy as np
 import math
 from typing import Optional, List, Dict, Tuple, Union
 
+from decimal import Decimal, ROUND_HALF_UP
+import math
 
 # TODO: implement type hints for all functions
 
@@ -225,9 +227,9 @@ def get_stats_df(column, *dfs):
                 if mean < 100:
                     mean_std = f"{mean:.2f} ({std:.2f})"
                 else:
-                    mean_std = f"{convert_float_2_sci_notation(int(mean))} ({convert_float_2_sci_notation(int(std))})"
+                    mean_std = f"{convert_float_2_sci_notation(mean)} ({convert_float_2_sci_notation(int(std))})"
                 if median > 100:
-                    median = f"{convert_float_2_sci_notation(int(median))}"
+                    median = f"{convert_float_2_sci_notation(median)}"
                 if minimum < 100 and maximum < 100:
                     range = f"{minimum:.2f} - {maximum:.2f}"
                 else:
@@ -287,9 +289,11 @@ def get_stats_perc_df(column, *dfs):
             if mean < 100:
                 mean_std = f"{mean:.2f}% ({std:.2f}%)"
             else:
-                mean_std = f"{convert_float_2_sci_notation(int(mean))}% ({convert_float_2_sci_notation(int(std))}%)"
+                # mean_std = f"{convert_float_2_sci_notation(int(mean))}% ({convert_float_2_sci_notation(int(std))}%)"
+                mean_std = f"{convert_float_2_sci_notation(mean)}% ({convert_float_2_sci_notation(std)}%)"
             if median > 100:
-                median = f"{convert_float_2_sci_notation(int(median))}%"
+                # median = f"{convert_float_2_sci_notation(int(median))}%"
+                median = f"{convert_float_2_sci_notation(median)}%"
             else:
                 median = f"{median:.2f}%"
             if minimum < 100 and maximum < 100:
@@ -306,31 +310,55 @@ def get_stats_perc_df(column, *dfs):
     return main_df
 
 
+# Hoang's original function which uses round half to even, Python’s built-in round() and :.2f formatting use banker’s rounding (also called “round half to even”)
+# def convert_float_2_sci_notation(n):
+#     """
+#     Convert a floating-point number to its scientific notation as a string.
+
+#     This function takes a floating-point number and converts it into a string that represents its scientific notation.
+#     Scientific notation expresses the number as a mantissa multiplied by 10 raised to an exponent. The mantissa is
+#     rounded to two decimal places unless it is an integer. If the input number is 0, it simply returns '0'.
+
+#     Args:
+#         n (float): The floating-point number to be converted into scientific notation.
+
+#     Returns:
+#         string: A string representing the scientific notation of the input number. The mantissa is formatted to
+#                 have two decimal places unless it is an integer, followed by 'x10' and the exponent.
+#     """
+#     if n == 0:
+#         return "0"
+#     else:
+#         exponent = int(math.floor(math.log10(abs(n))))
+#         mantissa = round(n / 10**exponent, 2)
+
+#         if mantissa.is_integer():
+#             mantissa = int(mantissa)
+#             return f"{mantissa}x10^{exponent}"
+#         else:
+#             return f"{mantissa:.2f}x10^{exponent}"
+
+
+# If you want round half up behavior (the usual "schoolbook rounding"), you should use the decimal module with ROUND_HALF_UP.
 def convert_float_2_sci_notation(n):
     """
-    Convert a floating-point number to its scientific notation as a string.
-
-    This function takes a floating-point number and converts it into a string that represents its scientific notation.
-    Scientific notation expresses the number as a mantissa multiplied by 10 raised to an exponent. The mantissa is
-    rounded to two decimal places unless it is an integer. If the input number is 0, it simply returns '0'.
-
-    Args:
-        n (float): The floating-point number to be converted into scientific notation.
-
-    Returns:
-        string: A string representing the scientific notation of the input number. The mantissa is formatted to
-                have two decimal places unless it is an integer, followed by 'x10' and the exponent.
+    Convert a floating-point number to scientific notation,
+    rounding mantissa to 2 decimals using ROUND_HALF_UP
+    and dropping trailing zeros.
     """
     if n == 0:
         return "0"
     else:
         exponent = int(math.floor(math.log10(abs(n))))
-        mantissa = n / 10**exponent
-        if mantissa.is_integer():
-            mantissa = int(mantissa)
-            return f"{mantissa}x10^{exponent}"
-        else:
-            return f"{mantissa:.2f}x10^{exponent}"
+
+        # Convert to Decimal BEFORE dividing to avoid float precision issues
+        n_decimal = Decimal(str(n))
+        mantissa = n_decimal / (Decimal("10") ** exponent)
+
+        # Round mantissa to 2 decimals (ROUND_HALF_UP)
+        mantissa_str = str(mantissa.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)).rstrip("0").rstrip(".")
+
+        return f"{mantissa_str}x10^{exponent}"
 
 
 def convert_sci_notation_2_float(s):
