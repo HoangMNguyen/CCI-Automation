@@ -658,7 +658,7 @@ class DSMB16321:
             infusionR_df,
             data,
             "EXINF",
-            "IL13Ra2 Transduction Efficiency (%) (ig_EXINF1.IL13INFTEFFP)",
+            "EGFR Transduction Efficiency (%) (ig_EXINF1.EGFRINFTEFFP)",
             "Met Target % scFV Flow (Y/N) (≥2%)",
             "Subject",
             "Event Group Label",
@@ -1816,7 +1816,7 @@ class DSMB16321:
 
                         worksheet6.merge_range("E1:F1", "Product Administration Volumes", bold_12_wrap_format)
                         worksheet6.merge_range("G1:H1", "Cells Administered", bold_12_wrap_format)
-                        worksheet6.merge_range("I1:J1", "Transduction Efficiency", bold_12_wrap_format)
+                        worksheet6.merge_range("I1:K1", "Transduction Efficiency", bold_12_wrap_format)
                         worksheet6.write(
                             "E2",
                             "Volume CSF Withdrawn",
