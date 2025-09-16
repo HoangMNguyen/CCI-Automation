@@ -56,6 +56,7 @@ class DSMB03325:
             self.infusion_stats(self.infusion_df, self.infusionR_df)
             self.EGFR_listing_df_output, self.EGFR_listing_df = self.EGFR_listing()
             self.AE_df, self.status_df, self.safetyCH1_total_df = self.status_listing(self.enrollment_listing_df)
+            self.TXSUB_status_df = self.TXSUB_status_listing(self.infusion_listing)
             self.export(self.output_dir, self.output_file_name)
 
     def enrollment_listing(self):
@@ -679,8 +680,6 @@ class DSMB03325:
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Group Name and Event Date
         status_DSSVLTFU_df = data["DSSVLTFU"][["Subject", "Event Group Name", "Event Date"]]
 
-        # status_DSSVLTFU_df["Event Group Label"] = status_DSSVLTFU_df["Event Label"].apply(map_event)
-
         # Combine DSSVLTFU with SV dataframe vertically
         status_SV_df = pd.concat([status_SV_df, status_DSSVLTFU_df])
         # Sort the dataframe by Subject and Event Date
@@ -718,7 +717,7 @@ class DSMB03325:
 
         # print(status_df)
         status_df["Event Group Name4"] = status_df["Subject"].apply(
-            lambda x: "Off Study/Withdrawn Prior to Study Treatment"
+            lambda x: "Withdrawn Prior to Study Treatment"
             if (
                 self.enrollment_listing_df[self.enrollment_listing_df["Subject"] == x]["Study Treatment Administered"]
                 .fillna("")
@@ -793,9 +792,8 @@ class DSMB03325:
         )
 
         filteredDSEOS_df = DSEOS_df[(DSEOS_df["Subject"].isin(filteredemrollment_df["Subject"].values))].copy()
-        # print(filteredDSEOS_df)
+
         # on perform the replace when status_df is not empty
-        # print(status_df)
         if not status_df.empty:
             eos_subjects = set(filteredDSEOS_df["Subject"].values)
 
@@ -804,9 +802,7 @@ class DSMB03325:
                 subj = row["Subject"]
 
                 if subj in eos_subjects:
-                    if ev == "Off Study/Withdrawn Prior to Study Treatment":
-                        return ev  # keep as is
-                    elif ev == "Pre-Treatment":
+                    if ev == "Pre-Treatment":
                         return "Off Study/Withdrawn Prior to Study Treatment"
                     else:
                         return "Off Study/" + ev
@@ -815,10 +811,6 @@ class DSMB03325:
 
             status_df["Event Group Name"] = status_df.apply(update_event_group, axis=1)
 
-            # status_df = status_df.replace(
-            #     "On Study/Pre-TreatmentWithdrawn Prior to Study Treatment",
-            #     "Off-Study/Withdrawn Prior to Study Treatment",
-            # )
             status_df = pd.merge(
                 status_df,
                 filteredDSEOS_df[["Subject", "Off-Study Reason", "Last Study Visit"]],
@@ -840,6 +832,226 @@ class DSMB03325:
         safetyCH1_total_df = pd.concat([AECH1_total_count, SAECH1_total_count], axis=1)
 
         return AE_df, status_df, safetyCH1_total_df
+
+    def TXSUB_status_listing(self, data):
+        data = self.data
+        # AE and SAE data
+        #    if not data["AE"].empty:
+        AE_df = data["AE"][
+            [
+                "Subject",
+                "AE or SAE (IG_NS_NA_AE2.CL_NS_YH_AESEV_cl_NS_AESAE1)",
+            ]
+        ].copy()
+        AE_new_col_name = {
+            "AE or SAE (IG_NS_NA_AE2.CL_NS_YH_AESEV_cl_NS_AESAE1)": "AE or SAE?",
+        }
+        AE_df = AE_df.rename(columns=AE_new_col_name)
+
+        TXSUB_status_df = self.infusion_df["Subject"].copy()
+        TXSUB_status_df = TXSUB_status_df.sort_values()
+
+        # Merge left with the TXSUB_status_df and keep unique rows
+        TXSUB_status_df = (
+            pd.merge(
+                TXSUB_status_df,
+                AE_df,
+                on="Subject",
+                how="left",
+            )
+            .drop(columns=["AE or SAE?"], errors="ignore")  # drop if exists
+            .drop_duplicates()
+            .reset_index(drop=True)
+        )
+
+        TXSUB_status_df["AE"] = TXSUB_status_df["Subject"].apply(lambda x: "Y" if x in AE_df["Subject"].values else "N")
+
+        TXSUB_status_df["SAE"] = TXSUB_status_df["Subject"].apply(
+            lambda x: "Y" if x in AE_df[AE_df["AE or SAE?"] == "SAE"]["Subject"].values else "N"
+        )
+        # replaces all occurrences of NaN, positive infinity, and negative infinity in the TXSUB_status_df dataframe with empty strings.
+        TXSUB_status_df = TXSUB_status_df.replace([np.nan, np.inf, -np.inf], "")
+        # Getting Study Status dataframe from SV, column Subject, Event Label and Event Date
+        TXSUB_status_SV_df = data["DSSV"][
+            [
+                "Subject",
+                "Event Group Label",
+                "Event Label",
+                "Event Date",
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+            ]
+        ]
+        TXSUB_status_SV_df = TXSUB_status_SV_df[
+            TXSUB_status_SV_df[
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"
+            ]
+            == "Yes"
+        ]
+
+        # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
+        TXSUB_status_DSSVLTFU_df = data["DSSVLTFU"][
+            [
+                "Subject",
+                "Event Group Label",
+                "Event Label",
+                "Event Date",
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+            ]
+        ]
+        TXSUB_status_DSSVLTFU_df = TXSUB_status_DSSVLTFU_df[
+            TXSUB_status_DSSVLTFU_df[
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"
+            ]
+            == "Yes"
+        ]
+        # Combine DSSVLTFU with SV dataframe vertically
+        # TXSUB_status_SV_df = pd.concat([TXSUB_status_SV_df, TXSUB_status_DSSVLTFU_df])
+        # Sort the dataframe by Subject and Event Date
+        TXSUB_status_SV_df = TXSUB_status_SV_df.sort_values(by=["Subject", "Event Date"])
+        TXSUB_status_DSSVLTFU_df = TXSUB_status_DSSVLTFU_df.sort_values(by=["Subject", "Event Date"])
+
+        # For each unique subject, get the last row of the dataframe
+        TXSUB_status_SV_df = TXSUB_status_SV_df.groupby("Subject").tail(1)
+        TXSUB_status_DSSVLTFU_df = TXSUB_status_DSSVLTFU_df.groupby("Subject").tail(1)
+
+        # Merge left with TXSUB_status_df
+        TXSUB_status_df = pd.merge(
+            TXSUB_status_df,
+            TXSUB_status_SV_df[["Subject", "Event Group Label", "Event Label", "Event Date"]],
+            on="Subject",
+            how="left",
+        )
+        TXSUB_status_df = pd.merge(
+            TXSUB_status_df,
+            TXSUB_status_DSSVLTFU_df[["Subject", "Event Group Label", "Event Label", "Event Date"]],
+            on="Subject",
+            how="left",
+        )
+        DSEOS_df = data["DSEOS"][
+            [
+                "Subject",
+                "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_YH_EOSCOD1_cl_NS_EOSREAS1)",
+                # "Which step of screening did the Subject screen fail? (IG_NS_NA_DSEOS2.CL_NS_YH_SFSTEP_cl_YS_IESTEP1)",
+                "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)",
+                "Principal Cause of Death (IG_NS_NA_DSEOS2.CL_NS_NH_PRCDTH_cl_NS_EOSCAD1)",
+                "Specify Principal Cause of Death (IG_NS_NA_DSEOS2.TX_NS_NH_PRCDTHOS)",
+                "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)",
+            ]
+        ].copy()
+        DSEOS_new_col_name = {
+            "Reason for End of Study? (IG_NS_NA_DSEOS2.CL_NS_YH_EOSCOD1_cl_NS_EOSREAS1)": "Off-Study Reason",
+            #   "Which step of screening did the Subject screen fail? (IG_NS_NA_DSEOS2.CL_NS_YH_SFSTEP_cl_YS_IESTEP1)": "Screen Fail Step",
+            "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Off-Study Reason sp1",
+            "Principal Cause of Death (IG_NS_NA_DSEOS2.CL_NS_NH_PRCDTH_cl_NS_EOSCAD1)": "Off-Study Reason sp2",
+            "Specify Principal Cause of Death (IG_NS_NA_DSEOS2.TX_NS_NH_PRCDTHOS)": "Off-Study Reason sp3",
+            "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
+        }
+        DSEOS_df = DSEOS_df.rename(columns=DSEOS_new_col_name)
+
+        # Merge off-study reason
+        DSEOS_df["Off-Study Reason"] = (
+            DSEOS_df["Off-Study Reason"].fillna("")
+            + " "
+            + DSEOS_df["Off-Study Reason sp1"].fillna("")
+            + DSEOS_df["Off-Study Reason sp2"].fillna("")
+            + " "
+            + DSEOS_df["Off-Study Reason sp3"].fillna("")
+        )
+        TXSUB_status_df = pd.merge(
+            TXSUB_status_df,
+            DSEOS_df[["Subject", "Off-Study Reason", "End of Study Date"]],
+            on="Subject",
+            how="left",
+        )
+        # replaces all occurrences of NaN, positive infinity, and negative infinity with empty strings.
+        TXSUB_status_df = TXSUB_status_df.replace([np.nan, np.inf, -np.inf], "N/A")
+        # Convert date column to string in M-D-YYYY format without leading zeros
+        # Replace "Event Date_y" with your actual column name
+        TXSUB_status_df["Event Date_x"] = TXSUB_status_df["Event Date_x"].apply(
+            lambda x: "N/A" if x == "N/A" else f"{x.month}-{x.day}-{x.year}"
+        )
+        TXSUB_status_df["Event Date_y"] = TXSUB_status_df["Event Date_y"].apply(
+            lambda x: "N/A" if x == "N/A" else f"{x.month}-{x.day}-{x.year}"
+        )
+
+        def format_date(x):
+            if pd.isna(x):
+                return ""
+            # If already datetime
+            if isinstance(x, pd.Timestamp):
+                return f"{x.month}/{x.day}/{x.year}"
+            # If string, try parsing it
+            try:
+                dt = pd.to_datetime(x)
+                return f"{dt.month}/{dt.day}/{dt.year}"
+            except:
+                return str(x)  # fallback, just keep original string
+
+        # Apply formatting
+        TXSUB_status_df["Event Date_x Str"] = TXSUB_status_df["Event Date_x"].apply(format_date)
+
+        # Combine into new column with special rule for Pre-Treatment Safety Visit and Pre-Retreatment Safety Visit, 03325 was using the combination of repeat event group and event label to identify the visit
+        TXSUB_status_df["Event Combined_x"] = TXSUB_status_df.apply(
+            lambda row: (
+                f"{row['Event Group Label_x']} ({row['Event Date_x Str']})"
+                if row["Event Group Label_x"] in ["Pre-Treatment Safety Visit", "Pre-Retreatment Safety Visit"]
+                else f"{row['Event Group Label_x']}/{row['Event Label_x']} ({row['Event Date_x Str']})"
+                if row["Event Group Label_x"]
+                else ""
+            ),
+            axis=1,
+        )
+
+        # Apply formatting
+        TXSUB_status_df["Event Date_y Str"] = TXSUB_status_df["Event Date_y"].apply(format_date)
+
+        # Combine into new column
+        TXSUB_status_df["Event Combined_y"] = TXSUB_status_df.apply(
+            lambda row: f"{row['Event Group Label_y']}/{row['Event Label_y']} ({row['Event Date_y Str']})"
+            if row["Event Group Label_y"]
+            else "",
+            axis=1,
+        )
+        # Apply formatting
+        TXSUB_status_df["End of Study Date Str"] = TXSUB_status_df["End of Study Date"].apply(format_date)
+
+        # Combine into new column
+        TXSUB_status_df["EOS Combined"] = TXSUB_status_df.apply(
+            lambda row: f"{row['End of Study Date Str']} {row['Off-Study Reason']}" if row["Off-Study Reason"] else "",
+            axis=1,
+        )
+        TXSUB_status_df = TXSUB_status_df.drop(
+            columns=[
+                "Event Group Label_x",
+                "Event Label_x",
+                "Event Date_x",
+                "Event Group Label_y",
+                "Event Label_y",
+                "Event Date_y",
+                "Off-Study Reason",
+                "End of Study Date",
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+            ],
+            errors="ignore",  # avoids errors if any column is missing
+        )
+
+        # *Re-order the columns and remove the columns that are not needed
+        TXSUB_status_df = TXSUB_status_df[
+            [
+                "Subject",
+                "Event Combined_x",
+                "Event Combined_y",
+                "EOS Combined",
+                "AE",
+                "SAE",
+            ]
+        ]
+        TXSUB_status_df = TXSUB_status_df.replace([np.nan, np.inf, -np.inf], "N/A").replace(
+            [r"N/A\s*\(N/A\)", r"N/A\s+N/A"], "N/A", regex=True
+        )
+
+        return TXSUB_status_df
 
     def export(self, output_dir, output_file_name):
         data = self.data
@@ -1165,7 +1377,7 @@ class DSMB03325:
                     # Autofit
                     worksheet5.autofit()
 
-                    ## TODO: DSMB-Infusion Listing
+                    ## TODO: DSMB-Retreatment Listing
                     worksheet6 = writer.book.add_worksheet("DSMB-Retreatment Listing")
                     # * WRITING AND FORMATING DATA
                     for i in range(0, len(self.infusionR_df)):
@@ -1215,3 +1427,23 @@ class DSMB03325:
                             worksheet7.write(i + 1, j, self.EGFR_listing_df_output.iloc[i, j], normal_data_format)
                     # Autofit
                     worksheet7.autofit()
+
+                    worksheet8 = writer.book.add_worksheet("DSMB-Status_Treated Subjects")
+                    # * WRITING AND FORMATING DATA
+                    for i in range(0, len(self.TXSUB_status_df)):
+                        for j in range(0, len(self.TXSUB_status_df.columns)):
+                            worksheet8.write(i + 2, j, self.TXSUB_status_df.iloc[i, j], normal_data_format)
+
+                    # * WRITING HEADER AND FORMATTING
+                    worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+                    worksheet8.merge_range(
+                        "B1:B2", "Last Primary Follow-Up Visit/Date of Last Visit in Primary Study", bold_12_wrap_format
+                    )
+                    worksheet8.merge_range(
+                        "C1:C2", "Last LTFU Visit Completed/Date of Last LTFU Visit", bold_12_wrap_format
+                    )
+                    worksheet8.merge_range("D1:D2", "Off-Study Date/Reason", bold_12_wrap_format)
+                    worksheet8.merge_range("E1:E2", "Adverse Events (Y/N)", bold_12_wrap_format)
+                    worksheet8.merge_range("F1:F2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
+
+                    worksheet8.autofit()
