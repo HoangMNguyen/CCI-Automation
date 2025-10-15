@@ -509,14 +509,56 @@ If Not IsEmpty(VSheet.Range("A2")) Then
     Next cel
 End If
 
+'Remove and re apply filter for the second validation
+Dim startLine, headerLine As Long
+startLine = VRow + 4
+headerLine = VRow + 3
+WS1.Activate
+RemoveFilter
+With WS1.Range("A1")
+    .AutoFilter Field:=12, Criteria1:="Closed", Operator:=xlOr, Criteria2:="Resolved"
+    .AutoFilter Field:=8, Criteria1:="Incomplete", Operator:=xlFilterValues
+End With
+WS1.Range("A1", WS1.Range("S1").End(xlDown)).SpecialCells(xlCellTypeVisible).Copy
+VSheet.Range("D" & headerLine).PasteSpecial
+
+'Copy second validation to the VSheet=
+VSheet.Range("O" & headerLine, VSheet.Range("O" & headerLine).End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A" & headerLine), Unique:=True
+Dim VRow2 As Long
+VRow2 = VSheet.Range("O" & headerLine, VSheet.Range("O" & headerLine).End(xlDown)).Rows.count
+MsgBox ("VRow2:" & VRow2)
+VSheet.Activate
+VSheet.Range("A" & headerLine).Value = "Closed/Resolved with Incomplete Form Status"
+
+'Counting the number of instances the form is Closed or Resolved with Incomplete status
+Dim lngCount2 As Long
+lngCount2 = VSheet.Range("A" & headerLine, VSheet.Range("A" & headerLine).End(xlDown)).Rows.count - 1
+MsgBox (lngCount2)
+Dim cel2 As Range
+If Not IsEmpty(VSheet.Range("A" & startLine)) Then
+    For Each cel2 In VSheet.Range("A" & headerLine & ":A" & headerLine + lngCount2).Cells
+        VSheet.Range("B" & cel2.row).Value = Application.WorksheetFunction.CountIf(Range("O" & startLine & ":O" & startLine + VRow2), cel2.text)
+    Next cel2
+End If
+
 'Format Validation Sheet
 VSheet.Range("B1").Value = "Count of occurrence"
+VSheet.Range("B" & headerLine).Value = "Count of occurrence"
 VSheet.Range("A1").Select
 Call FormatTable
 
+VSheet.Range("A" & headerLine).Select
+Call FormatTable
+
+
 VSheet.Range("D1").Select
 Call FormatTable
-    
+
+VSheet.Range("D" & headerLine).Select
+Call FormatTable
+
+WS1.Activate
+RemoveFilter
 Sheets(2).Activate
 
 Application.ScreenUpdating = True
