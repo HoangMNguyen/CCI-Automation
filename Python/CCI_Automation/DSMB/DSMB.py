@@ -97,3 +97,22 @@ class DSMB:
                 output_dir=self.output_dir,
                 output_file_name=self.output_file_name,
             )
+
+        if study_name == "16321":
+            from .DSMB16321 import DSMB16321
+
+            x = DSMB16321(
+                data,
+                output_dir=self.output_dir,
+                output_file_name=self.output_file_name,
+            )
+            x.run()
+        if study_name == "03325":
+            from .DSMB03325 import DSMB03325
+
+            x = DSMB03325(
+                data,
+                output_dir=self.output_dir,
+                output_file_name=self.output_file_name,
+            )
+            x.run()
