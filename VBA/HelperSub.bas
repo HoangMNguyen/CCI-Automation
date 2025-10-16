@@ -968,3 +968,63 @@ Sub UpdateSheetFontToCalibri(ws)
         .Font.Name = "Calibri"
     End With
 End Sub
+
+Option Explicit
+
+' Counts the number of contiguous non-empty cells downward in the same column,
+' starting at the first non-empty cell at or below startAddress.
+' - ws: the worksheet to inspect
+' - startAddress: e.g., "A5"
+' Returns: number of cells with data until the first empty cell is encountered.
+Public Function CountDownData(ws As Worksheet, startAddress As String) As Long
+    Dim startCell As Range
+    Dim col As Long, r As Long, lastRow As Long
+    Dim n As Long
+    
+    On Error GoTo SafeExit
+    Set startCell = ws.Range(startAddress)
+    col = startCell.column
+    r = startCell.row
+    lastRow = ws.Rows.count
+    
+    ' Move down to the first non-empty cell at or below the start row
+    Do While r <= lastRow
+        If CellHasData(ws.Cells(r, col)) Then Exit Do
+        r = r + 1
+    Loop
+    
+    ' If no data found below (or at) start, return 0
+    If r > lastRow Then
+        CountDownData = 0
+        Exit Function
+    End If
+    
+    ' Count contiguous non-empty cells until the first empty cell
+    Do While r <= lastRow And CellHasData(ws.Cells(r, col))
+        n = n + 1
+        r = r + 1
+    Loop
+    
+    CountDownData = n
+    Exit Function
+    
+SafeExit:
+    ' In case of an unexpected error, return what we have (defaults to 0)
+End Function
+
+' Helper: decides if a single cell should be considered "has data".
+' Treats: numbers, text, dates, booleans, and errors as data.
+' Treats: zero-length string ("") and truly empty as empty.
+Private Function CellHasData(c As Range) As Boolean
+    Dim v As Variant
+    v = c.Value
+    
+    If IsError(v) Then
+        CellHasData = True
+    Else
+        ' Convert to string and check zero-length;
+        ' this makes formulas returning "" count as empty.
+        CellHasData = (CStr(v) <> "")
+    End If
+End Function
+

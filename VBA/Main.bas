@@ -494,7 +494,7 @@ WS1.Range("A1").AutoFilter Field:=8
 
 VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
 Dim VRow As Long
-VRow = VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).Rows.count
+VRow = CountDownData(VSheet, "O1")
 
 VSheet.Activate
 VSheet.Range("A1").Value = "Opened/Reopened with Completed/Ready for Submission/Submitted to Sponsor Status"
@@ -525,15 +525,13 @@ VSheet.Range("D" & headerLine).PasteSpecial
 'Copy second validation to the VSheet=
 VSheet.Range("O" & headerLine, VSheet.Range("O" & headerLine).End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A" & headerLine), Unique:=True
 Dim VRow2 As Long
-VRow2 = VSheet.Range("O" & headerLine, VSheet.Range("O" & headerLine).End(xlDown)).Rows.count
-MsgBox ("VRow2:" & VRow2)
+VRow2 = CountDownData(VSheet, "O" & headerLine)
 VSheet.Activate
 VSheet.Range("A" & headerLine).Value = "Closed/Resolved with Incomplete Form Status"
 
 'Counting the number of instances the form is Closed or Resolved with Incomplete status
 Dim lngCount2 As Long
 lngCount2 = VSheet.Range("A" & headerLine, VSheet.Range("A" & headerLine).End(xlDown)).Rows.count - 1
-MsgBox (lngCount2)
 Dim cel2 As Range
 If Not IsEmpty(VSheet.Range("A" & startLine)) Then
     For Each cel2 In VSheet.Range("A" & headerLine & ":A" & headerLine + lngCount2).Cells
