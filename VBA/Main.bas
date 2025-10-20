@@ -557,6 +557,10 @@ Call FormatTable
 
 WS1.Activate
 RemoveFilter
+With WS1.Range("A1")
+    .AutoFilter Field:=12, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
+    .AutoFilter Field:=8, Criteria1:=Array("Completed", "Ready for Submission", "Submitted to Sponsor"), Operator:=xlFilterValues
+End With
 Sheets(2).Activate
 
 Application.ScreenUpdating = True
