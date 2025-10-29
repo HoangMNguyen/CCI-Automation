@@ -15,7 +15,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Prior ANP"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Prior ANP"
     Set WS2 = Sheets("Filtered Prior ANP")
 End With
 'Set up header for WS2
@@ -27,7 +27,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -129,7 +129,7 @@ Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
 
 End Sub
 
-Sub QQSR(WS1, WS2, WS3, WS4, WS5)
+Sub QQSR(WS1 As Worksheet, WS2 As Worksheet, WS3 As Worksheet, WS4 As Worksheet, WS5 As Worksheet)
 
 Dim lastRow As Long
 
@@ -147,8 +147,9 @@ WS4.Name = "Query Report Overview"
 
 WS1.Activate
 WS1.Range("A1").Select
-lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
-
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
+Dim calendarNameCol As Integer
+calendarNameCol = L2N(FindColumn(WS1, "CALENDAR_NAME"))
 'Copy cohort 2 data to another tab
 WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
    "15CT055 Cohort 2 LTFU Calendar", _
@@ -157,16 +158,16 @@ WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
    "15CT055 Cohort 2 Retx-LTFU Calendar", _
    "15CT055 Exception Retreatment Calendar"), Operator:=xlFilterValues
 
-WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS2.Paste
 
 'Copy cohort 1 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:="15CT055 Calendar", Operator:=xlOr, Criteria2:="15CT055-LTFU Calendar"
-WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="15CT055 Calendar", Operator:=xlOr, Criteria2:="15CT055-LTFU Calendar"
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS3.Paste
 
 'Copy cohort 3 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:=Array( _
         "15CT055 Cohort 3 LTFU Calendar", _
         "15CT055 Cohort 3 Primary Calendar", _
         "15CT055 Cohort 3 Retreatment Calendar", _

@@ -1028,3 +1028,103 @@ Private Function CellHasData(c As Range) As Boolean
     End If
 End Function
 
+' Returns a 0-based Variant array containing the visible values in a filtered column.
+' - ws: worksheet that is already filtered
+' - colName: header text of the target column (e.g., "RESPONSE_ID")
+' - headerRow: row number of the header (default = 1)
+' - uniqueOnly: if True, removes duplicates (case-insensitive)
+'
+' Example:
+'   Dim openQArray As Variant
+'   openQArray = FilteredColumnList(WS1, "RESPONSE_ID", 1, True)
+'
+Public Function FilteredColumnList(ByVal ws As Worksheet, _
+                                   ByVal colName As String, _
+                                   Optional ByVal headerRow As Long = 1, _
+                                   Optional ByVal uniqueOnly As Boolean = False) As Variant
+    Dim colIdx As Long
+    Dim rngCol As Range, rngVis As Range
+    Dim lastRow As Long
+    Dim vals() As Variant
+    Dim c As Range
+    Dim n As Long
+
+    '--- locate column by header
+    On Error Resume Next
+    ' Prefer project helper if available:
+    colIdx = L2N(FindColumn(ws, colName))
+    On Error GoTo 0
+
+    If colIdx = 0 Then
+        ' Fallback using MATCH on the header row
+        On Error Resume Next
+        colIdx = Application.match(colName, ws.Rows(headerRow), 0)
+        On Error GoTo 0
+    End If
+
+    If colIdx <= 0 Then
+        ' Couldn’t find the column; return empty list
+        FilteredColumnList = Array()
+        Exit Function
+    End If
+
+    '--- data range from the first data row to last used cell in that column
+    lastRow = ws.Cells(ws.Rows.count, colIdx).End(xlUp).row
+    If lastRow <= headerRow Then
+        FilteredColumnList = Array()
+        Exit Function
+    End If
+
+    Set rngCol = ws.Range(ws.Cells(headerRow + 1, colIdx), ws.Cells(lastRow, colIdx))
+
+    '--- restrict to visible cells (respect current filters)
+    On Error Resume Next
+    Set rngVis = rngCol.SpecialCells(xlCellTypeVisible)
+    On Error GoTo 0
+    If rngVis Is Nothing Then
+        FilteredColumnList = Array()
+        Exit Function
+    End If
+
+    '--- collect values
+    ReDim vals(0 To 0)
+    n = -1
+    For Each c In rngVis.Cells
+        If Len(Trim$(c.Value)) > 0 Then
+            If (Not uniqueOnly) Or (uniqueOnly And Not InArrayCI(CStr(c.Value), vals, n)) Then
+                n = n + 1
+                If n > UBound(vals) Then
+                    ReDim Preserve vals(0 To IIf(UBound(vals) = 0 And n = 0, 0, UBound(vals) * 2 + 1))
+                End If
+                vals(n) = CStr(c.Value)
+            End If
+        End If
+    Next c
+
+    If n < 0 Then
+        FilteredColumnList = Array()
+    Else
+        ReDim Preserve vals(0 To n)
+        FilteredColumnList = vals
+    End If
+End Function
+
+' Case-insensitive membership test against a dynamic string array
+' - valsArr is the working buffer (0-based), may be larger than actual count
+' - lastIdx is the last filled index in valsArr (-1 if none)
+Private Function InArrayCI(ByVal needle As String, ByRef valsArr() As Variant, ByVal lastIdx As Long) As Boolean
+    Dim i As Long
+    If lastIdx < 0 Then
+        InArrayCI = False
+        Exit Function
+    End If
+    For i = 0 To lastIdx
+        If StrComp(needle, CStr(valsArr(i)), vbTextCompare) = 0 Then
+            InArrayCI = True
+            Exit Function
+        End If
+    Next i
+    InArrayCI = False
+End Function
+
+
