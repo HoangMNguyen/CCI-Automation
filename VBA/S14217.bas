@@ -15,7 +15,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Prior ANP"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Prior ANP"
     Set WS2 = Sheets("Filtered Prior ANP")
 End With
 'Set up header for WS2
@@ -29,7 +29,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -66,7 +66,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Medical History"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Medical History"
     Set WS2 = Sheets("Filtered Medical History")
 End With
 'Set up header for WS2
@@ -80,7 +80,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -101,16 +101,16 @@ Call Main.OutFormat
 
 End Sub
 
-Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
+Sub QFSR(WS1, WS2, WS3, WS4, lastRow)
 
     'Copy cohort 1 data to another tab
     Sheets("All Cohorts Form Status Report").Select
     Set WS1 = Sheets("All Cohorts Form Status Report")
     WS1.Range("A1").AutoFilter Field:=3, Criteria1:="14217 Subject Study Calendar", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2"
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
-    Set WS2 = Sheets.Add(After:=Sheets(Sheets.Count))
+    Set WS2 = Sheets.Add(After:=Sheets(Sheets.count))
     WS2.Name = "Cohort 1 Form Status"
     WS2.Paste
     Call Main.OutFormat
@@ -119,10 +119,10 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
 
     'Copy cohort 2&3 data to another tab
     WS1.Range("A1").AutoFilter Field:=3, Criteria1:="14217 Subject Study Calendar - Local Delivery", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2 - Local Delivery"
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
-    Set WS3 = Sheets.Add(After:=Sheets(Sheets.Count))
+    Set WS3 = Sheets.Add(After:=Sheets(Sheets.count))
     WS3.Name = "Cohorts 2&3 Form Status"
     WS3.Paste
     Call Main.OutFormat
@@ -131,10 +131,10 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
 
     'Copy cohort 4 data to another tab
     WS1.Range("A1").AutoFilter Field:=3, Criteria1:="14217 Subject Study Calendar V3 - Local Delivery"
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
-    Set WS4 = Sheets.Add(After:=Sheets(Sheets.Count))
+    Set WS4 = Sheets.Add(After:=Sheets(Sheets.count))
     WS4.Name = "Cohorts 4 Form Status"
     WS4.Paste
     Call Main.OutFormat
@@ -145,17 +145,17 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
     WS5.Name = "Form Status Overview"
     
     WS5.Range("A1").Value = "All Cohorts Form Status"
-    Call FormStatusOverview(WS1, WS5, 1, LastRow)
+    Call FormStatusOverview(WS1, WS5, 1, lastRow)
     
     WS5.Range("A8").Value = "Cohort 1 Form Status"
-    Call FormStatusOverview(WS2, WS5, 8, LastRow)
+    Call FormStatusOverview(WS2, WS5, 8, lastRow)
    
     
     WS5.Range("A15").Value = "Cohorts 2&3 Form Status"
-    Call FormStatusOverview(WS3, WS5, 15, LastRow)
+    Call FormStatusOverview(WS3, WS5, 15, lastRow)
     
     WS5.Range("A22").Value = "Cohorts 4 Form Status"
-    Call FormStatusOverview(WS4, WS5, 22, LastRow)
+    Call FormStatusOverview(WS4, WS5, 22, lastRow)
 
     'Autofit and add borders for the form status overview table
     ActiveSheet.Range("A1").Select
@@ -174,9 +174,9 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
 
 End Sub
 
-Sub QQSR(WS1, WS2, WS3, WS4)
+Sub QQSR(WS1 As Worksheet, WS2, WS3, WS4)
 
-Dim LastRow As Long
+Dim lastRow As Long
 
 Set WS3 = Sheets.Add(After:=WS1)
 WS3.Name = "Cohort 1 Query Report"
@@ -192,20 +192,22 @@ WS5.Name = "Query Report Overview"
 
 WS1.Activate
 WS1.Range("A1").Select
-LastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
+Dim calendarNameCol As Integer
+calendarNameCol = L2N(FindColumn(WS1, "CALENDAR_NAME"))
 'Copy cohort 2&3 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:="14217 Subject Study Calendar - Local Delivery", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2 - Local Delivery"
-WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="14217 Subject Study Calendar - Local Delivery", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2 - Local Delivery"
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS2.Paste
 
 'Copy cohort 1 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:="14217 Subject Study Calendar", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2"
-WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="14217 Subject Study Calendar", Operator:=xlOr, Criteria2:="14217 Subject Study Calendar V2"
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS3.Paste
 
 'Copy cohort 4 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:="14217 Subject Study Calendar V3 - Local Delivery"
-WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="14217 Subject Study Calendar V3 - Local Delivery"
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS4.Paste
 
 WS1.Activate

@@ -16,7 +16,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Prior ONC"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Prior ONC"
     Set WS2 = Sheets("Filtered Prior ONC")
 End With
 'Set up header for WS2
@@ -33,7 +33,7 @@ WS2.Range("I1").Value = "Number of cycles"
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 12 To RowNum
@@ -68,7 +68,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Prior ANP"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Prior ANP"
     Set WS2 = Sheets("Filtered Prior ANP")
 End With
 'Set up header for WS2
@@ -82,7 +82,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -120,7 +120,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Infusion Vital Signs"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Infusion Vital Signs"
     Set WS2 = Sheets("Filtered Infusion Vital Signs")
 End With
 'Set up header for WS2
@@ -135,7 +135,7 @@ WS2.Range("C1").Value = "Infusion Number"
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -174,7 +174,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Infusion Vital Signs"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Infusion Vital Signs"
     Set WS2 = Sheets("Filtered Infusion Vital Signs")
 End With
 'Set up header for WS2
@@ -186,7 +186,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -223,7 +223,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Filtered Medical History"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Filtered Medical History"
     Set WS2 = Sheets("Filtered Medical History")
 End With
 'Set up header for WS2
@@ -237,7 +237,7 @@ Next i
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -286,7 +286,7 @@ Set WB1 = ActiveWorkbook
 Set WS1 = ActiveSheet
 'Add WS2 as output for taget lesion
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Target Lesions"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Target Lesions"
     Set WS2 = Sheets("Target Lesions")
 End With
 'Set up header for WS2
@@ -310,7 +310,7 @@ WS2.Range("L1").Value = "Target Lesion Identified?"
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l = 1
 For i = 9 To RowNum
@@ -360,7 +360,7 @@ Call Main.OutFormat
 
 'Add WS3 as output for non-target lesion
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "Non-Target Lesions"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "Non-Target Lesions"
     Set WS3 = Sheets("Non-Target Lesions")
 End With
 'Set up header for WS3
@@ -384,7 +384,7 @@ WS3.Range("L1").Value = "Non-Target Lesion Identified?"
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l2 = 1
 For i2 = 9 To RowNum
@@ -434,7 +434,7 @@ Call Main.OutFormat
 
 
 With WB1
-    .Sheets.Add(After:=.Sheets(.Sheets.Count)).Name = "New Lesions"
+    .Sheets.Add(After:=.Sheets(.Sheets.count)).Name = "New Lesions"
     Set WS4 = Sheets("New Lesions")
 End With
 'Set up header for WS4
@@ -460,7 +460,7 @@ WS4.Range("N1").Value = "New Lesion Identified?"
 'Count number of rows w/ header
 WS1.Activate
 WS1.Range("A1").Select
-RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+RowNum = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 'Loop rows
 l3 = 1
 For i3 = 9 To RowNum
@@ -526,14 +526,14 @@ WS4.Activate
 Call Main.OutFormat
 End Sub
 
-Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
+Sub QFSR(WS1, WS2, WS3, WS4, lastRow)
     'Copy cohort 5-7 data to another tab
      WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
         "02916 Subject Study Calendar - Cohort 5", _
         "02916 Subject Study Calendar - Cohort 6", _
         "02916 Subject Study Calendar - Cohort 7"), Operator:=xlFilterValues
    
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
     Set WS2 = Sheets.Add
@@ -546,7 +546,7 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
     'Copy cohort 1-3 data to another tab
     Sheets("All Cohorts Form Status Report").Select
     WS1.Range("A1").AutoFilter Field:=3, Criteria1:="02916-Subject Calendar"
-    WS1.Range("A1:J" & LastRow).Select
+    WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
     
     Set WS3 = Sheets.Add
@@ -560,13 +560,13 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
     WS4.Name = "Form Status Overview"
     
     WS4.Range("A1").Value = "All Cohorts Form Status"
-    Call FormStatusOverview(WS1, WS4, 1, LastRow)
+    Call FormStatusOverview(WS1, WS4, 1, lastRow)
     
     WS4.Range("A8").Value = "Cohorts 1-3 Form Status"
-    Call FormStatusOverview(WS3, WS4, 8, LastRow)
+    Call FormStatusOverview(WS3, WS4, 8, lastRow)
     
     WS4.Range("A15").Value = "Cohorts 5-7 Form Status"
-    Call FormStatusOverview(WS2, WS4, 15, LastRow)
+    Call FormStatusOverview(WS2, WS4, 15, lastRow)
  
     'Autofit and add borders for the form status overview table
     ActiveSheet.Range("A1").Select
@@ -582,9 +582,9 @@ Sub QFSR(WS1, WS2, WS3, WS4, LastRow)
 
 
 End Sub
-Sub QQSR(WS1, WS2, WS3, WS4)
+Sub QQSR(WS1 As Worksheet, WS2 As Worksheet, WS3 As Worksheet, WS4 As Worksheet)
 
-Dim LastRow As Long
+Dim lastRow As Long
     
 Set WS2 = Sheets.Add(After:=WS1)
 WS2.Name = "Cohorts 5-7 Query Report"
@@ -597,19 +597,21 @@ WS4.Name = "Query Report Overview"
 
 WS1.Activate
 WS1.Range("A1").Select
-LastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).Row
+lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
+Dim calendarNameCol As Integer
+calendarNameCol = L2N(FindColumn(WS1, "CALENDAR_NAME"))
 'Copy cohort 5-7 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:=Array( _
     "02916 Subject Study Calendar - Cohort 5", _
     "02916 Subject Study Calendar - Cohort 6", _
     "02916 Subject Study Calendar - Cohort 7"), Operator:=xlFilterValues
    
- WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+ WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
  WS2.Paste
 
  'Copy cohort 1-3 data to another tab
- WS1.Range("A1").AutoFilter Field:=5, Criteria1:="02916-Subject Calendar"
- WS1.Range("A1:S" & LastRow).SpecialCells(xlCellTypeVisible).Copy
+ WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="02916-Subject Calendar"
+ WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
  WS3.Paste
  
  WS4.Range("A1").Value = "All Cohorts Query Status"

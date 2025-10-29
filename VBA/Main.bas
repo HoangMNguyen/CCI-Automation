@@ -2,28 +2,27 @@ Attribute VB_Name = "Main"
 Option Explicit
 
 Sub OutFormat() 'Format, sort column A ascending,
-showAll
-ActiveSheet.Range("A1").Select
-Range(Selection, Selection.End(xlToRight)).Select
-Selection.Font.Bold = True
-Range(Selection, Selection.End(xlDown)).Select
-Selection.WrapText = False
-Selection.Columns.AutoFit
-Selection.VerticalAlignment = xlCenter
-Selection.HorizontalAlignment = xlLeft
-Selection.Borders.LineStyle = xlContinuous
-Selection.Borders.Weight = xlThin
-If Not ActiveSheet.AutoFilterMode Then
-    Selection.AutoFilter
-End If
-Selection.Font.Size = 10
-Selection.Borders.LineStyle = xlContinuous
-Selection.Borders.Color = vbBlack
-Selection.Borders.Weight = xlThin
+    showAll
+    ActiveSheet.Range("A1").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Selection.Font.Bold = True
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.WrapText = False
+    Selection.Columns.AutoFit
+    Selection.VerticalAlignment = xlCenter
+    Selection.HorizontalAlignment = xlLeft
+    Selection.Borders.LineStyle = xlContinuous
+    Selection.Borders.Weight = xlThin
+    If Not ActiveSheet.AutoFilterMode Then
+        Selection.AutoFilter
+    End If
+    Selection.Font.Size = 10
+    Selection.Borders.LineStyle = xlContinuous
+    Selection.Borders.Color = vbBlack
+    Selection.Borders.Weight = xlThin
 
-sortAsc ("A1")
+    sortAsc ("A1")
 End Sub
-
 
 Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status report, split into cohorts depend on studies
 ' Keyboard Shortcut: Ctrl+Shift+F
@@ -375,10 +374,9 @@ Sub FormStatusOverview(WSNum1, WSNum2, i, lastRow)
     WSNum2.Range("B" & i + 4).Value = Application.WorksheetFunction.CountIf(WSNum1.Range("F2:K" & lastRow), "Work In Progress")
     WSNum2.Range("B" & i + 5).Value = Application.WorksheetFunction.CountIf(WSNum1.Range("F2:K" & lastRow), "Incomplete")
 End Sub
-Sub QueryReportOverview(QueryWS, OverviewWS, TableStartRow)
+Sub QueryReportOverview(QueryWS As Worksheet, OverviewWS As Worksheet, TableStartRow)
     
     Dim lastRow As Long
-    
     QueryWS.Activate
     QueryWS.Range("A1").Select
     lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
@@ -389,194 +387,267 @@ Sub QueryReportOverview(QueryWS, OverviewWS, TableStartRow)
     OverviewWS.Range("A" & TableStartRow + 3).Value = "Open"
     OverviewWS.Range("A" & TableStartRow + 4).Value = "Re-opened"
     'count
-    OverviewWS.Range("B" & TableStartRow + 1).Value = Application.WorksheetFunction.CountIf(QueryWS.Range("L2:K" & lastRow), "Resolved")
-    OverviewWS.Range("B" & TableStartRow + 2).Value = Application.WorksheetFunction.CountIf(QueryWS.Range("L2:K" & lastRow), "Closed")
-    OverviewWS.Range("B" & TableStartRow + 3).Value = Application.WorksheetFunction.CountIf(QueryWS.Range("L2:K" & lastRow), "Open")
-    OverviewWS.Range("B" & TableStartRow + 4).Value = Application.WorksheetFunction.CountIf(QueryWS.Range("L2:K" & lastRow), "Re-opened")
+    Dim queryStatusCol As Integer
+    queryStatusCol = L2N(FindColumn(QueryWS, "QUERY_STATUS"))
+    OverviewWS.Range("B" & TableStartRow + 1).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Resolved")
+    OverviewWS.Range("B" & TableStartRow + 2).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Closed")
+    OverviewWS.Range("B" & TableStartRow + 3).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Open")
+    OverviewWS.Range("B" & TableStartRow + 4).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Re-opened")
 End Sub
 
 Sub QuickReportQueryStatusFormat()
-'
-'QuickReportQueryStatusMacro Macro to reformat quick report patient form query status report, split into cohorts depend on studies
-'
-'Keyboard Shortcut: Ctrl+Shift+Q
-'
-Dim WS1 As Worksheet
-Dim WS2 As Worksheet
-Dim WS3 As Worksheet
-Dim WS4 As Worksheet
-Dim WS5 As Worksheet
-Dim lastRow As Long
-Dim WSCount As Integer
-Dim Sh As Integer
-Dim VSheet As Worksheet
-Dim TempSheet As Worksheet
-Dim xcell As Object
-Dim SelectCells As Range
-Dim fileSaveName As Variant
+    '
+    'QuickReportQueryStatusMacro Macro to reformat quick report patient form query status report, split into cohorts depend on studies
+    '
+    'Keyboard Shortcut: Ctrl+Shift+Q
+    '
+    Dim WS1 As Worksheet
+    Dim WS2 As Worksheet
+    Dim WS3 As Worksheet
+    Dim WS4 As Worksheet
+    Dim WS5 As Worksheet
+    Dim lastRow As Long
+    Dim WSCount As Integer
+    Dim Sh As Integer
+    Dim VSheet As Worksheet
+    Dim TempSheet As Worksheet
+    Dim xcell As Object
+    Dim SelectCells As Range
+    Dim fileSaveName As Variant
 
 
-Application.ScreenUpdating = False
+    Application.ScreenUpdating = False
 
-Set WS1 = Sheets(1)
-WS1.Activate
-WS1.Name = "All Cohorts Query Report"
+    Set WS1 = Sheets(1)
+    WS1.Activate
+    WS1.Name = "All Cohorts Query Report"
 
-'Counting LastRow and LastCol for studies which only have 1 output, Errl will skip over the code above and continue loop
-WS1.Range("A1").Select
-lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
-'Delete last row
-Range("A" & lastRow).Select
-Selection.EntireRow.Delete
-lastRow = lastRow - 1
-    
-'Delete QUERY_STATUS_ID,PATIENT_ID,EVENT_NAME
-Range("B:B,E:E,I:I").Select
-Range("I1").Activate
-Selection.Delete Shift:=xlToLeft
-
-
-
-'Customization for each study
-If WS1.Range("C2").Value = "827644" Then
-    Call S14217.QQSR(WS1, WS2, WS3, WS4) '14217 study
-
-ElseIf WS1.Range("C2").Value = "826085" Then
-    Call S02916.QQSR(WS1, WS2, WS3, WS4) '02916 study
+    'Counting LastRow and LastCol for studies which only have 1 output, Errl will skip over the code above and continue loop
+    WS1.Range("A1").Select
+    lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
+    'Delete last row
+    Range("A" & lastRow).Select
+    Selection.EntireRow.Delete
+    lastRow = lastRow - 1
         
-ElseIf WS1.Range("C2").Value = "850925" Then
-    Call S01422.QQSR(WS1) '01422 Study
-    
-ElseIf WS1.Range("C2").Value = "823312" Then
-    Call S15CT055.QQSR(WS1, WS2, WS3, WS4, WS5) '15CT055 study
-    
-ElseIf WS1.Range("C2").Value = "826250" Then
-    Call S32816.QQSR(WS1, WS2, WS3, WS4) '32816 study
+    'Delete QUERY_STATUS_ID,PATIENT_ID,EVENT_NAME
+    Call RemoveColumn(WS1, "QUERY_STATUS_ID")
+    Call RemoveColumn(WS1, "PATIENT_ID")
+    Call RemoveColumn(WS1, "EVENT_NAME")
 
-Else 'other studies
-    WS1.Name = "Query Report"
-    Set WS2 = Sheets.Add(Before:=WS1)
-    WS2.Name = "Query Report Overview"
-    WS2.Range("A1").Value = "Query Status"
-    Call QueryReportOverview(WS1, WS2, 1)
-    WS2.Activate
-    'Autofit and add borders for the form status overview table
-    WS2.Range("A1").Select
-    Call FormatTable
-End If
+    Dim statusCol As String
+    Dim statusColV As String
+    Dim statusColN As Long
+    Dim formStatusCol As String
+    Dim formStatusColN As Long
+    statusCol = FindColumn(WS1, "QUERY_STATUS")
+    statusColN = L2N(statusCol)
+    statusColV = N2L(statusColN + 3)
+    formStatusCol = FindColumn(WS1, "FORM_STATUS")
+    formStatusColN = L2N(formStatusCol)
 
-'Format table for all worksheets except the first one
-WSCount = ActiveWorkbook.Worksheets.count
-For Sh = 2 To WSCount
-    Sheets(Sh).Activate
+    'Customization for each study
+    If WS1.Range("C2").Value = "827644" Then
+        Call S14217.QQSR(WS1, WS2, WS3, WS4) '14217 study
+
+    ElseIf WS1.Range("C2").Value = "826085" Then
+        Call S02916.QQSR(WS1, WS2, WS3, WS4) '02916 study
+            
+    ElseIf WS1.Range("C2").Value = "850925" Then
+        Call S01422.QQSR(WS1) '01422 Study
+        
+    ElseIf WS1.Range("C2").Value = "823312" Then
+        Call S15CT055.QQSR(WS1, WS2, WS3, WS4, WS5) '15CT055 study
+        
+    ElseIf WS1.Range("C2").Value = "826250" Then
+        Call S32816.QQSR(WS1, WS2, WS3, WS4) '32816 study
+
+    Else 'other studies
+        WS1.Name = "Query Report"
+        Set WS2 = Sheets.Add(Before:=WS1)
+        WS2.Name = "Query Report Overview"
+        WS2.Range("A1").Value = "Query Status"
+        Call QueryReportOverview(WS1, WS2, 1)
+        WS2.Activate
+        'Autofit and add borders for the form status overview table
+        WS2.Range("A1").Select
+        Call FormatTable
+    End If
+
+    'Format table for all worksheets except the first one
+    WSCount = ActiveWorkbook.Worksheets.count
+    For Sh = 2 To WSCount
+        Sheets(Sh).Activate
+        RemoveFilter
+        Range("A1").Select
+        FormatTable
+        Sheets(Sh).Range("A1").AutoFilter Field:=statusColN, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
+    Next Sh
+
+    'add validation tab
+    Sheets.Add After:=Sheets(Sheets.count)
+    Set VSheet = Sheets(Sheets.count)
+    VSheet.Name = "Validation tab"
+
+    'Filter to what is needed
+    WS1.Activate
     RemoveFilter
-    Range("A1").Select
-    FormatTable
-    Sheets(Sh).Range("A1").AutoFilter Field:=12, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
-Next Sh
+    With WS1.Range("A1")
+        .AutoFilter Field:=statusColN, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
+        .AutoFilter Field:=formStatusColN, Criteria1:=Array("Completed", "Ready for Submission", "Submitted to Sponsor"), Operator:=xlFilterValues
+    End With
+    WS1.Range("A1", WS1.Range("T1").End(xlDown)).SpecialCells(xlCellTypeVisible).Copy
+    VSheet.Range("D1").PasteSpecial
+    WS1.Range("A1").AutoFilter Field:=formStatusColN
 
-'add validation tab
-Sheets.Add After:=Sheets(Sheets.count)
-Set VSheet = Sheets(Sheets.count)
-VSheet.Name = "Validation tab"
+    VSheet.Range(statusColV & "1", VSheet.Range(statusColV & "1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
+    Dim VRow As Long
+    VRow = CountDownData(VSheet, statusColV & "1")
 
-'Filter to what is needed
-WS1.Activate
-RemoveFilter
-With WS1.Range("A1")
-    .AutoFilter Field:=12, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
-    .AutoFilter Field:=8, Criteria1:=Array("Completed", "Ready for Submission", "Submitted to Sponsor"), Operator:=xlFilterValues
-End With
-WS1.Range("A1", WS1.Range("S1").End(xlDown)).SpecialCells(xlCellTypeVisible).Copy
-VSheet.Range("D1").PasteSpecial
-WS1.Range("A1").AutoFilter Field:=8
+    VSheet.Activate
+    VSheet.Range("A1").Value = "Opened/Reopened with Completed/Ready for Submission/Submitted to Sponsor Status"
 
-
-VSheet.Range("O1", VSheet.Range("O1").End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A1"), Unique:=True
-Dim VRow As Long
-VRow = CountDownData(VSheet, "O1")
-
-VSheet.Activate
-VSheet.Range("A1").Value = "Opened/Reopened with Completed/Ready for Submission/Submitted to Sponsor Status"
-
-'Counting the number of instances the form is opened with Complete/Ready for submission status
-Dim lngCount As Long
-lngCount = Application.WorksheetFunction.CountA(Columns(1))
-Dim cel As Range
-If Not IsEmpty(VSheet.Range("A2")) Then
-    For Each cel In VSheet.Range("A2:A" & lngCount).Cells
-        VSheet.Range("B" & cel.row).Value = Application.WorksheetFunction.CountIf(Range("O1:O" & VRow), cel.text)
-    Next cel
-End If
-
-'Remove and re apply filter for the second validation
-Dim startLine, headerLine As Long
-startLine = VRow + 4
-headerLine = VRow + 3
-WS1.Activate
-RemoveFilter
-With WS1.Range("A1")
-    .AutoFilter Field:=12, Criteria1:="Closed", Operator:=xlOr, Criteria2:="Resolved"
-    .AutoFilter Field:=8, Criteria1:="Incomplete", Operator:=xlFilterValues
-End With
-WS1.Range("A1", WS1.Range("S1").End(xlDown)).SpecialCells(xlCellTypeVisible).Copy
-VSheet.Range("D" & headerLine).PasteSpecial
-
-'Copy second validation to the VSheet=
-VSheet.Range("O" & headerLine, VSheet.Range("O" & headerLine).End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A" & headerLine), Unique:=True
-Dim VRow2 As Long
-VRow2 = CountDownData(VSheet, "O" & headerLine)
-VSheet.Activate
-VSheet.Range("A" & headerLine).Value = "Closed/Resolved with Incomplete Form Status"
-
-'Counting the number of instances the form is Closed or Resolved with Incomplete status
-Dim lngCount2 As Long
-lngCount2 = VSheet.Range("A" & headerLine, VSheet.Range("A" & headerLine).End(xlDown)).Rows.count - 1
-Dim cel2 As Range
-If Not IsEmpty(VSheet.Range("A" & startLine)) Then
-    For Each cel2 In VSheet.Range("A" & headerLine & ":A" & headerLine + lngCount2).Cells
-        VSheet.Range("B" & cel2.row).Value = Application.WorksheetFunction.CountIf(Range("O" & startLine & ":O" & startLine + VRow2), cel2.text)
-    Next cel2
-End If
-
-'Format Validation Sheet
-VSheet.Range("B1").Value = "Count of occurrence"
-VSheet.Range("B" & headerLine).Value = "Count of occurrence"
-VSheet.Range("A1").Select
-Call FormatTable
-
-VSheet.Range("A" & headerLine).Select
-Call FormatTable
+    WS1.Activate
+    RemoveFilter
+    With WS1.Range("A1")
+        .AutoFilter Field:=statusColN, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
+    End With
+    Dim openQArray As Variant
+    Dim responseIDCol As String
+    responseIDCol = FindColumn(WS1, "RESPONSE_ID")
+    'get the unique list of RESPONSE_ID from the filtered WS1. I want openQArray to be a simple list, not dictionary
+    openQArray = FilteredColumnList(WS1, "RESPONSE_ID", 1, True)
 
 
-VSheet.Range("D1").Select
-Call FormatTable
+    'Counting the number of instances the form is opened with Complete/Ready for submission status
+    Dim lngCount As Long
+    Dim lastA As Long
+    lastA = VSheet.Cells(VSheet.Rows.count, "A").End(xlUp).row
+    lngCount = Application.Max(0, lastA - 1)
+    Dim cel As Range
+    If lngCount > 0 Then
+        Dim countRange As Range
+        ' use row 2 to skip the header in the copied table on VSheet
+        Set countRange = VSheet.Range(statusColV & "2:" & statusColV & VRow)
+    
+        For Each cel In VSheet.Range("A2:A" & lastA).Cells
+            VSheet.Range("B" & cel.row).Value = Application.WorksheetFunction.CountIf(countRange, cel.Value)
+        Next cel
+    End If
 
-VSheet.Range("D" & headerLine).Select
-Call FormatTable
+    'Remove and re apply filter for the second validation
+    Dim startLine, headerLine As Long
+    startLine = VRow + 4
+    headerLine = VRow + 3
+    WS1.Activate
+    RemoveFilter
+    With WS1.Range("A1")
+        .AutoFilter Field:=statusColN, Criteria1:="Closed", Operator:=xlOr, Criteria2:="Resolved"
+        .AutoFilter Field:=formStatusColN, Criteria1:="Incomplete", Operator:=xlFilterValues
+    End With
+    WS1.Range("A1", WS1.Range("T1").End(xlDown)).SpecialCells(xlCellTypeVisible).Copy
+    VSheet.Range("D" & headerLine).PasteSpecial
 
-WS1.Activate
-RemoveFilter
-With WS1.Range("A1")
-    .AutoFilter Field:=12, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
-End With
-Sheets(2).Activate
+    'TODO: for each instance the form is Closed or Resolved with Incomplete status in the validation tab, check if the instance's RESPONSE_ID value is in the openQArray. If it does, remove the instance from the table
+    If IsArray(openQArray) Then
+        ' Find the RESPONSE_ID column in the copied data on the validation tab
+        On Error Resume Next
+        Dim headerRow As Range
+        Set headerRow = VSheet.Range("D" & headerLine & ":" & VSheet.Cells(headerLine, VSheet.Columns.count).End(xlToLeft).Address)
+        
+        Dim responseIDCell As Range
+        Set responseIDCell = headerRow.Find("RESPONSE_ID", LookIn:=xlValues, LookAt:=xlWhole)
+        On Error GoTo 0
+        
+        If Not responseIDCell Is Nothing Then
+            Dim responseIDColNInVSheet As Long
+            responseIDColNInVSheet = responseIDCell.column
+            
+            ' Get the last row of the copied data
+            Dim lastRowVSheet As Long
+            lastRowVSheet = VSheet.Cells(VSheet.Rows.count, "D").End(xlUp).row
+            ' Loop through rows in reverse order (to avoid issues when deleting rows)
+            Dim r As Long
+            For r = lastRowVSheet To headerLine + 1 Step -1
+                ' Check if this row's RESPONSE_ID is in openQArray
+                Dim currentResponseID As Variant
+                currentResponseID = VSheet.Cells(r, responseIDColNInVSheet).Value
+                
+                ' Check if currentResponseID is in openQArray
+                Dim isInOpenQArray As Boolean
+                isInOpenQArray = False
+                Dim i As Long
+                For i = LBound(openQArray) To UBound(openQArray)
+                    If CStr(openQArray(i)) = CStr(currentResponseID) Then
+                        isInOpenQArray = True
+                        Exit For
+                    End If
+                Next i
+                
+                ' If this response ID is in openQArray, delete the row
+                If isInOpenQArray Then
+                    VSheet.Rows(r).Delete
+                End If
+            Next r
+        End If
+    End If
+    
+    'Copy second validation to the VSheet=
+    VSheet.Range(statusColV & headerLine, VSheet.Range(statusColV & headerLine).End(xlDown)).AdvancedFilter Action:=xlFilterCopy, CopyToRange:=VSheet.Range("A" & headerLine), Unique:=True
 
-Application.ScreenUpdating = True
+    Dim VRow2 As Long
+    VRow2 = CountDownData(VSheet, statusCol & headerLine)
+    VSheet.Activate
+    VSheet.Range("A" & headerLine).Value = "Closed/Resolved with Incomplete Form Status"
 
-'Save file
-Dim modifiedDate As String
-modifiedDate = Now2Date(Now)
-Dim modifiedTime As String
-modifiedTime = Now2Time(Now)
+    'Counting the number of instances the form is Closed or Resolved with Incomplete status
+    Dim lngCount2 As Long
+    lngCount2 = VSheet.Range("A" & headerLine, VSheet.Range("A" & headerLine).End(xlDown)).Rows.count - 1
+    Dim cel2 As Range
+    If Not IsEmpty(VSheet.Range("A" & startLine)) Then
+        For Each cel2 In VSheet.Range("A" & headerLine & ":A" & headerLine + lngCount2).Cells
+            VSheet.Range("B" & cel2.row).Value = Application.WorksheetFunction.CountIf(Range(statusColV & startLine & ":" & statusColV & startLine + VRow2), cel2.text)
+        Next cel2
+    End If
 
-fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-XXXXX Query Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    'Format Validation Sheet
+    VSheet.Range("B1").Value = "Count of occurrence"
+    VSheet.Range("B" & headerLine).Value = "Count of occurrence"
+    VSheet.Range("A1").Select
+    Call FormatTable
 
-If fileSaveName = False Then
-    MsgBox "You haven't saved the document", vbExclamation
-Else
-    ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
-End If
+    VSheet.Range("A" & headerLine).Select
+    Call FormatTable
+
+
+    VSheet.Range("D1").Select
+    Call FormatTable
+
+    VSheet.Range("D" & headerLine).Select
+    Call FormatTable
+
+    WS1.Activate
+    RemoveFilter
+    With WS1.Range("A1")
+        .AutoFilter Field:=statusColN, Criteria1:="Open", Operator:=xlOr, Criteria2:="Re-opened"
+    End With
+    Sheets(2).Activate
+
+    Application.ScreenUpdating = True
+
+    'Save file
+    Dim modifiedDate As String
+    modifiedDate = Now2Date(Now)
+    Dim modifiedTime As String
+    modifiedTime = Now2Time(Now)
+
+    fileSaveName = Application.GetSaveAsFilename(InitialFileName:=modifiedDate & "-XXXXX Query Report " & modifiedTime & " EST.xlsx", FileFilter:="Excel Files (*.xlsx), *.xlsx")
+
+    If fileSaveName = False Then
+        MsgBox "You haven't saved the document", vbExclamation
+    Else
+        ActiveWorkbook.SaveAs fileName:=fileSaveName, FileFormat:=xlOpenXMLWorkbook
+    End If
 
 End Sub
 
