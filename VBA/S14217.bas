@@ -174,9 +174,10 @@ Sub QFSR(WS1, WS2, WS3, WS4, lastRow)
 
 End Sub
 
-Sub QQSR(WS1 As Worksheet, WS2, WS3, WS4)
+Sub QQSR(WS1 As Worksheet, WS2 As Worksheet, WS3 As Worksheet, WS4 As Worksheet)
 
 Dim lastRow As Long
+Dim WS5 As Worksheet
 
 Set WS3 = Sheets.Add(After:=WS1)
 WS3.Name = "Cohort 1 Query Report"
