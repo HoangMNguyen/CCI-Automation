@@ -387,8 +387,8 @@ Sub QueryReportOverview(QueryWS As Worksheet, OverviewWS As Worksheet, TableStar
     OverviewWS.Range("A" & TableStartRow + 3).Value = "Open"
     OverviewWS.Range("A" & TableStartRow + 4).Value = "Re-opened"
     'count
-    Dim queryStatusCol As Integer
-    queryStatusCol = L2N(FindColumn(QueryWS, "QUERY_STATUS"))
+    Dim queryStatusCol As String
+    queryStatusCol = FindColumn(QueryWS, "QUERY_STATUS")
     OverviewWS.Range("B" & TableStartRow + 1).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Resolved")
     OverviewWS.Range("B" & TableStartRow + 2).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Closed")
     OverviewWS.Range("B" & TableStartRow + 3).Value = Application.WorksheetFunction.CountIf(QueryWS.Range(queryStatusCol & "2:" & queryStatusCol & lastRow), "Open")
