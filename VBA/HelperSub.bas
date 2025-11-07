@@ -969,7 +969,6 @@ Sub UpdateSheetFontToCalibri(ws)
     End With
 End Sub
 
-Option Explicit
 
 ' Counts the number of contiguous non-empty cells downward in the same column,
 ' starting at the first non-empty cell at or below startAddress.
