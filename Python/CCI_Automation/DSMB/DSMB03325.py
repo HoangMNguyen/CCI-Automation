@@ -89,7 +89,7 @@ class DSMB03325:
                 "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)": "Dose Level Assignment"},
             "IE": {
                 "Event Group Label": "IE Event Group Label",
-                "Event Date": "IE Event Date",
+                #"Event Date": "IE Event Date",
                 "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?",
                 "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF3",
                 "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "Reason for Screen Failure",
@@ -106,6 +106,22 @@ class DSMB03325:
                 "Provide Supportive Information (IG_NS_NA_DSEOS2.TX_NS_YH_EOSTERM)": "Supportive Information",
             },
         }
+
+        #print(f"input_dict: {input_dict}")
+        for key,val in data.items():
+            if key == "IE":
+                # print key within data
+                print(f"Printing key from, data: {key} , {type(val)}")
+
+                #print("Printing columns first!")
+                #import json
+                #print(val.to_dict(orient="list"))
+                for column in val.columns:
+                    if column in ["Event Group Label", "Event Date"]:
+                        print(column, ":", val[column].tolist())
+
+            
+        #print(f"data type: {type(data)}")
 
         enrollment_df = get_data_from_dict(data, input_dict)
         # Replace missing values in the "Cohort Assignment" and "Dose Level Assignment" columns with "Pending"
@@ -180,6 +196,9 @@ class DSMB03325:
 
         # Use np.select to assign values based on conditions
         enrollment_df["Screen Fail"] = np.select(conditions, values, default="Unknown")
+        enrollment_df["IE Event Group Label"] = (
+            enrollment_df["IE Event Group Label"].fillna("")
+            )
         # drop the columns that are not needed
         enrollment_df = enrollment_df.drop(
             columns=[
@@ -204,8 +223,8 @@ class DSMB03325:
         ] = "No"
         # enrollment_df = enrollment_df.drop(columns=["End of Study Date"])
 
-        # Add Last Eligibility Step Completed column
-        enrollment_df["Last Eligibility Step Completed"] = None
+        # # Add Last Eligibility Step Completed column
+        # enrollment_df["Last Eligibility Step Completed"] = None
 
         
         
@@ -241,7 +260,7 @@ class DSMB03325:
                 "Screen Fail",
                 "Reason for Screen Failure",
                 "Study Treatment Administered",
-                #"IE Event Group Label" 
+                "IE Event Group Label" 
             ]
         ]
         return enrollment_output_df, enrollment_df
