@@ -88,7 +88,7 @@ class DSMB03325:
             "DSDLA": {
                 "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)": "Dose Level Assignment"},
             "IE": {
-                "Event Group Label": "IE Event Group Label",
+                "Event Group Label": "Last Eligibility Step Completed",
                 #"Event Date": "IE Event Date",
                 "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?",
                 "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF3",
@@ -196,8 +196,8 @@ class DSMB03325:
 
         # Use np.select to assign values based on conditions
         enrollment_df["Screen Fail"] = np.select(conditions, values, default="Unknown")
-        enrollment_df["IE Event Group Label"] = (
-            enrollment_df["IE Event Group Label"].fillna("")
+        enrollment_df["Last Eligibility Step Completed"] = (
+            enrollment_df["Last Eligibility Step Completed"].fillna("")
             )
         # drop the columns that are not needed
         enrollment_df = enrollment_df.drop(
@@ -207,7 +207,6 @@ class DSMB03325:
                 "SF3",
                 "Supportive Information",
                 "End of Study Reason",
-                #"IE Event Group Label",
             ]
         )
 
@@ -260,7 +259,7 @@ class DSMB03325:
                 "Screen Fail",
                 "Reason for Screen Failure",
                 "Study Treatment Administered",
-                "IE Event Group Label" 
+                "Last Eligibility Step Completed"
             ]
         ]
         return enrollment_output_df, enrollment_df
