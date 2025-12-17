@@ -92,13 +92,13 @@ class DSMB03325:
                 #"Event Date": "IE Event Date",
                 "Subject Meets All Study Eligibility (IG_NS_NA_IE3.CL_NS_YH_ELIGYN_cl_YS_YN1)": "Subject meets all study eligibility?",
                 "Other Screen Fail Reason (IG_NS_NA_IE4.TX_NS_YH_OTHRSFREAS)": "SF3",
-                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "Reason for Screen Failure",
+                "Screen Failure Reason (IG_NS_NA_IE4.CL_NS_YH_IECAT_cl_NS_IEREASSF1)": "Reason for Screen Fail",
                 "Select the Primary Inclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ITESTCD_cl_NS_IEINCL1)": "SF1",
                 "Select the Primary Exclusion Criterion Excluding this Subject (IG_NS_NA_IE4.CL_NS_NH_ETESTCD_cl_NS_IEEXCL1)": "SF2",
             },
             "EXINF": {
                 "Event Group Label": "Event Group Label",
-                "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)": "Study Treatment Administered",
+                "Was study treatment administered? (IG_NS_NA_EXINF1.CL_NS_NH_INFADMIN_cl_YS_YN1)": "Treated",
             },
             "DSEOS": {
                 "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)": "End of Study Date",
@@ -139,27 +139,27 @@ class DSMB03325:
         enrollment_df = enrollment_df.fillna("")
 
         # Convert the entire column to string to avoid data type issues
-        enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].astype(str)
+        enrollment_df["Reason for Screen Fail"] = enrollment_df["Reason for Screen Fail"].astype(str)
 
-        # if "Reason for Screen Failure" in enrollment_df.columns equal "Other", replace the value with SF3
-        mask = enrollment_df["Reason for Screen Failure"] == "Other"
+        # if "Reason for Screen Fail" in enrollment_df.columns equal "Other", replace the value with SF3
+        mask = enrollment_df["Reason for Screen Fail"] == "Other"
         # Replace "Other" with the corresponding values from the "SF3" column
-        enrollment_df.loc[mask, "Reason for Screen Failure"] = enrollment_df.loc[mask, "SF3"]
+        enrollment_df.loc[mask, "Reason for Screen Fail"] = enrollment_df.loc[mask, "SF3"]
 
-        # if "Reason for Screen Failure" in enrollment_df.columns equal "Inclusion Criteria", concat the value of the column with "SF1"
-        # Create a mask for rows where "Reason for Screen Failure" is "Inclusion Criteria"
-        mask = (enrollment_df["Reason for Screen Failure"] == "Inclusion Criteria") & (enrollment_df["SF1"] != "")
-        # Use the mask to update the "Reason for Screen Failure" column
-        enrollment_df.loc[mask, "Reason for Screen Failure"] = (
-            enrollment_df.loc[mask, "Reason for Screen Failure"] + " " + enrollment_df.loc[mask, "SF1"].astype(str)
+        # if "Reason for Screen Fail" in enrollment_df.columns equal "Inclusion Criteria", concat the value of the column with "SF1"
+        # Create a mask for rows where "Reason for Screen Fail" is "Inclusion Criteria"
+        mask = (enrollment_df["Reason for Screen Fail"] == "Inclusion Criteria") & (enrollment_df["SF1"] != "")
+        # Use the mask to update the "Reason for Screen Fail" column
+        enrollment_df.loc[mask, "Reason for Screen Fail"] = (
+            enrollment_df.loc[mask, "Reason for Screen Fail"] + " " + enrollment_df.loc[mask, "SF1"].astype(str)
         )
 
-        # Create a mask for rows where "Reason for Screen Failure" is "Exclusion Criteria" and "SF2" is not empty
-        mask = (enrollment_df["Reason for Screen Failure"] == "Exclusion Criteria") & (enrollment_df["SF2"] != "")
+        # Create a mask for rows where "Reason for Screen Fail" is "Exclusion Criteria" and "SF2" is not empty
+        mask = (enrollment_df["Reason for Screen Fail"] == "Exclusion Criteria") & (enrollment_df["SF2"] != "")
 
-        # Use the mask to update the "Reason for Screen Failure" column
-        enrollment_df.loc[mask, "Reason for Screen Failure"] = (
-            enrollment_df.loc[mask, "Reason for Screen Failure"] + " " + enrollment_df.loc[mask, "SF2"].astype(str)
+        # Use the mask to update the "Reason for Screen Fail" column
+        enrollment_df.loc[mask, "Reason for Screen Fail"] = (
+            enrollment_df.loc[mask, "Reason for Screen Fail"] + " " + enrollment_df.loc[mask, "SF2"].astype(str)
         )
 
         # if subject does not have IE data, check if the subject has DSEOS "End of Study Date" data. If yes, then the subject is "No" for "Subject meets all study eligibility?"
@@ -176,7 +176,7 @@ class DSMB03325:
         enrollment_df.loc[
             (enrollment_df["Subject meets all study eligibility?"] != "Yes")
             & (enrollment_df["End of Study Date"].notna()),
-            "Reason for Screen Failure",
+            "Reason for Screen Fail",
         ] = enrollment_df["Supportive Information"]
         # Add Screen Fail column
         enrollment_df["Screen Fail"] = None
@@ -196,9 +196,36 @@ class DSMB03325:
 
         # Use np.select to assign values based on conditions
         enrollment_df["Screen Fail"] = np.select(conditions, values, default="Unknown")
+
+        # Override Screen Fail if DSEOS indicates screen failure ---
+        mask_dseos_sf = enrollment_df["End of Study Reason"].str.contains("Screen failure", case=False, na=False)
+
+        # If DSEOS says screen failure → Screen Fail must be Yes
+        enrollment_df.loc[mask_dseos_sf, "Screen Fail"] = "Yes"
+
+        # Use supportive information as reason if Screen Failure is triggered by DSEOS
+        enrollment_df.loc[mask_dseos_sf, "Reason for Screen Fail"] = (
+            enrollment_df["Supportive Information"].fillna("")
+        )
+
+        enrollment_df.loc[
+            (enrollment_df["Last Eligibility Step Completed"] == "Step #1 Screening/Eligibility")
+            & (enrollment_df["Treated"] != "Yes")
+            & enrollment_df["Screen Fail"].isin(["No", ""]), 
+            "Screen Fail"
+        ] = "Pending"
+        
+        # Add Last Eligibility Step Completed column
         enrollment_df["Last Eligibility Step Completed"] = (
             enrollment_df["Last Eligibility Step Completed"].fillna("")
             )
+        
+        # Remove only the trailing " Screening/Eligibility"
+        enrollment_df["Last Eligibility Step Completed"] = (
+            enrollment_df["Last Eligibility Step Completed"]
+            .str.replace(" Screening/Eligibility", "", regex=False)
+        )
+
         # drop the columns that are not needed
         enrollment_df = enrollment_df.drop(
             columns=[
@@ -211,21 +238,16 @@ class DSMB03325:
         )
 
         enrollment_df = enrollment_df.drop(columns=["Event Group Label"])
-        # Update 'Study Treatment Administered' column based on the conditions:
+        # Update 'Treated' column based on the conditions:
         enrollment_df.loc[
-            (enrollment_df["Study Treatment Administered"] != "Yes") & (enrollment_df["End of Study Date"].isnull()),
-            "Study Treatment Administered",
+            (enrollment_df["Treated"] != "Yes") & (enrollment_df["End of Study Date"].isnull()),
+            "Treated",
         ] = "Pending"
         enrollment_df.loc[
-            (enrollment_df["Study Treatment Administered"] != "Yes") & (~enrollment_df["End of Study Date"].isnull()),
-            "Study Treatment Administered",
+            (enrollment_df["Treated"] != "Yes") & (~enrollment_df["End of Study Date"].isnull()),
+            "Treated",
         ] = "No"
         # enrollment_df = enrollment_df.drop(columns=["End of Study Date"])
-
-        # # Add Last Eligibility Step Completed column
-        # enrollment_df["Last Eligibility Step Completed"] = None
-
-        
         
         # Sort
         enrollment_df = enrollment_df.sort_values(["Subject"])
@@ -257,8 +279,8 @@ class DSMB03325:
                 "Race",
                 "Age at Consent",
                 "Screen Fail",
-                "Reason for Screen Failure",
-                "Study Treatment Administered",
+                "Reason for Screen Fail",
+                "Treated",
                 "Last Eligibility Step Completed"
             ]
         ]
@@ -288,13 +310,13 @@ class DSMB03325:
             TT_df = filtered_df.copy()
             TT = filtered_df["Subject"].count()
             ## Screen Failed
-            SF_df = filtered_df[filtered_df["Subject meets all study eligibility?"] == "No"].copy()
+            SF_df = filtered_df[filtered_df["Screen Fail"] == "Yes"].copy()
             SF = SF_df["Subject"].count()
             ## Eligible
-            EL_df = filtered_df[filtered_df["Subject meets all study eligibility?"] == "Yes"].copy()
+            EL_df = filtered_df[filtered_df["Screen Fail"] == "No"].copy()
             EL = EL_df["Subject"].count()
-            ## Study Treatment Administered
-            INFR_df = filtered_df[filtered_df["Study Treatment Administered"] == "Yes"].copy()
+            ## Treated
+            INFR_df = filtered_df[filtered_df["Treated"] == "Yes"].copy()
             INF = INFR_df["Subject"].count()
 
             # Define a dictionary containing the status of each variable
@@ -303,7 +325,7 @@ class DSMB03325:
                     "Total Consented": TT,
                     "Screen Failed": SF,
                     "Eligible": EL,
-                    "Study Treatment Administered": INF,
+                    "Treated": INF,
                 }
             )
 
@@ -683,12 +705,12 @@ class DSMB03325:
                 "Subject",
                 "Event Group Name",
                 "Event Date",
-                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+               # "Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
             ]
         ]
-        status_SV_df = status_SV_df[
-            status_SV_df["Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"] == "Yes"
-        ]
+        # status_SV_df = status_SV_df[
+        #     status_SV_df["Did the protocol-specified study visit occur? (IG_NS_NA_DSSV1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"] == "Yes"
+        # ]
 
         # Getting Study Status dataframe from DSSVLTFU, column Subject, Event Label and Event Date
         status_DSSVLTFU_df = data["DSSVLTFU"][
@@ -696,12 +718,12 @@ class DSMB03325:
                 "Subject",
                 "Event Group Name",
                 "Event Date",
-                "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+               # "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
             ]
         ]
-        status_DSSVLTFU_df = status_DSSVLTFU_df[
-            status_DSSVLTFU_df["Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"] == "Yes"
-        ]
+        # status_DSSVLTFU_df = status_DSSVLTFU_df[
+        #     status_DSSVLTFU_df["Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)"] == "Yes"
+        # ]
 
         # status_DSSVLTFU_df["Event Group Label"] = status_DSSVLTFU_df["Event Label"].apply(map_event)
 
@@ -729,7 +751,7 @@ class DSMB03325:
             lambda row: "Pre-Treatment"
             if (
                 row["Event Group Name"] != "Pre-Treatment"  # avoid duplication
-                and self.enrollment_listing_df[self.enrollment_listing_df["Subject"] == row["Subject"]]["Study Treatment Administered"]
+                and self.enrollment_listing_df[self.enrollment_listing_df["Subject"] == row["Subject"]]["Treated"]
                 .fillna("")
                 .str.strip()
                 .values[0]
@@ -742,7 +764,7 @@ class DSMB03325:
         status_df["Event Group Name4"] = status_df["Subject"].apply(
             lambda x: "Withdrawn Prior to Study Treatment"
             if (
-                self.enrollment_listing_df[self.enrollment_listing_df["Subject"] == x]["Study Treatment Administered"]
+                self.enrollment_listing_df[self.enrollment_listing_df["Subject"] == x]["Treated"]
                 .fillna("")
                 .str.strip()
                 .values[0]
@@ -1233,7 +1255,7 @@ class DSMB03325:
                         worksheet1.write(
                             1,
                             4 + i * 4,
-                            "Study Treatment Administered\nN=" + str(self.status_list[i]["Study Treatment Administered"]),
+                            "Treated\nN=" + str(self.status_list[i]["Treated"]),
                             bold_11_wrap_format,
                         )
 
