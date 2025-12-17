@@ -281,7 +281,7 @@ class DSMB03325:
                 "Screen Fail",
                 "Reason for Screen Fail",
                 "Treated",
-                "Last Eligibility Step Completed"
+                # "Last Eligibility Step Completed",
             ]
         ]
         return enrollment_output_df, enrollment_df
@@ -1283,7 +1283,13 @@ class DSMB03325:
                     # Replace column header for A1 from "Subject" to "Subject ID", columns name starting from 1 instead of 0
                     worksheet2.write("A1", "Subject ID", bold_12_wrap_format)
                     for i in range(1, len(self.enrollment_listing_df_output.columns)):
-                        worksheet2.write(0, i, self.enrollment_listing_df_output.columns[i], bold_11_format)
+                        header = self.enrollment_listing_df_output.columns[i]
+                        header_stripped = str(header).strip()
+                        if header_stripped == "Screen Fail":
+                            header = "Screen Fail (Y/N)"
+                        elif header_stripped == "Treated":
+                            header = "Treated (Y/N)"
+                        worksheet2.write(0, i, header, bold_11_format)
                     # * FORMAT DATA
                     for i in range(0, len(self.enrollment_listing_df_output)):
                         for j in range(0, len(self.enrollment_listing_df_output.columns)):
