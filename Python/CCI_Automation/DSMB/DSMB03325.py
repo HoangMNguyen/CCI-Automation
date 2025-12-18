@@ -233,7 +233,7 @@ class DSMB03325:
                 "SF2",
                 "SF3",
                 "Supportive Information",
-                "End of Study Reason",
+                # "End of Study Reason",
             ]
         )
 
@@ -247,6 +247,24 @@ class DSMB03325:
             (enrollment_df["Treated"] != "Yes") & (~enrollment_df["End of Study Date"].isnull()),
             "Treated",
         ] = "No"
+
+        screen_fail_series = enrollment_df.get("Screen Fail")
+        treated_series = enrollment_df.get("Treated")
+        eos_reason_series = enrollment_df.get("End of Study Reason")
+        if screen_fail_series is None:
+            screen_fail_series = pd.Series([""] * len(enrollment_df), index=enrollment_df.index)
+        if treated_series is None:
+            treated_series = pd.Series([""] * len(enrollment_df), index=enrollment_df.index)
+        if eos_reason_series is None:
+            eos_reason_series = pd.Series([""] * len(enrollment_df), index=enrollment_df.index)
+
+        enrollment_df["Reason for Withdrawal Prior to Study Treatment"] = np.where(
+            (screen_fail_series.fillna("").astype(str).str.strip() == "No")
+            & (treated_series.fillna("").astype(str).str.strip() == "No"),
+            eos_reason_series.fillna("").astype(str),
+            "",
+        )
+        enrollment_df = enrollment_df.drop(columns=["End of Study Reason"], errors="ignore")
         # enrollment_df = enrollment_df.drop(columns=["End of Study Date"])
         
         # Sort
@@ -281,6 +299,7 @@ class DSMB03325:
                 "Screen Fail",
                 "Reason for Screen Fail",
                 "Treated",
+                "Reason for Withdrawal Prior to Study Treatment",
                 # "Last Eligibility Step Completed",
             ]
         ]
