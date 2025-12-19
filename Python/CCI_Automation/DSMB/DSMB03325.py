@@ -1075,6 +1075,44 @@ class DSMB03325:
         # Apply formatting
         TXSUB_status_df["End of Study Date Str"] = TXSUB_status_df["End of Study Date"].apply(format_date)
 
+        def _extract_last_date(val: str):
+            if not isinstance(val, str):
+                return pd.NaT
+            matches = re.findall(r"(\d{1,2}/\d{1,2}/\d{4})", val)
+            if not matches:
+                return pd.NaT
+            # pick the chronologically latest date in the string
+            parsed = []
+            for m in matches:
+                try:
+                    parsed.append(pd.to_datetime(m))
+                except Exception:
+                    continue
+            return max(parsed) if parsed else pd.NaT
+
+        def _pick_last_visit(row):
+            val_x = row.get("Event Combined_x", "")
+            val_y = row.get("Event Combined_y", "")
+
+            date_x = _extract_last_date(val_x)
+            date_y = _extract_last_date(val_y)
+
+            if pd.notna(date_x) and pd.notna(date_y):
+                return val_x if date_x >= date_y else val_y
+            if pd.notna(date_x):
+                return val_x
+            if pd.notna(date_y):
+                return val_y
+
+            # If neither has a parsable date, prefer the non-N/A value if present
+            if isinstance(val_x, str) and val_x.strip() not in ["", "N/A"]:
+                return val_x
+            if isinstance(val_y, str) and val_y.strip() not in ["", "N/A"]:
+                return val_y
+            return "N/A"
+
+        TXSUB_status_df["Last Study Visit Completed"] = TXSUB_status_df.apply(_pick_last_visit, axis=1)
+
         # Combine into new column
         TXSUB_status_df["EOS Combined"] = TXSUB_status_df.apply(
             lambda row: f"{row['End of Study Date Str']} {row['Off-Study Reason']}" if row["Off-Study Reason"] else "",
@@ -1092,16 +1130,27 @@ class DSMB03325:
                 "End of Study Date",
                 "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
                 "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
+                "Event Combined_x",
+                "Event Combined_y",
             ],
             errors="ignore",  # avoids errors if any column is missing
         )
+
+        # Add Study Status from the eligible status listing (if available) so it can be shown on the treated subjects sheet
+        study_status_map = {}
+        try:
+            if hasattr(self, "status_df") and "Event Group Name" in self.status_df.columns:
+                study_status_map = self.status_df.set_index("Subject")["Event Group Name"].to_dict()
+        except Exception:
+            study_status_map = {}
+        TXSUB_status_df["Study Status"] = TXSUB_status_df["Subject"].map(study_status_map).fillna("")
 
         # *Re-order the columns and remove the columns that are not needed
         TXSUB_status_df = TXSUB_status_df[
             [
                 "Subject",
-                "Event Combined_x",
-                "Event Combined_y",
+                "Study Status",
+                "Last Study Visit Completed",
                 "EOS Combined",
                 "AE",
                 "SAE",
@@ -1318,9 +1367,11 @@ class DSMB03325:
 
                     worksheet3 = writer.book.add_worksheet("DSMB-Status.Eligible Subjects")
                     # * WRITING AND FORMATING DATA
-                    for i in range(0, len(self.status_df)):
-                        for j in range(0, len(self.status_df.columns)):
-                            worksheet3.write(i + 2, j, self.status_df.iloc[i, j], normal_data_format)
+                    status_df_output = self.status_df.drop(columns=["Event Group Name"], errors="ignore")
+
+                    for i in range(0, len(status_df_output)):
+                        for j in range(0, len(status_df_output.columns)):
+                            worksheet3.write(i + 2, j, status_df_output.iloc[i, j], normal_data_format)
 
                     # * WRITING HEADER AND FORMATTING
                     worksheet3.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
@@ -1328,13 +1379,8 @@ class DSMB03325:
                     worksheet3.merge_range("C1:C2", "Dose Level Assignment", bold_12_wrap_format)
                     worksheet3.merge_range("D1:D2", "Adverse Events (Y/N)", bold_12_wrap_format)
                     worksheet3.merge_range("E1:E2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
-                    worksheet3.merge_range("F1:F2", "Study Status", bold_12_wrap_format)
-                    worksheet3.merge_range("G1:G2", "Off-Study Reason", bold_12_wrap_format)
-                    worksheet3.merge_range(
-                        "H1:H2",
-                        "Last Study Visit Performed for Off-Study Subject",
-                        bold_12_wrap_format,
-                    )
+                    worksheet3.merge_range("F1:F2", "Off-Study Reason", bold_12_wrap_format)
+                    worksheet3.merge_range("G1:G2", "Last Study Visit Performed for Off-Study Subject", bold_12_wrap_format)
 
                     # Safety Headers
                     # number of subject of safety_total_df
@@ -1449,9 +1495,10 @@ class DSMB03325:
                     
                     # * WRITING HEADER AND FORMATTING
                     worksheet9.write("A1", "Subject ID", bold_12_wrap_format)
-                    worksheet9.write("B1", "Timepoint", bold_12_wrap_format)
+                    worksheet9.write("B1", "Study Day", bold_12_wrap_format)
                     worksheet9.write("C1", "Sample Type", bold_12_wrap_format)
-                    worksheet9.write("D1", "Results", bold_12_wrap_format)
+                    worksheet9.write("D1", "Site of Lesion/Laterality", bold_12_wrap_format)
+                    worksheet9.write("E1", "Results", bold_12_wrap_format)
 
                     worksheet9.autofit()
 
@@ -1513,10 +1560,10 @@ class DSMB03325:
                     # * WRITING HEADER AND FORMATTING
                     worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
                     worksheet8.merge_range(
-                        "B1:B2", "Last Primary Follow-Up Visit/Date of Last Visit in Primary Study", bold_12_wrap_format
+                        "B1:B2", "Study Status", bold_12_wrap_format
                     )
                     worksheet8.merge_range(
-                        "C1:C2", "Last LTFU Visit Completed/Date of Last LTFU Visit", bold_12_wrap_format
+                        "C1:C2", "Last Study Visit Completed", bold_12_wrap_format
                     )
                     worksheet8.merge_range("D1:D2", "Off-Study Date/Reason", bold_12_wrap_format)
                     worksheet8.merge_range("E1:E2", "Adverse Events (Y/N)", bold_12_wrap_format)
