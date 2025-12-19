@@ -1113,11 +1113,9 @@ class DSMB03325:
 
         TXSUB_status_df["Last Study Visit Completed"] = TXSUB_status_df.apply(_pick_last_visit, axis=1)
 
-        # Combine into new column
-        TXSUB_status_df["EOS Combined"] = TXSUB_status_df.apply(
-            lambda row: f"{row['End of Study Date Str']} {row['Off-Study Reason']}" if row["Off-Study Reason"] else "",
-            axis=1,
-        )
+        # Separate End of Study date and reason for reporting
+        TXSUB_status_df["End of Study Date"] = TXSUB_status_df["End of Study Date Str"]
+        TXSUB_status_df["Reason for End of Study"] = TXSUB_status_df["Off-Study Reason"]
         TXSUB_status_df = TXSUB_status_df.drop(
             columns=[
                 "Event Group Label_x",
@@ -1126,12 +1124,12 @@ class DSMB03325:
                 "Event Group Label_y",
                 "Event Label_y",
                 "Event Date_y",
-                "Off-Study Reason",
-                "End of Study Date",
                 "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
                 "Did the protocol-specified study visit occur? (IG_NS_NA_DSSVLTFU1.CL_YS_NH_SVOCCUR_cl_YS_YN1)",
                 "Event Combined_x",
                 "Event Combined_y",
+                "Off-Study Reason",
+                "End of Study Date Str",
             ],
             errors="ignore",  # avoids errors if any column is missing
         )
@@ -1151,7 +1149,8 @@ class DSMB03325:
                 "Subject",
                 "Study Status",
                 "Last Study Visit Completed",
-                "EOS Combined",
+                "End of Study Date",
+                "Reason for End of Study",
                 "AE",
                 "SAE",
             ]
@@ -1565,8 +1564,9 @@ class DSMB03325:
                     worksheet8.merge_range(
                         "C1:C2", "Last Study Visit Completed", bold_12_wrap_format
                     )
-                    worksheet8.merge_range("D1:D2", "Off-Study Date/Reason", bold_12_wrap_format)
-                    worksheet8.merge_range("E1:E2", "Adverse Events (Y/N)", bold_12_wrap_format)
-                    worksheet8.merge_range("F1:F2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
+                    worksheet8.merge_range("D1:D2", "End of Study Date", bold_12_wrap_format)
+                    worksheet8.merge_range("E1:E2", "Reason for End of Study", bold_12_wrap_format)
+                    worksheet8.merge_range("F1:F2", "Adverse Events (Y/N)", bold_12_wrap_format)
+                    worksheet8.merge_range("G1:G2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
 
                     worksheet8.autofit()
