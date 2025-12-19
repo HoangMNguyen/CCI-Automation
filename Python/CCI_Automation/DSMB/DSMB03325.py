@@ -1155,6 +1155,11 @@ class DSMB03325:
                 "SAE",
             ]
         ]
+        # Safety stats for treated subjects
+        AE_total_treated = get_stats_percentage("AE", TXSUB_status_df).T
+        SAE_total_treated = get_stats_percentage("SAE", TXSUB_status_df).T
+        self.safetyTX_total_df = pd.concat([AE_total_treated, SAE_total_treated], axis=1)
+
         TXSUB_status_df = TXSUB_status_df.replace([np.nan, np.inf, -np.inf], "N/A").replace(
             [r"N/A\s*\(N/A\)", r"N/A\s+N/A"], "N/A", regex=True
         )
@@ -1381,33 +1386,6 @@ class DSMB03325:
                     worksheet3.merge_range("F1:F2", "Off-Study Reason", bold_12_wrap_format)
                     worksheet3.merge_range("G1:G2", "Last Study Visit Performed for Off-Study Subject", bold_12_wrap_format)
 
-                    # Safety Headers
-                    # number of subject of safety_total_df
-                    safety_total_df_subject_count = len(self.status_df["Subject"].unique())
-                    worksheet3.merge_range(
-                        "K1:N1",
-                        "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")",
-                        bold_12_wrap_format,
-                    )
-                    worksheet3.merge_range("K2:L2", "Adverse Events", bold_11_format)
-                    worksheet3.merge_range("M2:N2", "Serious Adverse Events ", bold_11_format)
-                    worksheet3.write("K3", "Yes", bold_11_format)
-                    worksheet3.write("L3", "No", bold_11_format)
-                    worksheet3.write("M3", "Yes", bold_11_format)
-                    worksheet3.write("N3", "No", bold_11_format)
-                    worksheet3.write("J4", "Cohort A", bold_11_format)
-
-                    # Safety Data
-                    # Cohort A
-                    for i in range(0, len(self.safetyCH1_total_df)):
-                        for j in range(0, len(self.safetyCH1_total_df.columns)):
-                            worksheet3.write(
-                                i + 3,
-                                j + 10,
-                                self.safetyCH1_total_df.iloc[i, j],
-                                normal_data_format,
-                            )
-
                     # Autofit
                     worksheet3.autofit()
 
@@ -1568,5 +1546,31 @@ class DSMB03325:
                     worksheet8.merge_range("E1:E2", "Reason for End of Study", bold_12_wrap_format)
                     worksheet8.merge_range("F1:F2", "Adverse Events (Y/N)", bold_12_wrap_format)
                     worksheet8.merge_range("G1:G2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
+
+                    # Safety Headers moved from eligible subjects sheet
+                    safety_total_df_subject_count = len(self.TXSUB_status_df["Subject"].unique())
+                    worksheet8.merge_range(
+                        "J1:M1",
+                        "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")",
+                        bold_12_wrap_format,
+                    )
+                    worksheet8.merge_range("J2:K2", "Adverse Events", bold_11_format)
+                    worksheet8.merge_range("L2:M2", "Serious Adverse Events ", bold_11_format)
+                    worksheet8.write("J3", "Yes", bold_11_format)
+                    worksheet8.write("K3", "No", bold_11_format)
+                    worksheet8.write("L3", "Yes", bold_11_format)
+                    worksheet8.write("M3", "No", bold_11_format)
+                    worksheet8.write("I4", "Cohort A", bold_11_format)
+
+                    # Safety Data
+                    safety_df = getattr(self, "safetyTX_total_df", self.safetyCH1_total_df)
+                    for i in range(0, len(safety_df)):
+                        for j in range(0, len(safety_df.columns)):
+                            worksheet8.write(
+                                i + 3,
+                                j + 9,
+                                safety_df.iloc[i, j],
+                                normal_data_format,
+                            )
 
                     worksheet8.autofit()
