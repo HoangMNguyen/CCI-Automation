@@ -12,6 +12,18 @@ class AECoreListing:
 
     # Add this mapping as a class variable or set in __init__
     STUDY_KEY_MAP = {
+        "03325": {
+            "AE": "AE",
+            "DSDLA": "DSDLA",
+            "EXINF": "EXINF",
+            "DSEOS": "DSEOS",
+        },
+        "10325": {
+            "AE": "AE",
+            "DSDLA": "DSDLA",
+            "EXINF": "EXINF",
+            "DSEOS": "DSEOS",
+        },
         "12423": {
             "AE": "AE",
             "DSDLA": "DSDLA",
@@ -57,13 +69,18 @@ class AECoreListing:
     def get_cohort_value_dict(self, study_name):
         # initialize cohort_value_dict
         cohort_value_dict = {}
-
-        if study_name == "16321":
+        if study_name == "03325":
+            cohort_value_dict = {
+                "Cohort A": "A",
+                "Not Assigned": "Not Assigned",
+            }
+        elif study_name == "16321":
             cohort_value_dict = {
                 "Cohort -1": -1,
                 "Cohort 1": 1,
                 "Cohort 2": 2,
                 "Cohort 3": 3,
+                "Cohort 4": 4,
                 "Not Assigned": "Not Assigned",
             }
         elif study_name == "12423":
@@ -83,7 +100,20 @@ class AECoreListing:
     def get_dose_level_assignment_value_dict(self, study_name):
         # initialize dose_level_assignment_value_dict
         dose_level_assignment_value_dict = {}
-        if study_name == "11823":
+        if study_name == "03325":
+            dose_level_assignment_value_dict = {
+                "Dose Level -1 (DL-1)": "DL-1",
+                "Dose Level 1 (DL1)": "DL1",
+                "Not Assigned": "Not Assigned",
+            }
+        elif study_name == "10325":
+            dose_level_assignment_value_dict = {
+                "Dose Level -1 (DL-1)": "DL-1",
+                "Dose Level 1 (DL1)": "DL1",
+                "Not Applicable": "Not Applicable",
+                "Not Assigned": "Not Assigned",
+            }
+        elif study_name == "11823":
             dose_level_assignment_value_dict = {
                 "Dose Level -1 (DL-1)": "DL-1",
                 "Dose Level 1 (DL1)": "DL1",
@@ -113,7 +143,17 @@ class AECoreListing:
         return dose_level_assignment_value_dict
 
     def get_dose_level_mapping(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            dose_level_mapping = {
+                "DL-1": (1, 7),
+                "DL1": (2.5, 7),
+            }
+        elif study_name == "10325":
+            dose_level_mapping = {
+                "DL-1": (1, 7),
+                "DL1": (2.5, 7),
+            }
+        elif study_name == "11823":
             dose_level_mapping = {
                 "DL-1": (1, 7),
                 "DL1": (5, 7),
@@ -140,7 +180,43 @@ class AECoreListing:
         return dose_level_mapping
 
     def get_AE_header_list(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            header = [
+                "Subject",
+                "AE or SAE (IG_NS_NA_AE2.CL_NS_YH_AESEV_cl_NS_AESAE1)",
+                "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)",
+                "T-cell Expectedness (IG_NS_NA_AE1.CL_NS_YH_AETRTINTP_cl_YS_YN1)",
+                "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)",
+                "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)",
+                "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)",
+                "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)",
+                "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)",
+                "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)",
+                "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)",
+                "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)",
+                "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
+                "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)",
+                "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)",
+            ]
+        if study_name == "10325":
+            header = [
+                "Subject",
+                "AE or SAE (IG_NS_NA_AE2.CL_NS_YH_AESEV_cl_NS_AESAE1)",
+                "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)",
+                "T-cell Expectedness (IG_NS_NA_AE1.CL_NS_YH_AETRTINTP_cl_YS_YN1)",
+                "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)",
+                "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)",
+                "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)",
+                "Derived Toxicity (IG_NS_NA_AE1.DV_YS_YH_AETOXDV)",
+                "Toxicity (IG_NS_NA_AE1.TX_YS_NH_AETOX)",
+                "Grade (IG_NS_NA_AE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)",
+                "Start Date (IG_NS_NA_AE1.DT_YS_NH_AESTDAT)",
+                "Stop Date (IG_NS_NA_AE1.DT_YS_YH_AEENDAT)",
+                "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)",
+                "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)",
+                "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)",
+            ]
+        elif study_name == "11823":
             header = [
                 "Subject",
                 "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)",
@@ -217,7 +293,12 @@ class AECoreListing:
         return header
 
     def get_DSCA_header_list(self, study_name):
-        if study_name == "16321":
+        if study_name == "03325":
+            header = [
+                "Subject",
+                "Cohort Assignment (IG_NS_NA_DSCA1.CL_NS_YH_CACHASCOD_cl_NS_COHORT1)",
+            ]
+        elif study_name == "16321":
             header = [
                 "Subject",
                 "Cohort Assignment (ig_DSCA1.CACHASCOD)",
@@ -232,7 +313,17 @@ class AECoreListing:
         return header
 
     def get_DSDLA_header_list(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            header = [
+                "Subject",
+                "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)",
+            ]
+        elif study_name == "10325":
+            header = [
+                "Subject",
+                "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)",
+            ]
+        elif study_name == "11823":
             header = [
                 "Subject",
                 "Dose Level Assignment (IG_NS_NA_DSDLA1.CL_NS_YH_DLADOSELV_cl_NS_DOSELV1)",
@@ -250,7 +341,21 @@ class AECoreListing:
         return header
 
     def get_EXINF_DLA_header_list(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            header = [
+                "Subject",
+                "Event Label",
+                "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_YH_TDOS)",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+            ]
+        if study_name == "10325":
+            header = [
+                "Subject",
+                "Event Label",
+                "CAR T Cell Dose Administered (IG_NS_NA_EXINF1.NM_NS_YH_TDOS)",
+                "x 10 to the power of (IG_NS_NA_EXINF1.CL_NS_NH_TDOSXP_cl_YS_EX10POW1)",
+            ]
+        elif study_name == "11823":
             header = [
                 "Subject",
                 "Event Group Label",
@@ -274,7 +379,19 @@ class AECoreListing:
         return header
 
     def get_EXINF_header_list(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            header = [
+                "Subject",
+                "Study Treatment Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
+                "Study Day (IG_NS_NA_EXINF1.CL_NS_NH_STUDYDAY_cl_NS_STUYDAY1)",
+            ]
+        elif study_name == "10325":
+            header = [
+                "Subject",
+                "Study Treatment Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
+                "Study Day (IG_NS_NA_EXINF1.CL_NS_NH_STUDYDAY_cl_NS_STUYDAY1)",
+            ]
+        elif study_name == "11823":
             header = [
                 "Subject",
                 "Infusion Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)",
@@ -302,7 +419,11 @@ class AECoreListing:
         return header
 
     def get_DSEOS_header_list(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
+        if study_name == "10325":
+            header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
+        elif study_name == "11823":
             header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
         elif study_name == "12423":
             header = ["Subject", "End of Study Date (IG_NS_NA_DSEOS1.DT_NS_YH_EOSDAT)"]
@@ -314,7 +435,32 @@ class AECoreListing:
         return header
 
     def get_infusion_details(self, study_name):
-        if study_name == "11823":
+        if study_name == "03325":
+            return ["Day 0", "Day 0-R"]
+        elif study_name == "10325":  # TODO!
+            return [
+                "Day 0",
+                "Day 13",
+                "Day 14",
+                "Day 15",
+                "Day 16",
+                "Day 17",
+                "Day 18",
+                "Day 19",
+                "Day 20",
+                "Day 21",
+                "Day 0-R",
+                "Day 13-R",
+                "Day 14-R",
+                "Day 15-R",
+                "Day 16-R",
+                "Day 17-R",
+                "Day 18-R",
+                "Day 19-R",
+                "Day 20-R",
+                "Day 21-R",
+            ]
+        elif study_name == "11823":
             return ["Day 0", "Day 0-R"]
         elif study_name == "16321":
             return ["Day 0", "Day 0-R1", "Day 0-R2"]
