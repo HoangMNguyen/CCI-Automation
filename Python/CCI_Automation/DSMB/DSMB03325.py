@@ -1660,54 +1660,39 @@ class DSMB03325:
                     # Autofit
                     worksheet7.autofit()
 
-                    worksheet8 = writer.book.add_worksheet("DSMB-Status_Treated Subjects")
-                    # * WRITING AND FORMATING DATA (AE/SAE hidden from display)
-                    txsub_display = self.TXSUB_status_df.drop(columns=["AE", "SAE"], errors="ignore")
-                    for i in range(0, len(txsub_display)):
-                        for j in range(0, len(txsub_display.columns)):
-                            worksheet8.write(i + 2, j, txsub_display.iloc[i, j], normal_data_format)
-
-                    # * WRITING HEADER AND FORMATTING
-                    worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
-                    worksheet8.merge_range(
-                        "B1:B2", "Study Status", bold_12_wrap_format
-                    )
-                    worksheet8.merge_range(
-                        "C1:C2", "Reason for LTFU", bold_12_wrap_format
-                    )
-                    worksheet8.merge_range(
-                        "D1:D2", "Reason for Retx LTFU", bold_12_wrap_format
-                    )
-                    worksheet8.merge_range(
-                        "E1:E2", "Last Study Visit Completed", bold_12_wrap_format
-                    )
-                    worksheet8.merge_range("F1:F2", "End of Study Date", bold_12_wrap_format)
-                    worksheet8.merge_range("G1:G2", "Reason for End of Study", bold_12_wrap_format)
-
-                    # Safety Headers moved from eligible subjects sheet
-                    safety_total_df_subject_count = len(self.TXSUB_status_df["Subject"].unique())
-                    worksheet8.merge_range(
-                        "J1:M1",
-                        "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")",
-                        bold_12_wrap_format,
-                    )
-                    worksheet8.merge_range("J2:K2", "Adverse Events", bold_11_format)
-                    worksheet8.merge_range("L2:M2", "Serious Adverse Events ", bold_11_format)
-                    worksheet8.write("J3", "Yes", bold_11_format)
-                    worksheet8.write("K3", "No", bold_11_format)
-                    worksheet8.write("L3", "Yes", bold_11_format)
-                    worksheet8.write("M3", "No", bold_11_format)
-                    worksheet8.write("I4", "Cohort A", bold_11_format)
-
-                    # Safety Data
-                    safety_df = getattr(self, "safetyTX_total_df", self.safetyCH1_total_df)
-                    for i in range(0, len(safety_df)):
-                        for j in range(0, len(safety_df.columns)):
-                            worksheet8.write(
-                                i + 3,  # row 4 (1-based)
-                                j + 9,  # start at column J
-                                safety_df.iloc[i, j],
-                                normal_data_format,
-                            )
-
-                    worksheet8.autofit()
+                    # Duplicate treated subjects sheet disabled (already created above after Enrollment Listing)
+                    # worksheet8 = writer.book.add_worksheet("DSMB-Status_Treated Subjects")
+                    # txsub_display = self.TXSUB_status_df.drop(columns=["AE", "SAE"], errors="ignore")
+                    # for i in range(0, len(txsub_display)):
+                    #     for j in range(0, len(txsub_display.columns)):
+                    #         worksheet8.write(i + 2, j, txsub_display.iloc[i, j], normal_data_format)
+                    #
+                    # worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+                    # worksheet8.merge_range("B1:B2", "Study Status", bold_12_wrap_format)
+                    # worksheet8.merge_range("C1:C2", "Reason for LTFU", bold_12_wrap_format)
+                    # worksheet8.merge_range("D1:D2", "Reason for Retx LTFU", bold_12_wrap_format)
+                    # worksheet8.merge_range("E1:E2", "Last Study Visit Completed", bold_12_wrap_format)
+                    # worksheet8.merge_range("F1:F2", "End of Study Date", bold_12_wrap_format)
+                    # worksheet8.merge_range("G1:G2", "Reason for End of Study", bold_12_wrap_format)
+                    #
+                    # safety_total_df_subject_count = len(self.TXSUB_status_df["Subject"].unique())
+                    # worksheet8.merge_range("J1:M1", "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")", bold_12_wrap_format)
+                    # worksheet8.merge_range("J2:K2", "Adverse Events", bold_11_format)
+                    # worksheet8.merge_range("L2:M2", "Serious Adverse Events ", bold_11_format)
+                    # worksheet8.write("J3", "Yes", bold_11_format)
+                    # worksheet8.write("K3", "No", bold_11_format)
+                    # worksheet8.write("L3", "Yes", bold_11_format)
+                    # worksheet8.write("M3", "No", bold_11_format)
+                    # worksheet8.write("I4", "Cohort A", bold_11_format)
+                    #
+                    # safety_df = getattr(self, "safetyTX_total_df", self.safetyCH1_total_df)
+                    # for i in range(0, len(safety_df)):
+                    #     for j in range(0, len(safety_df.columns)):
+                    #         worksheet8.write(
+                    #             i + 3,
+                    #             j + 9,
+                    #             safety_df.iloc[i, j],
+                    #             normal_data_format,
+                    #         )
+                    #
+                    # worksheet8.autofit()
