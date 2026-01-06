@@ -151,7 +151,7 @@ def EnrollmentLog15420(final_data):
 
     # INF
     INF_df = final_data["INF"][["Subject", "Event Group Label", "Infusion Date (ig_INF1.INFDAT)"]].copy()
-    INF_df = INF_df[INF_df["Event Group Label"] != "Day 0-R"]
+    INF_df = INF_df[(INF_df["Event Group Label"] != "Day 0-R") & (INF_df["Event Group Label"] != " Day 0-R")]
     INF_new_col_name = {"Infusion Date (ig_INF1.INFDAT)": "CAR T cell Infusion Date [Day 0]"}
     INF_df = INF_df.rename(columns=INF_new_col_name)
     INF_df = INF_df.drop("Event Group Label", axis=1)
@@ -238,7 +238,7 @@ def EnrollmentLog15420(final_data):
 
     # INF Retx
     INF_df = final_data["INF"][["Subject", "Event Group Label", "Infusion Date (ig_INF1.INFDAT)"]].copy()
-    INF_df = INF_df[INF_df["Event Group Label"] == "Day 0-R"]
+    INF_df = INF_df[(INF_df["Event Group Label"] == "Day 0-R") | (INF_df["Event Group Label"] == " Day 0-R")]
     INF_new_col_name = {"Infusion Date (ig_INF1.INFDAT)": "CAR T cell Retreatment Date [Day 0-R]"}
     INF_df = INF_df.rename(columns=INF_new_col_name)
     INF_df = INF_df.drop("Event Group Label", axis=1)

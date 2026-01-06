@@ -91,7 +91,7 @@ Sub QQSR(WS1 As Worksheet)
 
         'Copy study data to another tab
         WS1.Range("A1").AutoFilter Field:=4, Criteria1:=uniqueValues(i, 1) & "*"
-        WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
+        WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
         ws.Paste
         Call Main.OutFormat
         
