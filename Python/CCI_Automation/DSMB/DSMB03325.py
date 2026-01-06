@@ -367,6 +367,7 @@ class DSMB03325:
                 "Amplification of EGFR (IG_NS_NA_LBEGFR2.CL_NS_YH_AMPEGFR_cl_YS_DTNDT1)",
                 "EGFRvIII Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR8_cl_YS_DTNDT1)",
                 "EGFR Mutation (IG_NS_NA_LBEGFR2.CL_NS_YH_EGFRMUT_cl_YS_DTNDT1)",
+                "Laboratory Name (IG_NS_NA_LBEGFR1.CL_NS_NH_LBNAMEGFR_cl_NS_LBNAME2)",
             ]
         ].copy()
 
@@ -374,12 +375,48 @@ class DSMB03325:
             "Amplification of EGFR (IG_NS_NA_LBEGFR2.CL_NS_YH_AMPEGFR_cl_YS_DTNDT1)": "Amplification of EGFR",
             "EGFRvIII Mutation (IG_NS_NA_LBEGFR2.CL_NS_NH_AMPEGFR8_cl_YS_DTNDT1)": "EGFRvIII Mutation",
             "EGFR Mutation (IG_NS_NA_LBEGFR2.CL_NS_YH_EGFRMUT_cl_YS_DTNDT1)": "EGFR Mutation",
+            "Laboratory Name (IG_NS_NA_LBEGFR1.CL_NS_NH_LBNAMEGFR_cl_NS_LBNAME2)": "Laboratory Name",
         }
 
         EGFR_df = EGFR_df.rename(columns=EGFR_new_col_name)
 
+        # Combine results by subject, giving NeoGenomics priority unless its value is "Not Done"
+        def combine_labs(group):
+            res = {"Subject": group["Subject"].iloc[0]}
+            labs = group.get("Laboratory Name", pd.Series([], dtype=str)).fillna("").astype(str).str.strip()
+            neo_mask = labs.eq("NeoGenomics")
+            other_mask = ~neo_mask
+
+            for col in ["Amplification of EGFR", "EGFRvIII Mutation", "EGFR Mutation"]:
+                neo_vals = group.loc[neo_mask, col].fillna("").astype(str).str.strip()
+                other_vals = group.loc[other_mask, col].fillna("").astype(str).str.strip()
+
+                neo_nonempty = neo_vals[neo_vals != ""]
+                other_nonempty = other_vals[other_vals != ""]
+                neo_choice = neo_nonempty.iloc[0] if not neo_nonempty.empty else ""
+                neo_has_not_done = (neo_nonempty.str.lower() == "not done").any()
+
+                if neo_has_not_done and not other_nonempty.empty:
+                    chosen = other_nonempty.iloc[0]
+                elif neo_choice:
+                    chosen = neo_choice
+                elif not other_nonempty.empty:
+                    chosen = other_nonempty.iloc[0]
+                else:
+                    chosen = ""
+
+                res[col] = chosen
+
+            return pd.Series(res)
+
+        combined_EGFR_df = (
+            EGFR_df.groupby("Subject", dropna=False)
+            .apply(combine_labs)
+            .reset_index(drop=True)
+        )
+
         # Merge on "Subject"
-        EGFR_final_df = pd.merge(DM_df, EGFR_df, on="Subject", how="left")
+        EGFR_final_df = pd.merge(DM_df, combined_EGFR_df, on="Subject", how="left")
 
         MHDIAG_df = data["MHDIAG"][["Subject", "MGMT Result (IG_NS_NA_MHDIAG2.CL_NS_NH_MGMTRES_cl_NS_MGMTRES1)"]].copy()
         MHDIAG_new_col_name = {
@@ -1022,6 +1059,57 @@ class DSMB03325:
             on="Subject",
             how="left",
         )
+        # Reason for entering LTFU (primary vs retreatment)
+        dsinit_cols = [
+            "Subject",
+            "From which Phase is the Subject entering Long-Term Follow-Up? (IG_NS_NA_DSINITLF1.CL_NS_NH_PHASELTFU_cl_NS_PHASE1)",
+            "Provide reason the Subject is entering into the Long-Term Follow-Up Phase (IG_NS_NA_DSINITLF2.CL_NS_NH_LTFUREAS_cl_NS_LTFURE1)",
+            "Provide supportive information on the reason for entering Long-Term Follow-Up (IG_NS_NA_DSINITLF2.TX_NS_YH_LTFUREASSP)",
+        ]
+        dsinit_df = data.get("DSINITLF", pd.DataFrame(columns=dsinit_cols))[dsinit_cols].copy()
+        dsinit_df = dsinit_df.rename(
+            columns={
+                "From which Phase is the Subject entering Long-Term Follow-Up? (IG_NS_NA_DSINITLF1.CL_NS_NH_PHASELTFU_cl_NS_PHASE1)": "PhaseLTFU",
+                "Provide reason the Subject is entering into the Long-Term Follow-Up Phase (IG_NS_NA_DSINITLF2.CL_NS_NH_LTFUREAS_cl_NS_LTFURE1)": "LTFU Reason",
+                "Provide supportive information on the reason for entering Long-Term Follow-Up (IG_NS_NA_DSINITLF2.TX_NS_YH_LTFUREASSP)": "LTFU Support",
+            }
+        )
+
+        def _clean_str(val):
+            if pd.isna(val):
+                return ""
+            s = str(val).strip()
+            return "" if s.lower() == "nan" else s
+
+        def combine_reason(row):
+            reason = _clean_str(row.get("LTFU Reason", ""))
+            support = _clean_str(row.get("LTFU Support", ""))
+            return (reason + (" " + support if support else "")).strip()
+
+        dsinit_df["Combined Reason"] = dsinit_df.apply(combine_reason, axis=1)
+
+        primary_map = (
+            dsinit_df[dsinit_df["PhaseLTFU"] == "Primary Follow-Up"]
+            .groupby("Subject")["Combined Reason"]
+            .apply(lambda s: next((x for x in s if x.strip()), ""))
+            .to_dict()
+        )
+        retx_map = (
+            dsinit_df[dsinit_df["PhaseLTFU"] == "Retreatment"]
+            .groupby("Subject")["Combined Reason"]
+            .apply(lambda s: next((x for x in s if x.strip()), ""))
+            .to_dict()
+        )
+
+        TXSUB_status_df["Reason for LTFU"] = TXSUB_status_df["Subject"].map(primary_map).fillna("")
+        TXSUB_status_df["Reason for Retx LTFU"] = TXSUB_status_df["Subject"].map(retx_map).fillna("")
+
+        def _fill_na_reason(val):
+            txt = _clean_str(val)
+            return txt if txt else "N/A"
+
+        TXSUB_status_df["Reason for LTFU"] = TXSUB_status_df["Reason for LTFU"].apply(_fill_na_reason)
+        TXSUB_status_df["Reason for Retx LTFU"] = TXSUB_status_df["Reason for Retx LTFU"].apply(_fill_na_reason)
         # replaces all occurrences of NaN, positive infinity, and negative infinity with empty strings.
         TXSUB_status_df = TXSUB_status_df.replace([np.nan, np.inf, -np.inf], "N/A")
         # Convert date column to string in M-D-YYYY format without leading zeros
@@ -1148,6 +1236,8 @@ class DSMB03325:
             [
                 "Subject",
                 "Study Status",
+                "Reason for LTFU",
+                "Reason for Retx LTFU",
                 "Last Study Visit Completed",
                 "End of Study Date",
                 "Reason for End of Study",
@@ -1369,25 +1459,67 @@ class DSMB03325:
                     # Autofit
                     worksheet2.autofit()
 
-                    worksheet3 = writer.book.add_worksheet("DSMB-Status.Eligible Subjects")
-                    # * WRITING AND FORMATING DATA
-                    status_df_output = self.status_df.drop(columns=["Event Group Name"], errors="ignore")
-
-                    for i in range(0, len(status_df_output)):
-                        for j in range(0, len(status_df_output.columns)):
-                            worksheet3.write(i + 2, j, status_df_output.iloc[i, j], normal_data_format)
+                    # DSMB-Status_Treated Subjects (moved up to follow Enrollment Listing)
+                    # * WRITING AND FORMATING DATA (AE/SAE hidden from display)
+                    txsub_display = self.TXSUB_status_df.drop(columns=["AE", "SAE"], errors="ignore")
+                    worksheet8 = writer.book.add_worksheet("DSMB-Status_Treated Subjects")
+                    for i in range(0, len(txsub_display)):
+                        for j in range(0, len(txsub_display.columns)):
+                            worksheet8.write(i + 2, j, txsub_display.iloc[i, j], normal_data_format)
 
                     # * WRITING HEADER AND FORMATTING
-                    worksheet3.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
-                    worksheet3.merge_range("B1:B2", "Cohort Assignment", bold_12_wrap_format)
-                    worksheet3.merge_range("C1:C2", "Dose Level Assignment", bold_12_wrap_format)
-                    worksheet3.merge_range("D1:D2", "Adverse Events (Y/N)", bold_12_wrap_format)
-                    worksheet3.merge_range("E1:E2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
-                    worksheet3.merge_range("F1:F2", "Off-Study Reason", bold_12_wrap_format)
-                    worksheet3.merge_range("G1:G2", "Last Study Visit Performed for Off-Study Subject", bold_12_wrap_format)
+                    worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+                    worksheet8.merge_range("B1:B2", "Study Status", bold_12_wrap_format)
+                    worksheet8.merge_range("C1:C2", "Reason for LTFU", bold_12_wrap_format)
+                    worksheet8.merge_range("D1:D2", "Reason for Retx LTFU", bold_12_wrap_format)
+                    worksheet8.merge_range("E1:E2", "Last Study Visit Completed", bold_12_wrap_format)
+                    worksheet8.merge_range("F1:F2", "End of Study Date", bold_12_wrap_format)
+                    worksheet8.merge_range("G1:G2", "Reason for End of Study", bold_12_wrap_format)
 
-                    # Autofit
-                    worksheet3.autofit()
+                    # Safety Headers
+                    safety_total_df_subject_count = len(self.TXSUB_status_df["Subject"].unique())
+                    worksheet8.merge_range("J1:M1", "Safety Statistics (N=" + str(safety_total_df_subject_count) + ")", bold_12_wrap_format)
+                    worksheet8.merge_range("J2:K2", "Adverse Events", bold_11_format)
+                    worksheet8.merge_range("L2:M2", "Serious Adverse Events ", bold_11_format)
+                    worksheet8.write("J3", "Yes", bold_11_format)
+                    worksheet8.write("K3", "No", bold_11_format)
+                    worksheet8.write("L3", "Yes", bold_11_format)
+                    worksheet8.write("M3", "No", bold_11_format)
+                    worksheet8.write("I4", "Cohort A", bold_11_format)
+
+                    # Safety Data
+                    safety_df = getattr(self, "safetyTX_total_df", self.safetyCH1_total_df)
+                    for i in range(0, len(safety_df)):
+                        for j in range(0, len(safety_df.columns)):
+                            worksheet8.write(
+                                i + 3,  # row 4 (1-based)
+                                j + 9,  # start at column J
+                                safety_df.iloc[i, j],
+                                normal_data_format,
+                            )
+
+                    worksheet8.autofit()
+
+                    # DSMB-Status.Eligible Subjects (disabled; code retained)
+                    # worksheet3 = writer.book.add_worksheet("DSMB-Status.Eligible Subjects")
+                    # # * WRITING AND FORMATING DATA
+                    # status_df_output = self.status_df.drop(columns=["Event Group Name"], errors="ignore")
+                    #
+                    # for i in range(0, len(status_df_output)):
+                    #     for j in range(0, len(status_df_output.columns)):
+                    #         worksheet3.write(i + 2, j, status_df_output.iloc[i, j], normal_data_format)
+                    #
+                    # # * WRITING HEADER AND FORMATTING
+                    # worksheet3.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
+                    # worksheet3.merge_range("B1:B2", "Cohort Assignment", bold_12_wrap_format)
+                    # worksheet3.merge_range("C1:C2", "Dose Level Assignment", bold_12_wrap_format)
+                    # worksheet3.merge_range("D1:D2", "Adverse Events (Y/N)", bold_12_wrap_format)
+                    # worksheet3.merge_range("E1:E2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
+                    # worksheet3.merge_range("F1:F2", "Off-Study Reason", bold_12_wrap_format)
+                    # worksheet3.merge_range("G1:G2", "Last Study Visit Performed for Off-Study Subject", bold_12_wrap_format)
+                    #
+                    # # Autofit
+                    # worksheet3.autofit()
 
                     ## TODO: Study Tx Statistics
                     worksheet4 = writer.book.add_worksheet("DSMB-Treatment Statistics")
@@ -1422,9 +1554,9 @@ class DSMB03325:
                     worksheet4.merge_range("E1:G1", "Transduction Efficiency", bold_12_wrap_format)
                     worksheet4.write("B2", "Total Cell Dose", bold_12_wrap_format)
                     worksheet4.write("C2", "CART-EGFR-IL13Ra2 Cell Dose", bold_12_wrap_format)
-                    worksheet4.write("D2", "Met Target Dose", bold_12_wrap_format)
+                    worksheet4.write("D2", "Met Target Dose (Y/N)", bold_12_wrap_format)
                     worksheet4.write("E2", "%scFV (EGFR)", bold_12_wrap_format)
-                    worksheet4.write("F2", "Met Target % scFV Flow(Y/N) (≥2%)", bold_12_wrap_format)
+                    worksheet4.write("F2", "Met Target % scFV (EGFR) Flow (Y/N) (≥2%)", bold_12_wrap_format)
                     worksheet4.write("G2", "%scFV (IL13Ra2)", bold_12_wrap_format)
                     worksheet4.merge_range(
                         "A3:G3",
@@ -1463,7 +1595,7 @@ class DSMB03325:
                     worksheet5.write("H2", "CART-EGFR-IL13Ra2 Cell Dose", bold_12_wrap_format)
                     worksheet5.write("I2", "Met Target Dose (Y/N)", bold_12_wrap_format)
                     worksheet5.write("J2", "%scFV (EGFR)", bold_12_wrap_format)
-                    worksheet5.write("K2", "Met Target % scFV Flow (Y/N) (≥2%)", bold_12_wrap_format)
+                    worksheet5.write("K2", "Met Target % scFV (EGFR) Flow (Y/N) (≥2%)", bold_12_wrap_format)
                     worksheet5.write("L2", "%scFV (IL13Ra2)", bold_12_wrap_format)
 
                     worksheet5.autofit()
@@ -1499,7 +1631,7 @@ class DSMB03325:
                     worksheet6.write("G2", "Total Cell Dose", bold_12_wrap_format)
                     worksheet6.write("H2", "CART-EGFR-IL13Ra2 Cell Dose", bold_12_wrap_format)
                     worksheet6.write("I2", "%scFV (EGFR)", bold_12_wrap_format)
-                    worksheet6.write("J2", "Met Target % scFV Flow (Y/N) (≥2%)", bold_12_wrap_format)
+                    worksheet6.write("J2", "Met Target % scFV (EGFR) Flow (Y/N) (≥2%)", bold_12_wrap_format)
                     worksheet6.write("K2", "%scFV (Il13Ra2)", bold_12_wrap_format)
 
                     # Autofit
@@ -1529,10 +1661,11 @@ class DSMB03325:
                     worksheet7.autofit()
 
                     worksheet8 = writer.book.add_worksheet("DSMB-Status_Treated Subjects")
-                    # * WRITING AND FORMATING DATA
-                    for i in range(0, len(self.TXSUB_status_df)):
-                        for j in range(0, len(self.TXSUB_status_df.columns)):
-                            worksheet8.write(i + 2, j, self.TXSUB_status_df.iloc[i, j], normal_data_format)
+                    # * WRITING AND FORMATING DATA (AE/SAE hidden from display)
+                    txsub_display = self.TXSUB_status_df.drop(columns=["AE", "SAE"], errors="ignore")
+                    for i in range(0, len(txsub_display)):
+                        for j in range(0, len(txsub_display.columns)):
+                            worksheet8.write(i + 2, j, txsub_display.iloc[i, j], normal_data_format)
 
                     # * WRITING HEADER AND FORMATTING
                     worksheet8.merge_range("A1:A2", "Subject ID", bold_12_wrap_format)
@@ -1540,12 +1673,16 @@ class DSMB03325:
                         "B1:B2", "Study Status", bold_12_wrap_format
                     )
                     worksheet8.merge_range(
-                        "C1:C2", "Last Study Visit Completed", bold_12_wrap_format
+                        "C1:C2", "Reason for LTFU", bold_12_wrap_format
                     )
-                    worksheet8.merge_range("D1:D2", "End of Study Date", bold_12_wrap_format)
-                    worksheet8.merge_range("E1:E2", "Reason for End of Study", bold_12_wrap_format)
-                    worksheet8.merge_range("F1:F2", "Adverse Events (Y/N)", bold_12_wrap_format)
-                    worksheet8.merge_range("G1:G2", "Serious Adverse Events (Y/N)", bold_12_wrap_format)
+                    worksheet8.merge_range(
+                        "D1:D2", "Reason for Retx LTFU", bold_12_wrap_format
+                    )
+                    worksheet8.merge_range(
+                        "E1:E2", "Last Study Visit Completed", bold_12_wrap_format
+                    )
+                    worksheet8.merge_range("F1:F2", "End of Study Date", bold_12_wrap_format)
+                    worksheet8.merge_range("G1:G2", "Reason for End of Study", bold_12_wrap_format)
 
                     # Safety Headers moved from eligible subjects sheet
                     safety_total_df_subject_count = len(self.TXSUB_status_df["Subject"].unique())
@@ -1567,8 +1704,8 @@ class DSMB03325:
                     for i in range(0, len(safety_df)):
                         for j in range(0, len(safety_df.columns)):
                             worksheet8.write(
-                                i + 3,
-                                j + 9,
+                                i + 3,  # row 4 (1-based)
+                                j + 9,  # start at column J
                                 safety_df.iloc[i, j],
                                 normal_data_format,
                             )
