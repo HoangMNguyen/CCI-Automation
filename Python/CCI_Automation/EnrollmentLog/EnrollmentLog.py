@@ -57,6 +57,10 @@ class EnrollmentLog:
             from .EnrollmentLog03325 import EnrollmentLog03325
 
             output_df = EnrollmentLog03325(self.data)
+        elif self.study_name == "10325":
+            from .EnrollmentLog10325 import EnrollmentLog10325
+
+            output_df = EnrollmentLog10325(self.data)
 
         return output_df
 
@@ -251,6 +255,17 @@ class EnrollmentLog:
                 for i in range(17, 22):
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
                 for i in range(22, 23):
+                    worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
+            elif self.study_name == "10325":
+                for i in range(8):
+                    worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
+                for i in range(8, 12):
+                    worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
+                for i in range(12, 20):
+                    worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
+                for i in range(20, 26):
+                    worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
+                for i in range(26, 27):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
 
             worksheet.set_row(0, 60)
