@@ -131,22 +131,6 @@ def EnrollmentLog10325(final_data):
         ).dt.strftime("%m/%d/%Y")
         # print(merged_df)
 
-        # MHSG Arm C
-        MHSG_df = final_data["MHSG"][
-            ["Subject", "Event Label", "Date of Surgery (IG_NS_NA_MHSG1.DT_NS_NH_SGDAT)"]
-        ].copy()
-        MHSG_df = MHSG_df[MHSG_df["Event Label"] == "Routine Care Surgical Intervention - Post-Treatment"]
-        MHSG_new_col_name = {
-            "Date of Surgery (IG_NS_NA_MHSG1.DT_NS_NH_SGDAT)": "Routine Care Surgical Intervention (Arm C)"
-        }
-        MHSG_df = MHSG_df.rename(columns=MHSG_new_col_name)
-        MHSG_df = MHSG_df.drop("Event Label", axis=1)
-        merged_df = pd.merge(merged_df, MHSG_df, on="Subject", how="left")
-        merged_df["Routine Care Surgical Intervention (Arm C)"] = pd.to_datetime(
-            merged_df["Routine Care Surgical Intervention (Arm C)"]
-        ).dt.strftime("%m/%d/%Y")
-        # print(merged_df)
-
         # EXCHMO
         EXCHMO_df = final_data["EXCHMO"][
             ["Subject", "Event Group Label", "Start Date (IG_NS_NA_EXCHMO2.DT_NS_NH_EXSTDAT)"]
@@ -172,6 +156,22 @@ def EnrollmentLog10325(final_data):
         merged_df = pd.merge(merged_df, EXINF_df, on="Subject", how="left")
         merged_df["CART T cell Administration Date (Day 0)"] = pd.to_datetime(
             merged_df["CART T cell Administration Date (Day 0)"]
+        ).dt.strftime("%m/%d/%Y")
+        # print(merged_df)
+
+        # MHSG Arm C
+        MHSG_df = final_data["MHSG"][
+            ["Subject", "Event Label", "Date of Surgery (IG_NS_NA_MHSG1.DT_NS_NH_SGDAT)"]
+        ].copy()
+        MHSG_df = MHSG_df[MHSG_df["Event Label"] == "Routine Care Surgical Intervention - Post-Treatment"]
+        MHSG_new_col_name = {
+            "Date of Surgery (IG_NS_NA_MHSG1.DT_NS_NH_SGDAT)": "Routine Care Surgical Intervention (Arm C)"
+        }
+        MHSG_df = MHSG_df.rename(columns=MHSG_new_col_name)
+        MHSG_df = MHSG_df.drop("Event Label", axis=1)
+        merged_df = pd.merge(merged_df, MHSG_df, on="Subject", how="left")
+        merged_df["Routine Care Surgical Intervention (Arm C)"] = pd.to_datetime(
+            merged_df["Routine Care Surgical Intervention (Arm C)"]
         ).dt.strftime("%m/%d/%Y")
         # print(merged_df)
 
@@ -252,12 +252,12 @@ def EnrollmentLog10325(final_data):
         # EXINF Retx
         INF_df = final_data["EXINF"][["Subject", "Event Group Label", "Study Treatment Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)"]].copy()
         INF_df = INF_df[(INF_df["Event Group Label"] == "Study Retreatment") | (INF_df["Event Group Label"] == "Study Retreatment")]
-        INF_new_col_name = {"Study Treatment Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)": "CAR T cell Retreatment Date [Day 0-R]"}
+        INF_new_col_name = {"Study Treatment Date (IG_NS_NA_EXINF1.DT_NS_NH_INFDAT)": "CAR T cell Retreatment Date (Day 0-R)"}
         INF_df = INF_df.rename(columns=INF_new_col_name)
         INF_df = INF_df.drop("Event Group Label", axis=1)
         merged_df = pd.merge(merged_df, INF_df, on="Subject", how="left")
-        merged_df["CAR T cell Retreatment Date [Day 0-R]"] = pd.to_datetime(
-            merged_df["CAR T cell Retreatment Date [Day 0-R]"]
+        merged_df["CAR T cell Retreatment Date (Day 0-R)"] = pd.to_datetime(
+            merged_df["CAR T cell Retreatment Date (Day 0-R)"]
         ).dt.strftime("%m/%d/%Y")
         # print(merged_df)
 
@@ -274,7 +274,7 @@ def EnrollmentLog10325(final_data):
             INITLF_df["From which Phase is the Subject entering Long-Term Follow-Up? (IG_NS_NA_DSINITLF1.CL_NS_NH_PHASELTFU_cl_NS_PHASE1)"] == "Retreatment"
         ]
         INITLF_new_col_name = {
-            "Last Study Visit Completed in Retreatment (IG_NS_NA_DSINITLF1.CL_NS_NH_LVCRETX_cl_NS_LVCPFUR1)": "Last Study Visit Completed in Retreatment F/up",
+            "Last Study Visit Completed in Retreatment (IG_NS_NA_DSINITLF1.CL_NS_NH_LVCRETX_cl_NS_LVCPFUR1)": "Last Study Visit Completed in Retreatment (X-R)",
             "End of Retreatment Date (IG_NS_NA_DSINITLF1.DT_NS_YH_RETXENDDAT)": "Initiation of Retreatment LTFU Date",
         }
         INITLF_df = INITLF_df.rename(columns=INITLF_new_col_name)
