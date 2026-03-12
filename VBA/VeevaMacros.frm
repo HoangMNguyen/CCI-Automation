@@ -2,9 +2,9 @@ VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} VeevaMacros 
    Caption         =   "Veeva Automation"
    ClientHeight    =   1560
-   ClientLeft      =   96
-   ClientTop       =   372
-   ClientWidth     =   5088
+   ClientLeft      =   90
+   ClientTop       =   375
+   ClientWidth     =   5100
    OleObjectBlob   =   "VeevaMacros.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
@@ -13,6 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
+
 
 
 
@@ -27,11 +28,13 @@ ComboBox1.AddItem "Query Detail Listing Format Sponsor"
 ComboBox1.AddItem "Subject Progress Listing Format"
 ComboBox1.AddItem "Format Core Listing AE"
 ComboBox1.AddItem "Format Core Listing Non AE"
+ComboBox1.AddItem "AE Assessment Join Data"
 ComboBox1.AddItem "15420 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "03821 Ming's Comprehensive Form Summary Format"
 ComboBox1.AddItem "Sheet Format (Left Align)"
 ComboBox1.AddItem "Table Format (Left Align)"
 ComboBox1.AddItem "Table Format (Wrap Text, Center Align)"
+
 
 VeevaMacros.Label1.Caption = "Please select the appropriate automation from the list above." & vbNewLine & "For Table Format automation, please select the top left cell of the table before running automation." & vbNewLine & "For automation updates, please submit an Automation Request Form"
 End Sub
@@ -49,6 +52,8 @@ Sub CommandButton1_Click()
         Call VeevaAE.FormatVeevaAE
     ElseIf ComboBox1.Value = "Format Core Listing Non AE" Then
         Call SafetyMacro.FormatNonAECRF
+    ElseIf ComboBox1.Value = "AE Assessment Join Data" Then
+        Call AssessmentJoinData.ProcessAssessmentJoinData
     ElseIf ComboBox1.Value = "15420 Ming's Comprehensive Form Summary Format" Then
         Call S15420.MingComprehensiveFormSummary
     ElseIf ComboBox1.Value = "03821 Ming's Comprehensive Form Summary Format" Then
