@@ -17,7 +17,6 @@ Public Sub ProcessAssessmentJoinData()
     Dim questionText As String
     Dim subjectCol As Long
     Dim formSeqCol As Long
-    Dim createdCol As Long
     Dim statusCol As Long
     Dim questionAnswerCol As Long
     Dim questionTextCol As Long
@@ -31,6 +30,7 @@ Public Sub ProcessAssessmentJoinData()
     Dim finalOutputCol As Long
     Dim saveFolder As String
     Dim saveFilePath As String
+    Dim baseFilePath As String
 
     On Error GoTo CleanFail
     Application.ScreenUpdating = False
@@ -41,14 +41,16 @@ Public Sub ProcessAssessmentJoinData()
     wsSource.Activate
     RemoveFilter
 
+    RemoveColumn wsSource, "ASM.GUID"
+    RemoveColumn wsSource, "ASMR.AGUID"
+
     subjectCol = GetColumnNumber(wsSource, "Subject")
     formSeqCol = GetColumnNumber(wsSource, "Form Sequence Number")
-    createdCol = GetColumnNumber(wsSource, "CREATEDT")
     statusCol = GetColumnNumber(wsSource, "ASM.STATUS")
     questionAnswerCol = GetColumnNumber(wsSource, "ASMR.QUESANS")
     questionTextCol = GetColumnNumber(wsSource, "ASMR.QUESTEXT")
 
-    If subjectCol = 0 Or formSeqCol = 0 Or createdCol = 0 Or statusCol = 0 _
+    If subjectCol = 0 Or formSeqCol = 0 Or statusCol = 0 _
         Or questionAnswerCol = 0 Or questionTextCol = 0 Then
         MsgBox "One or more required columns are missing from the active sheet.", vbExclamation
         GoTo CleanExit
@@ -85,7 +87,7 @@ Public Sub ProcessAssessmentJoinData()
         GoTo CleanExit
     End If
 
-    totalColumns = 4 + questionOrder.Count
+    totalColumns = 2 + questionOrder.Count
 
     Set groupMap = CreateObject("Scripting.Dictionary")
     Set groupOrder = New Collection
@@ -95,14 +97,12 @@ Public Sub ProcessAssessmentJoinData()
             groupKey = BuildAssessmentJoinKey( _
                 sourceData(rowIndex, subjectCol), _
                 sourceData(rowIndex, formSeqCol), _
-                sourceData(rowIndex, createdCol))
+                vbNullString)
 
             If Not groupMap.Exists(groupKey) Then
                 ReDim groupRow(1 To totalColumns)
                 groupRow(1) = sourceData(rowIndex, subjectCol)
                 groupRow(2) = sourceData(rowIndex, formSeqCol)
-                groupRow(3) = sourceData(rowIndex, createdCol)
-                groupRow(4) = sourceData(rowIndex, statusCol)
                 groupMap.Add groupKey, groupRow
                 groupOrder.Add groupKey
             End If
@@ -113,8 +113,8 @@ Public Sub ProcessAssessmentJoinData()
             If Len(questionText) > 0 Then
                 questionIndex = CLng(questionMap(questionText))
                 ' Populate each question column with the matching answer value.
-                groupRow(4 + questionIndex) = MergeAssessmentAnswer( _
-                    groupRow(4 + questionIndex), _
+                groupRow(2 + questionIndex) = MergeAssessmentAnswer( _
+                    groupRow(2 + questionIndex), _
                     sourceData(rowIndex, questionAnswerCol))
             End If
 
@@ -130,11 +130,9 @@ Public Sub ProcessAssessmentJoinData()
 
     outputData(1, 1) = "Subject"
     outputData(1, 2) = "Form Sequence Number"
-    outputData(1, 3) = "CREATEDT"
-    outputData(1, 4) = "ASM.STATUS"
 
     For colIndex = 1 To questionOrder.Count
-        outputData(1, 4 + colIndex) = CStr(questionOrder(colIndex))
+        outputData(1, 2 + colIndex) = CStr(questionOrder(colIndex))
     Next colIndex
 
     For rowIndex = 1 To groupOrder.Count
@@ -147,8 +145,6 @@ Public Sub ProcessAssessmentJoinData()
     wsOutput.Range(wsOutput.Cells(1, 1), wsOutput.Cells(UBound(outputData, 1), totalColumns)).Value = outputData
 
     SortAssessmentOutput wsOutput, UBound(outputData, 1), totalColumns
-    RemoveColumn wsOutput, "CREATEDT"
-    RemoveColumn wsOutput, "ASM.STATUS"
     finalOutputCol = FindLastColumn(wsOutput)
 
     wsOutput.Activate
@@ -169,12 +165,15 @@ Public Sub ProcessAssessmentJoinData()
     End If
 
     If Len(saveFolder) > 0 Then
-        saveFilePath = saveFolder & Application.PathSeparator & "Assessment final.xlsx"
+        baseFilePath = saveFolder & Application.PathSeparator & "Assessment final.xlsx"
     Else
-        saveFilePath = "Assessment final.xlsx"
+        baseFilePath = "Assessment final.xlsx"
     End If
 
+    saveFilePath = GetAvailableSavePath(baseFilePath)
+    Application.DisplayAlerts = False
     outputWb.SaveAs fileName:=saveFilePath, FileFormat:=xlOpenXMLWorkbook
+    Application.DisplayAlerts = True
 
     MsgBox completedRowCount & " completed rows were combined into " & groupOrder.Count & _
         " rows across " & questionOrder.Count & " assessment questions." & vbNewLine & _
@@ -185,6 +184,7 @@ CleanExit:
     Exit Sub
 
 CleanFail:
+    Application.DisplayAlerts = True
     Application.ScreenUpdating = True
     MsgBox "Assessment join processing failed: " & Err.Description, vbCritical
 End Sub
@@ -253,6 +253,33 @@ Private Function WorksheetExists(ByVal targetWb As Workbook, ByVal sheetName As 
     WorksheetExists = Not ws Is Nothing
 End Function
 
+Private Function GetAvailableSavePath(ByVal preferredPath As String) As String
+    Dim folderPath As String
+    Dim fileNameOnly As String
+    Dim dotPos As Long
+    Dim fileBase As String
+    Dim fileExt As String
+
+    If Dir(preferredPath) = "" Then
+        GetAvailableSavePath = preferredPath
+        Exit Function
+    End If
+
+    folderPath = Left$(preferredPath, InStrRev(preferredPath, Application.PathSeparator))
+    fileNameOnly = Mid$(preferredPath, InStrRev(preferredPath, Application.PathSeparator) + 1)
+    dotPos = InStrRev(fileNameOnly, ".")
+
+    If dotPos > 0 Then
+        fileBase = Left$(fileNameOnly, dotPos - 1)
+        fileExt = Mid$(fileNameOnly, dotPos)
+    Else
+        fileBase = fileNameOnly
+        fileExt = ""
+    End If
+
+    GetAvailableSavePath = folderPath & fileBase & " " & Now2Date(Now) & "_" & Format(Now, "hhmmss") & fileExt
+End Function
+
 Private Sub SortAssessmentOutput(ByVal ws As Worksheet, ByVal lastDataRow As Long, ByVal lastDataCol As Long)
     Dim sortRange As Range
 
@@ -264,7 +291,6 @@ Private Sub SortAssessmentOutput(ByVal ws As Worksheet, ByVal lastDataRow As Lon
         .SortFields.Clear
         .SortFields.Add Key:=ws.Range(ws.Cells(2, 1), ws.Cells(lastDataRow, 1)), Order:=xlAscending
         .SortFields.Add Key:=ws.Range(ws.Cells(2, 2), ws.Cells(lastDataRow, 2)), Order:=xlAscending
-        .SortFields.Add Key:=ws.Range(ws.Cells(2, 3), ws.Cells(lastDataRow, 3)), Order:=xlAscending
         .SetRange sortRange
         .Header = xlYes
         .Apply
