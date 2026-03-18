@@ -116,7 +116,7 @@ def EnrollmentLog15122(raw_data):
         # if merged_df does not have all the columns in column_list, add the missing columns
         for col in column_list:
             if col not in merged_df.columns:
-                merged_df[col] = np.NaN
+                merged_df[col] = np.nan
         merged_df = merged_df[column_list]
         # merge the dataframes with the output dataframe
         output_df = pd.concat([output_df, merged_df], ignore_index=True)
