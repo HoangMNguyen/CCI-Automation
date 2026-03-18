@@ -324,6 +324,6 @@ def EnrollmentLog03325(final_data):
         # if merged_df does not have all the columns in column_list, add the missing columns
         for col in column_list:
             if col not in merged_df.columns:
-                merged_df[col] = np.NaN
+                merged_df[col] = np.nan
         merged_df = merged_df[column_list]
         return merged_df
