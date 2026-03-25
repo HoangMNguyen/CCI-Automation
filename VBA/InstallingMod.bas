@@ -1,6 +1,5 @@
 Attribute VB_Name = "InstallingMod"
-'Sub RemoveAddMod(Optional ModulePath As String = "A:\VBA\")
-Sub RemoveAddMod(Optional ModulePath As String = "C:\Users\mingl\MingProject\CCI-Automation\VBA\")
+Sub RemoveAddMod(Optional ModulePath As String = "A:\VBA\")
 
 Dim vbCom As Object
 Set vbCom = ThisWorkbook.VBProject.VBComponents
