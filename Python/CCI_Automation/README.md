@@ -21,19 +21,19 @@ CCI Automation V1.00 is a tool designed to streamline and automate processes rel
 
 The application requires the following Python packages:
 
-- numpy>=1.25.2
-- matplotlib>=3.7.2
-- pandas==2.2.1
-- PyQt5>=5.15.9
-- PyQt5-Qt5>=5.15.2
-- PyQt5-sip>=12.11.1
-- PySide6>=6.5.2
-- PySide6-Addons>=6.5.2
-- PySide6-Essentials>=6.5.2
-- XlsxWriter>=3.1.2
-- openpyxl>=3.1.2
-- requests>=2.31.0
-- pytest>=8.1.1
+ - matplotlib==3.10.8
+ - numpy==2.4.3
+ - openpyxl==3.1.5
+ - pandas==3.0.1
+ - PyQt5==5.15.11
+ - PyQt5-Qt5==5.15.2
+ - PyQt5-sip==12.18.0
+ - PySide6==6.10.2
+ - PySide6-Addons==6.10.2
+ - PySide6-Essentials==6.10.2
+ - pytest==9.0.2
+ - shiboken6==6.10.2
+ - XlsxWriter==3.2.9
 
 Install the dependencies using the following command:
 
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 To build the application into a standalone executable, use the following `pyinstaller` command. This will create an optimized `.exe` file named "CCI Automation V1.00" and exclude certain dependencies for a smaller file size.
 
 ```bash
-pyinstaller --onefile --strip --name "CCI Automation V1.00" --windowed "CCI_Automation.py" --exclude PyQt5 --exclude matplotlib
+python -m pyinstaller --onefile --strip --name "CCI Automation V1.00" --windowed "CCI_Automation.py" --exclude PyQt5 --exclude matplotlib
 ```
 
 **Note**: Ensure that PyInstaller is installed as listed in the `requirements.txt`.
