@@ -113,7 +113,7 @@ class DSMB12423:
         enrollment_df["Disease Type"] = (
             enrollment_df["Disease NHL"].fillna("") + " " + enrollment_df["Disease NHL2"].fillna("")
         )
-        enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
+        enrollment_df["Disease Type"] = enrollment_df["Disease Type"].fillna("")
 
         # Convert the entire column to string to avoid data type issues
         enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].astype(str)
@@ -164,7 +164,7 @@ class DSMB12423:
             ]
         )
         # Remove the rows with Event Group Label is Day 0-R
-        enrollment_df = enrollment_df[enrollment_df["Event Group Label"] != "Day 0-R"]
+        # enrollment_df = enrollment_df[enrollment_df["Event Group Label"] != "Day 0-R"]
         enrollment_df = enrollment_df.drop(columns=["Event Group Label"])
         # Update 'Infused' column based on the conditions:
         enrollment_df.loc[
@@ -353,17 +353,21 @@ class DSMB12423:
 
         # Adding Met Target Dose column based on the condition of Total Cell Dose Administered and Total TmCD19-IL18 CAR T Cell Dose Administered if 'Target Cell Dose' is integer
         infusion_df["Met Target Dose"] = infusion_df.apply(
-            lambda row: "Y"
-            if isinstance(row["Target Cell Dose"], int)
-            and row["Total TmCD19-IL18 CAR T Cell Dose Administered"] >= row["Target Cell Dose"]
-            else "",
+            lambda row: (
+                "Y"
+                if isinstance(row["Target Cell Dose"], int)
+                and row["Total TmCD19-IL18 CAR T Cell Dose Administered"] >= row["Target Cell Dose"]
+                else ""
+            ),
             axis=1,
         )
         infusion_df["Met Target Dose"] = infusion_df.apply(
-            lambda row: "N"
-            if isinstance(row["Target Cell Dose"], int)
-            and row["Total TmCD19-IL18 CAR T Cell Dose Administered"] < row["Target Cell Dose"]
-            else row["Met Target Dose"],
+            lambda row: (
+                "N"
+                if isinstance(row["Target Cell Dose"], int)
+                and row["Total TmCD19-IL18 CAR T Cell Dose Administered"] < row["Target Cell Dose"]
+                else row["Met Target Dose"]
+            ),
             axis=1,
         )
 
@@ -663,25 +667,16 @@ class DSMB12423:
         temp_mask = responseA_primary_df[
             "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
         ].apply(lambda x: str(x).isdigit())
-        # Coerce to numeric first (turn non‐numeric to NaN).
-        responseA_primary_df.loc[
-            temp_mask,
-            "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
-        ] = pd.to_numeric(
-            responseA_primary_df.loc[
-                temp_mask,
-                "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
+        # Build numeric day values separately so pandas string columns stay strings.
+        unscheduled_primary_days = pd.to_numeric(
+            responseA_primary_df[
+                "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
             ],
             errors="coerce",
         )
 
         # Now safely convert to int, but only for rows that pass the mask.
-        temp_mask = (
-            temp_mask
-            & responseA_primary_df[
-                "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)"
-            ].notna()
-        )
+        temp_mask = temp_mask & unscheduled_primary_days.notna()
         responseA_primary_df = convert_integers_to_strings(
             responseA_primary_df,
             "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
@@ -689,10 +684,7 @@ class DSMB12423:
         responseA_primary_df.loc[
             temp_mask,
             "Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)",
-        ] = "Day " + responseA_primary_df.loc[
-            temp_mask,
-            "For Unscheduled Primary Treatment Time Point, Specify Day #  (IG_NS_NA_NHLRS1.TX_YS_YH_RSTUDYDAY)",
-        ].astype(int).astype(str)
+        ] = "Day " + unscheduled_primary_days.loc[temp_mask].astype(int).astype(str)
         responseA_primary_df["Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)"] = (
             responseA_primary_df["Primary Treatment Time Point (IG_NS_NA_NHLRS1.CL_NS_NH_RSTPT_cl_NS_RSTPT1)"].fillna(
                 responseA_primary_df[
@@ -991,12 +983,14 @@ class DSMB12423:
             )
             # Check responseA_primary_AE_df if the subject of responseA_primary_df has SAE in column 'AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)' . If yes, then add 'Y' to the column 'SAE' in responseA_primary_df, else add 'N'
             final_responseA_primary_df["SAE"] = final_responseA_primary_df["Subject"].apply(
-                lambda x: "Y"
-                if x
-                in responseA_primary_AE_df[
-                    responseA_primary_AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"] == "SAE"
-                ]["Subject"].values
-                else "N"
+                lambda x: (
+                    "Y"
+                    if x
+                    in responseA_primary_AE_df[
+                        responseA_primary_AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"] == "SAE"
+                    ]["Subject"].values
+                    else "N"
+                )
             )
 
             ## Checking Study Status for NHL primary
@@ -1327,12 +1321,15 @@ class DSMB12423:
                 )
                 # Check responseA_retreatment_AE_df if the subject of responseA_retreatment_df has SAE in column 'AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)' . If yes, then add 'Y' to the column 'SAE' in responseA_retreatment_df, else add 'N'
                 final_responseA_retreatment_df["SAE"] = final_responseA_retreatment_df["Subject"].apply(
-                    lambda x: "Y"
-                    if x
-                    in responseA_retreatment_AE_df[
-                        responseA_retreatment_AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"] == "SAE"
-                    ]["Subject"].values
-                    else "N"
+                    lambda x: (
+                        "Y"
+                        if x
+                        in responseA_retreatment_AE_df[
+                            responseA_retreatment_AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"]
+                            == "SAE"
+                        ]["Subject"].values
+                        else "N"
+                    )
                 )
 
                 ## Checking Study Status for NHL primary
@@ -1404,9 +1401,11 @@ class DSMB12423:
         )
         # Check responseA_primary_AE_df if the subject of responseA_primary_df has SAE in column 'AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)' . If yes, then add 'Y' to the column 'SAE' in responseA_primary_df, else add 'N'
         total_infused_df["SAE"] = total_infused_df["Subject"].apply(
-            lambda x: "Y"
-            if x in AE_df[AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"] == "SAE"]["Subject"].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x in AE_df[AE_df["AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)"] == "SAE"]["Subject"].values
+                else "N"
+            )
         )
 
         # # Total number of subjects in cohort A, B, and C

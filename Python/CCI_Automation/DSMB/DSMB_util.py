@@ -211,12 +211,12 @@ def get_stats_df(column, *dfs):
     for i, df in enumerate(dfs):
         if df.count()[column] != 0:
             # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
-            df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
-            mean = df[column].mean()
-            std = df[column].std()
-            median = df[column].median()
-            minimum = df[column].min()
-            maximum = df[column].max()
+            numeric_column = pd.to_numeric(df[column], errors="coerce")
+            mean = numeric_column.mean()
+            std = numeric_column.std()
+            median = numeric_column.median()
+            minimum = numeric_column.min()
+            maximum = numeric_column.max()
 
             if np.isnan(std):
                 std = 0
@@ -273,12 +273,12 @@ def get_stats_perc_df(column, *dfs):
 
     for i, df in enumerate(dfs):
         # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
-        df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
-        mean = df[column].mean()
-        std = df[column].std()
-        median = df[column].median()
-        minimum = df[column].min()
-        maximum = df[column].max()
+        numeric_column = pd.to_numeric(df[column], errors="coerce")
+        mean = numeric_column.mean()
+        std = numeric_column.std()
+        median = numeric_column.median()
+        minimum = numeric_column.min()
+        maximum = numeric_column.max()
 
         if np.isnan(std):
             std = 0
