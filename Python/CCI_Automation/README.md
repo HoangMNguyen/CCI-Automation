@@ -43,13 +43,13 @@ pip install -r requirements.txt
 
 ### Building the Executable
 
-To build the application into a standalone executable, use the following `pyinstaller` command. This will create an optimized `.exe` file named "CCI Automation V1.00" and exclude certain dependencies for a smaller file size.
+To build the application into a standalone executable, use the following `PyInstaller` command. This will create an optimized `.exe` file named "CCI Automation V1.00" and exclude certain dependencies for a smaller file size.
 
 ```bash
-python -m pyinstaller --onefile --strip --name "CCI Automation V1.00" --windowed "CCI_Automation.py" --exclude PyQt5 --exclude matplotlib
+python -m PyInstaller --onefile --strip --name "CCI Automation V1.00" --windowed "CCI_Automation.py" --exclude PyQt5 --exclude matplotlib
 ```
 
-**Note**: Ensure that PyInstaller is installed as listed in the `requirements.txt`.
+**Note**: If needed, install it with `python -m pip install pyinstaller`.
 
 ## Usage
 

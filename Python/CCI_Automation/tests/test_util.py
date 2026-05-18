@@ -1,4 +1,6 @@
 import pytest
+import numpy as np
+import pandas as pd
 from util import *
 
 def setup_module(module):

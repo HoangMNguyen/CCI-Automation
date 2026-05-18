@@ -5,6 +5,7 @@ import numpy as np
 import requests
 import os
 import sys
+from xlsxwriter.utility import xl_col_to_name
 from util import *
 from Clockify.tasks import task_list
 from Clockify.tags import tags_list  # Import tags_list from tags.py
@@ -67,19 +68,20 @@ class ClockifyDashboard:
     def collect_data(self):
         ### Filter data
         # filter the raw data to selected columns
-        filter_data = self.raw_data[["Project", "Task", "User", "Tags", "Duration (h)", "Duration (decimal)"]]
+        filter_data = self.raw_data[
+            ["Project", "Task", "User", "Tags", "Duration (h)", "Duration (decimal)"]
+        ].copy()
         # Replace NA values with empty strings
-        filter_data.loc[:, "Project"] = filter_data.loc[:, "Project"].fillna("")
-        # Replace NaN values with empty strings
-        filter_data.loc[:, "Project"] = filter_data.loc[:, "Project"].replace(np.nan, "")
+        filter_data["Project"] = filter_data["Project"].fillna("")
+        filter_data["Task"] = filter_data["Task"].fillna("")
+        filter_data["Tags"] = filter_data["Tags"].fillna("")
+        filter_data["Duration (decimal)"] = pd.to_numeric(filter_data["Duration (decimal)"], errors="coerce").fillna(0)
         # Filter to the study selected
-        filter_data = filter_data[filter_data["Project"].str.contains(self.project_name)]
+        filter_data = filter_data[filter_data["Project"].str.contains(self.project_name, regex=False, na=False)].copy()
+        filter_data = filter_data.reset_index(drop=True)
         # assign the filtered data to self.filter_data
         self.filter_data = filter_data
-        missing_tag_rows = self.filter_data["Tags"] == ""
-        highlighted_df = self.filter_data.copy()
-        highlighted_df.loc[missing_tag_rows, :] = "background-color: yellow"
-        self.filter_data = highlighted_df
+        self.missing_tag_rows = self.filter_data["Tags"].eq("")
 
         ### DF1
         # create a dataframe that shows total hours per task
@@ -96,7 +98,9 @@ class ClockifyDashboard:
         self.df1["Total Task Hours"] = pd.to_numeric(self.df1["Total Task Hours"]).round(1)
         # calculate the percentage
         df1_total_hours = self.df1["Total Task Hours"].sum()
-        self.df1["Total Hours Percentage per Task"] = self.df1["Total Task Hours"] / df1_total_hours
+        self.df1["Total Hours Percentage per Task"] = (
+            self.df1["Total Task Hours"] / df1_total_hours if df1_total_hours else 0
+        )
         total_instance = {
             "Task": "Total Project Hours",
             "Total Task Hours": df1_total_hours,
@@ -116,7 +120,7 @@ class ClockifyDashboard:
         self.df2 = self.df2.rename(columns=df2_new_col_name)
         # calculate the total hours and percentage of hours per project milestone
         total_hours = sum_per_tag.sum()
-        percent_hours = sum_per_tag / total_hours
+        percent_hours = sum_per_tag / total_hours if total_hours else sum_per_tag * 0
         # add a new column to the existing DataFrame
         self.df2["Project Milestone Percentage of Project"] = self.df2["Project Milestone"].map(percent_hours)
         # Replace NaN values with 0
@@ -126,10 +130,11 @@ class ClockifyDashboard:
 
         ### DF3 hours per role
         # create a dataframe that shows total hours per role
-        new_cols = self.filter_data["Task"].str.split(")", n=1, expand=True)
+        new_cols = self.filter_data["Task"].fillna("").astype(str).str.split(")", n=1, expand=True)
+        new_cols = new_cols.reindex(columns=[0, 1], fill_value="")
         new_cols.columns = ["Roles", "Work"]
-        new_cols["Roles"] = new_cols["Roles"].str.replace("(", "")
-        self.df3 = pd.concat([self.raw_data, new_cols], axis=1)
+        new_cols["Roles"] = new_cols["Roles"].fillna("").str.replace("(", "", regex=False)
+        self.df3 = pd.concat([self.filter_data, new_cols], axis=1)
         self.df4 = self.df3.copy()
         sum_per_role = self.df3.groupby("Roles")["Duration (decimal)"].sum()
         self.df3 = pd.merge(self.roles, sum_per_role, on="Roles", how="left")
@@ -140,7 +145,7 @@ class ClockifyDashboard:
         self.df3 = self.df3.rename(columns=df3_new_col_name)
         # calculate the total hours and percentage of hours per role
         role_total_hours = sum_per_role.sum()
-        role_percent_hours = sum_per_role / role_total_hours
+        role_percent_hours = sum_per_role / role_total_hours if role_total_hours else sum_per_role * 0
         # add a new column to the existing DataFrame
         self.df3["Total Hours Percentage of Project"] = self.df3["Role"].map(role_percent_hours)
         self.df3["Total Hours Percentage of Project"] = self.df3["Total Hours Percentage of Project"].replace(np.nan, 0)
@@ -149,7 +154,6 @@ class ClockifyDashboard:
 
         ### DF4 validation tab
         self.df4 = self.df4[["User", "Roles"]].drop_duplicates(subset=["User", "Roles"])
-        new_cols["Roles"] = new_cols["Roles"].replace(np.nan, "")
         # print(self.df4)
 
         ### DF5 validation tab
@@ -166,8 +170,9 @@ class ClockifyDashboard:
         self.df6 = self.df6.rename(columns=df6_new_col_name)
 
     def output(self):
+        project_label = self.filter_data.iloc[0, 0] if not self.filter_data.empty else self.project_name
         self.output_file_name = (
-            date.today().strftime("%y%m%d") + "-" + self.filter_data.iloc[0, 0] + "-Clockify Dashboard"
+            date.today().strftime("%y%m%d") + "-" + project_label + "-Clockify Dashboard"
         )
         with pd.ExcelWriter(self.output_dir + "/" + self.output_file_name + ".xlsx", engine="xlsxwriter") as writer:
             self.raw_data.to_excel(writer, sheet_name="Detailed Report", index=False, startcol=0)
@@ -191,6 +196,29 @@ class ClockifyDashboard:
             ## formating
             # coloring
             no_border_white = writer.book.add_format({"bg_color": "#FFFFFF", "border": 0})
+            missing_tag_format = writer.book.add_format({"bg_color": "#FFFF00", "border": 1})
+            listing_header_format = writer.book.add_format(
+                {
+                    "bg_color": "#DCE6F1",
+                    "text_wrap": True,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": True,
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                    "border": 1,
+                }
+            )
+            listing_data_format = writer.book.add_format(
+                {
+                    "text_wrap": True,
+                    "valign": "top",
+                    "align": "left",
+                    "font_name": "Calibri",
+                    "font_size": 11,
+                    "border": 1,
+                }
+            )
             blue_header_format = writer.book.add_format(
                 {
                     "bg_color": "#DCE6F1",
@@ -262,6 +290,35 @@ class ClockifyDashboard:
                     "border": 1,
                 }
             )
+
+            def write_bordered_dataframe(worksheet, df, startrow=0, startcol=0):
+                for col_idx, column_name in enumerate(df.columns):
+                    worksheet.write(startrow, startcol + col_idx, column_name, listing_header_format)
+                for row_idx, row in enumerate(df.itertuples(index=False), start=1):
+                    for col_idx, value in enumerate(row):
+                        if pd.isna(value):
+                            value = ""
+                        worksheet.write(startrow + row_idx, startcol + col_idx, value, listing_data_format)
+
+            write_bordered_dataframe(worksheet1, self.raw_data)
+            write_bordered_dataframe(worksheet2, self.filter_data)
+            write_bordered_dataframe(worksheet4, self.df4, startcol=0)
+            write_bordered_dataframe(worksheet4, self.df5, startcol=3)
+            write_bordered_dataframe(worksheet4, self.df6, startcol=10)
+
+            if not self.filter_data.empty and "Tags" in self.filter_data.columns:
+                tags_column = xl_col_to_name(self.filter_data.columns.get_loc("Tags"))
+                worksheet2.conditional_format(
+                    1,
+                    0,
+                    len(self.filter_data),
+                    len(self.filter_data.columns) - 1,
+                    {
+                        "type": "formula",
+                        "criteria": f'=${tags_column}2=""',
+                        "format": missing_tag_format,
+                    },
+                )
 
             # BACK GROUND COLOR WHITE
             for j in range(len(self.df1) + 5 if len(self.df1) + 3 > 22 else 22):

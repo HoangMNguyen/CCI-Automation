@@ -126,7 +126,7 @@ class DSMB16321:
             "Disease",
         ] = ""
         enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + " " + enrollment_df["Disease2"].fillna("")
-        enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
+        enrollment_df["Disease Type"] = enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"])
 
         # Convert the entire column to string to avoid data type issues
         enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].astype(str)
@@ -1040,7 +1040,7 @@ class DSMB16321:
             status_df["Event Label3"].fillna("") + status_df["Event Label4"].fillna(""),
             status_df["Event Label"],
         )
-        status_df["Event Label"].fillna(status_df["Event Label"], inplace=True)
+        status_df["Event Label"] = status_df["Event Label"].fillna(status_df["Event Label"])
         status_df = status_df.drop(
             columns=[
                 "Event Label3",

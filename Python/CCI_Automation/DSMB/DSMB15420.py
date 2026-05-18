@@ -149,7 +149,7 @@ def DSMB15420(
         + enrollment_df["SF2"].round().fillna("").astype(str)
         + enrollment_df["SF3"].round().fillna("").astype(str)
     )
-    enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["SF4"], inplace=True)
+    enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["SF4"])
     enrollment_df = enrollment_df.drop(columns=["SF1", "SF2", "SF3", "SF4"])
     # Infused
     enrollment_df = add_rename_column_corelisting(enrollment_df, data, "INF", "Event Group Label", "Event Group Label")
@@ -436,17 +436,21 @@ def DSMB15420(
 
     # Adding Met Target Dose column based on the condition of Total Cell Dose Administered and Total huCAR T Cell Dose Administered if 'Target Cell Dose' is integer
     infusion_df["Met Target Dose"] = infusion_df.apply(
-        lambda row: "Y"
-        if isinstance(row["Target Cell Dose"], int)
-        and row["Total huCAR T Cell Dose Administered"] >= row["Target Cell Dose"]
-        else "",
+        lambda row: (
+            "Y"
+            if isinstance(row["Target Cell Dose"], int)
+            and row["Total huCAR T Cell Dose Administered"] >= row["Target Cell Dose"]
+            else ""
+        ),
         axis=1,
     )
     infusion_df["Met Target Dose"] = infusion_df.apply(
-        lambda row: "N"
-        if isinstance(row["Target Cell Dose"], int)
-        and row["Total huCAR T Cell Dose Administered"] < row["Target Cell Dose"]
-        else row["Met Target Dose"],
+        lambda row: (
+            "N"
+            if isinstance(row["Target Cell Dose"], int)
+            and row["Total huCAR T Cell Dose Administered"] < row["Target Cell Dose"]
+            else row["Met Target Dose"]
+        ),
         axis=1,
     )
 
@@ -945,9 +949,13 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_A_prim_count > 0:
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseA_primary_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna("Not Reported", inplace=True)
+        responseA_primary_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = responseA_primary_df[
+            "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseA_primary_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna("Not Reported", inplace=True)
+        responseA_primary_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = responseA_primary_df[
+            "CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"
+        ].fillna("Not Reported")
         # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
         responseA_primary_df["PET-Score"] = responseA_primary_df[
             "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
@@ -962,12 +970,12 @@ def DSMB15420(
         # Select these rows for the current response
         responseA_primary_current_df = responseA_primary_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseA_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseA_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = (
+            responseA_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna("Not Reported")
         )
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseA_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseA_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = (
+            responseA_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna("Not Reported")
         )
 
         # * BEST RESPONSE
@@ -1112,9 +1120,13 @@ def DSMB15420(
             final_response_NHL_primary_df, responseA_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column PET-Based ORR
-        final_response_NHL_primary_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
+        final_response_NHL_primary_df["PET-Based ORR"] = final_response_NHL_primary_df["PET-Based ORR"].fillna(
+            "Not Reported"
+        )
         # Fill NaN with "Not Reported" in column CT-Based ORR
-        final_response_NHL_primary_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
+        final_response_NHL_primary_df["CT-Based ORR"] = final_response_NHL_primary_df["CT-Based ORR"].fillna(
+            "Not Reported"
+        )
 
         ## Checking AE and SAE for NHL primary
         # Getting AE and SAE dataframes
@@ -1127,10 +1139,14 @@ def DSMB15420(
         )
         # Check responseA_primary_AE_df if the subject of responseA_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseA_primary_df, else add 'N'
         final_response_NHL_primary_df["SAE"] = final_response_NHL_primary_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseA_primary_AE_df[responseA_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseA_primary_AE_df[responseA_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for NHL primary
@@ -1161,9 +1177,11 @@ def DSMB15420(
         final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
         final_response_NHL_primary_df["Event Label"] = final_response_NHL_primary_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -1231,13 +1249,13 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_A_retx_count > 0:
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseA_retreatment_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseA_retreatment_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = responseA_retreatment_df[
+            "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseA_retreatment_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseA_retreatment_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = responseA_retreatment_df[
+            "CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"
+        ].fillna("Not Reported")
         # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
         responseA_retreatment_df["PET-Score"] = responseA_retreatment_df[
             "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
@@ -1252,12 +1270,14 @@ def DSMB15420(
         # Select these rows for the current response
         responseA_retreatment_current_df = responseA_retreatment_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseA_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseA_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = (
+            responseA_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
+                "Not Reported"
+            )
         )
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseA_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseA_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = (
+            responseA_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna("Not Reported")
         )
 
         # * BEST RESPONSE
@@ -1279,7 +1299,7 @@ def DSMB15420(
             inplace=True,
         )
         # Fill NaN with "Not Reported" in column PET-Based Response
-        responseA_best_PET_df["PET-Based Response"].fillna("Not Reported", inplace=True)
+        responseA_best_PET_df["PET-Based Response"] = responseA_best_PET_df["PET-Based Response"].fillna("Not Reported")
         # Merge left with the primary current response dataframe
         final_responseA_retreatment_df = pd.merge(
             responseA_retreatment_current_df, responseA_best_PET_df, on="Subject", how="left"
@@ -1303,7 +1323,7 @@ def DSMB15420(
             inplace=True,
         )
         # Fill NaN with "Not Reported" in column CT-Based Response
-        responseA_best_CT_df["CT-Based Response"].fillna("Not Reported", inplace=True)
+        responseA_best_CT_df["CT-Based Response"] = responseA_best_CT_df["CT-Based Response"].fillna("Not Reported")
         # Merge left with the primary response dataframe
         final_responseA_retreatment_df = pd.merge(
             final_responseA_retreatment_df, responseA_best_CT_df, on="Subject", how="left"
@@ -1381,9 +1401,13 @@ def DSMB15420(
             final_responseA_retreatment_df, responseA_retreatment_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column PET-Based ORR
-        final_responseA_retreatment_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
+        final_responseA_retreatment_df["PET-Based ORR"] = final_responseA_retreatment_df["PET-Based ORR"].fillna(
+            "Not Reported"
+        )
         # Fill NaN with "Not Reported" in column CT-Based ORR
-        final_responseA_retreatment_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
+        final_responseA_retreatment_df["CT-Based ORR"] = final_responseA_retreatment_df["CT-Based ORR"].fillna(
+            "Not Reported"
+        )
 
         ## Checking AE and SAE for NHL primary
         # Getting AE and SAE dataframes
@@ -1396,12 +1420,14 @@ def DSMB15420(
         )
         # Check responseA_retreatment_AE_df if the subject of responseA_retreatment_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseA_retreatment_df, else add 'N'
         final_responseA_retreatment_df["SAE"] = final_responseA_retreatment_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseA_retreatment_AE_df[responseA_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
-                "Subject"
-            ].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseA_retreatment_AE_df[responseA_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for NHL primary
@@ -1436,9 +1462,11 @@ def DSMB15420(
         final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
         final_responseA_retreatment_df["Event Label"] = final_responseA_retreatment_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -1516,9 +1544,13 @@ def DSMB15420(
         ].apply(lambda x: f"Day {x}" if pd.notna(x) and str(x).strip().isdigit() else x)
 
         # Fill NaN with "Not Reported" in column Overall CLL Disease Response (ig_RS2.RSCLLCAT)
-        responseB_primary_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna("Not Reported", inplace=True)
+        responseB_primary_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"] = responseB_primary_df[
+            "Overall CLL Disease Response (ig_RS2.RSCLLCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)
-        responseB_primary_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"].fillna("Not Reported", inplace=True)
+        responseB_primary_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"] = responseB_primary_df[
+            "CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"
+        ].fillna("Not Reported")
         # Convert OV-Based CLL Disease Response and CT-Based CLL Disease Response to numeric values
         responseB_primary_df["OV-Score"] = responseB_primary_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].map(
             DR_CLL_OV_dict
@@ -1533,13 +1565,13 @@ def DSMB15420(
         # Select these rows for the current response
         responseB_primary_current_df = responseB_primary_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column Overall CLL Disease Response (ig_RS2.RSCLLCAT)
-        responseB_primary_current_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseB_primary_current_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"] = responseB_primary_current_df[
+            "Overall CLL Disease Response (ig_RS2.RSCLLCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)
-        responseB_primary_current_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseB_primary_current_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"] = responseB_primary_current_df[
+            "CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"
+        ].fillna("Not Reported")
 
         # * BEST RESPONSE
         ## Best OV-Based CLL Disease Response primary
@@ -1674,9 +1706,13 @@ def DSMB15420(
             final_responseB_primary_df, responseB_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column Overall Response
-        final_responseB_primary_df["Overall Response"].fillna("Not Reported", inplace=True)
+        final_responseB_primary_df["Overall Response"] = final_responseB_primary_df["Overall Response"].fillna(
+            "Not Reported"
+        )
         # Fill NaN with "Not Reported" in column Bone Marrow Response
-        final_responseB_primary_df["Bone Marrow Response"].fillna("Not Reported", inplace=True)
+        final_responseB_primary_df["Bone Marrow Response"] = final_responseB_primary_df["Bone Marrow Response"].fillna(
+            "Not Reported"
+        )
 
         ## Checking AE and SAE for CLL primary
         # Getting AE and SAE dataframes
@@ -1689,10 +1725,14 @@ def DSMB15420(
         )
         # Check responseB_primary_AE_df if the subject of responseB_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseB_primary_df, else add 'N'
         final_responseB_primary_df["SAE"] = final_responseB_primary_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseB_primary_AE_df[responseB_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseB_primary_AE_df[responseB_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for CLL primary
@@ -1724,9 +1764,11 @@ def DSMB15420(
         final_responseB_primary_df["Event Label"] = final_responseB_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
         final_responseB_primary_df["Event Label"] = final_responseB_primary_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -1773,9 +1815,13 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_B_retx_count > 0:
         # Fill NaN with "Not Reported" in column Overall CLL Disease Response (ig_RS2.RSCLLCAT)
-        responseB_retreatment_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna("Not Reported", inplace=True)
+        responseB_retreatment_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"] = responseB_retreatment_df[
+            "Overall CLL Disease Response (ig_RS2.RSCLLCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)
-        responseB_retreatment_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"].fillna("Not Reported", inplace=True)
+        responseB_retreatment_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"] = responseB_retreatment_df[
+            "CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"
+        ].fillna("Not Reported")
         # Convert OV-Based CLL Disease Response and CT-Based CLL Disease Response to numeric values
         responseB_retreatment_df["OV-Score"] = responseB_retreatment_df[
             "Overall CLL Disease Response (ig_RS2.RSCLLCAT)"
@@ -1790,12 +1836,12 @@ def DSMB15420(
         # Select these rows for the current response
         responseB_retreatment_current_df = responseB_retreatment_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column Overall CLL Disease Response (ig_RS2.RSCLLCAT)
-        responseB_retreatment_current_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseB_retreatment_current_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"] = (
+            responseB_retreatment_current_df["Overall CLL Disease Response (ig_RS2.RSCLLCAT)"].fillna("Not Reported")
         )
         # Fill NaN with "Not Reported" in column CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)
-        responseB_retreatment_current_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"].fillna(
-            "Not Reported", inplace=True
+        responseB_retreatment_current_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"] = (
+            responseB_retreatment_current_df["CLL Bone Marrow Response (ig_RS2.RSCLLBMRESP)"].fillna("Not Reported")
         )
 
         # * BEST RESPONSE
@@ -1913,8 +1959,12 @@ def DSMB15420(
             final_responseB_retreatment_df, responseB_retreatment_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column Overall Response and Bone Marrow Response
-        final_responseB_retreatment_df["Overall Response"].fillna("Not Reported", inplace=True)
-        final_responseB_retreatment_df["Bone Marrow Response"].fillna("Not Reported", inplace=True)
+        final_responseB_retreatment_df["Overall Response"] = final_responseB_retreatment_df["Overall Response"].fillna(
+            "Not Reported"
+        )
+        final_responseB_retreatment_df["Bone Marrow Response"] = final_responseB_retreatment_df[
+            "Bone Marrow Response"
+        ].fillna("Not Reported")
 
         ## Checking AE and SAE for CLL primary
         # Getting AE and SAE dataframes
@@ -1927,12 +1977,14 @@ def DSMB15420(
         )
         # Check responseB_retreatment_AE_df if the subject of responseB_retreatment_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseB_retreatment_df, else add 'N'
         final_responseB_retreatment_df["SAE"] = final_responseB_retreatment_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseB_retreatment_AE_df[responseB_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
-                "Subject"
-            ].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseB_retreatment_AE_df[responseB_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for CLL primary
@@ -1968,9 +2020,11 @@ def DSMB15420(
         final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
         final_responseB_retreatment_df["Event Label"] = final_responseB_retreatment_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -2018,11 +2072,13 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_BRT_prim_count > 0:
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseBRT_primary_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseBRT_primary_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = responseBRT_primary_df[
+            "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseBRT_primary_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna("Not Reported", inplace=True)
+        responseBRT_primary_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = responseBRT_primary_df[
+            "CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"
+        ].fillna("Not Reported")
         # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
         responseBRT_primary_df["PET-Score"] = responseBRT_primary_df[
             "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
@@ -2037,12 +2093,12 @@ def DSMB15420(
         # Select these rows for the current response
         responseBRT_primary_current_df = responseBRT_primary_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseBRT_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseBRT_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = (
+            responseBRT_primary_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna("Not Reported")
         )
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseBRT_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseBRT_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = (
+            responseBRT_primary_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna("Not Reported")
         )
 
         # * BEST RESPONSE
@@ -2189,8 +2245,12 @@ def DSMB15420(
             final_responseBRT_primary_df, responseBRT_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Reported" in column PET-Based ORR and CT-Based ORR
-        final_responseBRT_primary_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
-        final_responseBRT_primary_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
+        final_responseBRT_primary_df["PET-Based ORR"] = final_responseBRT_primary_df["PET-Based ORR"].fillna(
+            "Not Reported"
+        )
+        final_responseBRT_primary_df["CT-Based ORR"] = final_responseBRT_primary_df["CT-Based ORR"].fillna(
+            "Not Reported"
+        )
 
         ## Checking AE and SAE for NHL primary
         # Getting AE and SAE dataframes
@@ -2203,12 +2263,14 @@ def DSMB15420(
         )
         # Check responseBRT_primary_AE_df if the subject of responseBRT_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseBRT_primary_df, else add 'N'
         final_responseBRT_primary_df["SAE"] = final_responseBRT_primary_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseBRT_primary_AE_df[responseBRT_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
-                "Subject"
-            ].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseBRT_primary_AE_df[responseBRT_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for NHL primary
@@ -2241,9 +2303,11 @@ def DSMB15420(
         final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df["Event Label"].map(event_AB_dict)
         # Add End of Study Date to Event Label if available
         final_responseBRT_primary_df["Event Label"] = final_responseBRT_primary_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -2293,13 +2357,13 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_BRT_retx_count > 0:
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseBRT_retreatment_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseBRT_retreatment_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = responseBRT_retreatment_df[
+            "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
+        ].fillna("Not Reported")
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseBRT_retreatment_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
-        )
+        responseBRT_retreatment_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = responseBRT_retreatment_df[
+            "CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"
+        ].fillna("Not Reported")
         # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
         responseBRT_retreatment_df["PET-Score"] = responseBRT_retreatment_df[
             "PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"
@@ -2314,12 +2378,16 @@ def DSMB15420(
         # Select these rows for the current response
         responseBRT_retreatment_current_df = responseBRT_retreatment_df.loc[idx].copy()
         # Fill NaN with "Not Reported" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseBRT_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseBRT_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"] = (
+            responseBRT_retreatment_current_df["PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)"].fillna(
+                "Not Reported"
+            )
         )
         # Fill NaN with "Not Reported" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
-        responseBRT_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
-            "Not Reported", inplace=True
+        responseBRT_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"] = (
+            responseBRT_retreatment_current_df["CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)"].fillna(
+                "Not Reported"
+            )
         )
 
         # * BEST RESPONSE
@@ -2341,7 +2409,9 @@ def DSMB15420(
             inplace=True,
         )
         # Fill NaN with "Not Reported" in column PET-Based Response
-        responseBRT_best_PET_df["PET-Based Response"].fillna("Not Reported", inplace=True)
+        responseBRT_best_PET_df["PET-Based Response"] = responseBRT_best_PET_df["PET-Based Response"].fillna(
+            "Not Reported"
+        )
         # Merge left with the primary current response dataframe
         final_responseBRT_retreatment_df = pd.merge(
             responseBRT_retreatment_current_df, responseBRT_best_PET_df, on="Subject", how="left"
@@ -2365,7 +2435,7 @@ def DSMB15420(
             inplace=True,
         )
         # Fill NaN with "Not Reported" in column CT-Based Response
-        responseBRT_best_CT_df["CT-Based Response"].fillna("Not Reported", inplace=True)
+        responseBRT_best_CT_df["CT-Based Response"] = responseBRT_best_CT_df["CT-Based Response"].fillna("Not Reported")
         # Merge left with the primary response dataframe
         final_responseBRT_retreatment_df = pd.merge(
             final_responseBRT_retreatment_df, responseBRT_best_CT_df, on="Subject", how="left"
@@ -2440,9 +2510,13 @@ def DSMB15420(
         final_responseBRT_retreatment_df = pd.merge(
             final_responseBRT_retreatment_df, responseBRT_retreatment_M3_df, on="Subject", how="left"
         )
-        final_responseBRT_retreatment_df["PET-Based ORR"].fillna("Not Reported", inplace=True)
+        final_responseBRT_retreatment_df["PET-Based ORR"] = final_responseBRT_retreatment_df["PET-Based ORR"].fillna(
+            "Not Reported"
+        )
         # Fill NaN with "Not Reported" in column CT-Based ORR
-        final_responseBRT_retreatment_df["CT-Based ORR"].fillna("Not Reported", inplace=True)
+        final_responseBRT_retreatment_df["CT-Based ORR"] = final_responseBRT_retreatment_df["CT-Based ORR"].fillna(
+            "Not Reported"
+        )
 
         ## Checking AE and SAE for NHL primary
         # Getting AE and SAE dataframes
@@ -2455,12 +2529,14 @@ def DSMB15420(
         )
         # Check responseBRT_retreatment_AE_df if the subject of responseBRT_retreatment_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseBRT_retreatment_df, else add 'N'
         final_responseBRT_retreatment_df["SAE"] = final_responseBRT_retreatment_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseBRT_retreatment_AE_df[responseBRT_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
-                "Subject"
-            ].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseBRT_retreatment_AE_df[responseBRT_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for NHL primary
@@ -2498,9 +2574,11 @@ def DSMB15420(
         )
         # Add End of Study Date to Event Label if available
         final_responseBRT_retreatment_df["Event Label"] = final_responseBRT_retreatment_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -2577,11 +2655,15 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_C_prim_count > 0:
         # Fill NaN with "Not Applicable" in column Overall Disease Response (ig_RSALL2.RSALLCAT)
-        responseC_primary_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna("Not Applicable", inplace=True)
+        responseC_primary_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = responseC_primary_df[
+            "Overall Disease Response (ig_RSALL2.RSALLCAT)"
+        ].fillna("Not Applicable")
         # Fill NaN with "Not Applicable" in column Radiographic Tumor Response for Extramedullary Disease (ig_RSALL2.RADTURESEXDS)
-        responseC_primary_df[
-            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
-        ].fillna("Not Applicable", inplace=True)
+        responseC_primary_df["Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"] = (
+            responseC_primary_df[
+                "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+            ].fillna("Not Applicable")
+        )
         # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
         responseC_primary_df["OV-Score"] = responseC_primary_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].map(
             DR_ALL_OV_dict
@@ -2596,13 +2678,15 @@ def DSMB15420(
         # Select these rows for the current response
         responseC_primary_current_df = responseC_primary_df.loc[idx].copy()
         # Fill NaN with "Not Applicable" in column PET-Based NHL Disease Response (ig_RS3.RSNHLPETCAT)
-        responseC_primary_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna(
-            "Not Applicable", inplace=True
-        )
+        responseC_primary_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = responseC_primary_current_df[
+            "Overall Disease Response (ig_RSALL2.RSALLCAT)"
+        ].fillna("Not Applicable")
         # Fill NaN with "Not Applicable" in column CT-Based NHL Disease Response (ig_RS3.RSNHLCTCAT)
         responseC_primary_current_df[
             "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
-        ].fillna("Not Applicable", inplace=True)
+        ] = responseC_primary_current_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].fillna("Not Applicable")
         # rename the column Overall Disease Response (ig_RSALL2.RSALLCAT) to Current Response
         responseC_primary_current_df.rename(
             columns={
@@ -2636,7 +2720,9 @@ def DSMB15420(
             inplace=True,
         )
         # Replace Nan with Not Applicable
-        responseC_best_OV_df["Best Overall Response"].fillna("Not Applicable", inplace=True)
+        responseC_best_OV_df["Best Overall Response"] = responseC_best_OV_df["Best Overall Response"].fillna(
+            "Not Applicable"
+        )
         # Merge left with the primary current response dataframe
         final_response_ALL_primary_df = pd.merge(
             responseC_primary_current_df, responseC_best_OV_df, on="Subject", how="left"
@@ -2664,7 +2750,7 @@ def DSMB15420(
             inplace=True,
         )
         # Replace Nan with Not Applicable
-        responseC_best_ED_df["Best ED Response"].fillna("Not Applicable", inplace=True)
+        responseC_best_ED_df["Best ED Response"] = responseC_best_ED_df["Best ED Response"].fillna("Not Applicable")
         # Merge left with the primary response dataframe
         final_response_ALL_primary_df = pd.merge(
             final_response_ALL_primary_df, responseC_best_ED_df, on="Subject", how="left"
@@ -2764,9 +2850,9 @@ def DSMB15420(
             final_response_ALL_primary_df, responseC_primary_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Applicable" in column OV ORR
-        final_response_ALL_primary_df["OV ORR"].fillna("Not Applicable", inplace=True)
+        final_response_ALL_primary_df["OV ORR"] = final_response_ALL_primary_df["OV ORR"].fillna("Not Applicable")
         # Fill NaN with "Not Applicable" in column ED ORR
-        final_response_ALL_primary_df["ED ORR"].fillna("Not Applicable", inplace=True)
+        final_response_ALL_primary_df["ED ORR"] = final_response_ALL_primary_df["ED ORR"].fillna("Not Applicable")
         # Replace Extramedullary Disease Without Bone Marrow Involvement with Not Applicable
         final_response_ALL_primary_df["OV ORR"] = final_response_ALL_primary_df["OV ORR"].replace(
             "Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable"
@@ -2783,10 +2869,14 @@ def DSMB15420(
         )
         # Check responseC_primary_AE_df if the subject of responseC_primary_df has SAE in column 'AE or SAE? (ig_AE2.AESEV)' . If yes, then add 'Y' to the column 'SAE' in responseC_primary_df, else add 'N'
         final_response_ALL_primary_df["SAE"] = final_response_ALL_primary_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseC_primary_AE_df[responseC_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"]["Subject"].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseC_primary_AE_df[responseC_primary_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for NHL primary
@@ -2824,9 +2914,11 @@ def DSMB15420(
             "End of Study Date (ig_EOS1.EOSDAT)"
         ].fillna("")
         final_response_ALL_primary_df["Event Label"] = final_response_ALL_primary_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"]
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"]
+                else row["Event Label"]
+            ),
             axis=1,
         )
         # Select the columns needed only
@@ -2889,7 +2981,9 @@ def DSMB15420(
 
         # TODO: Cohort C - ALL Retreatment
     # Filter to only Retreatment
-    responseC_retreatment_df = responseC_df[responseC_df["Study Phase (ig_RSALL1.STUDYPHS2)"] == "Retreatment"]
+    responseC_retreatment_df = responseC_df[
+        responseC_df["Study Phase (ig_RSALL1.STUDYPHS2)"] == "Retreatment"
+    ].copy()
     # Replace value of "Unscheduled" in column Retreatment Time Point with value of "For Unscheduled Retreatment Time Point, Specify Day #"
     temp_mask = responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] == "Unscheduled"
     # Convert the column For Unscheduled Retreatment Time Point, Specify Day # to string
@@ -2904,11 +2998,11 @@ def DSMB15420(
     # Remove rows with Pre-Retreatment Safety Visit
     responseC_retreatment_df = responseC_retreatment_df[
         responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] != "Pre-Retreatment Safety Visit"
-    ]
+    ].copy()
     # Remove rows with Post-Lymphodepleting Chemotherapy
     responseC_retreatment_df = responseC_retreatment_df[
         responseC_retreatment_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] != "Post-Lymphodepleting Chemotherapy"
-    ]
+    ].copy()
     # replace all rows with Extramedullary Disease Without Bone Marrow Involvement to Not Applicable
     responseC_retreatment_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = responseC_retreatment_df[
         "Overall Disease Response (ig_RSALL2.RSALLCAT)"
@@ -2924,18 +3018,22 @@ def DSMB15420(
     # Check if there is any subject. If yes, then proceed, else skip
     if final_subject_C_retx_count > 0:
         # Fill NaN with "Not Applicable" in column Overall Disease Response (ig_RSALL2.RSALLCAT)
-        responseC_retreatment_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna("Not Applicable", inplace=True)
+        responseC_retreatment_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = responseC_retreatment_df[
+            "Overall Disease Response (ig_RSALL2.RSALLCAT)"
+        ].fillna("Not Applicable")
         # Fill NaN with "Not Applicable" in column Radiographic Tumor Response for Extramedullary Disease
         responseC_retreatment_df[
             "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
-        ].fillna("Not Applicable", inplace=True)
+        ] = responseC_retreatment_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].fillna("Not Applicable")
         # Convert to numeric values
         responseC_retreatment_df["OV-Score"] = responseC_retreatment_df[
             "Overall Disease Response (ig_RSALL2.RSALLCAT)"
-        ].map(DR_ALL_OV_dict)
+        ].map(DR_ALL_OV_dict).fillna(DR_ALL_OV_dict["Not Applicable"])
         responseC_retreatment_df["ED-Score"] = responseC_retreatment_df[
             "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
-        ].map(DR_ALL_ED_dict)
+        ].map(DR_ALL_ED_dict).fillna(DR_ALL_ED_dict["Not Applicable"])
 
         # * CURRENT RESPONSE
         # Get the indices of the rows with the maximum 'Event Date' for each 'Subject'
@@ -2943,12 +3041,14 @@ def DSMB15420(
         # Select these rows for the current response
         responseC_retreatment_current_df = responseC_retreatment_df.loc[idx].copy()
         # Fill NaN with "Not Applicable"
-        responseC_retreatment_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna(
-            "Not Applicable", inplace=True
+        responseC_retreatment_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"] = (
+            responseC_retreatment_current_df["Overall Disease Response (ig_RSALL2.RSALLCAT)"].fillna("Not Applicable")
         )
         responseC_retreatment_current_df[
             "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
-        ].fillna("Not Applicable", inplace=True)
+        ] = responseC_retreatment_current_df[
+            "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)"
+        ].fillna("Not Applicable")
         # rename the columns
         responseC_retreatment_current_df.rename(
             columns={
@@ -2982,7 +3082,9 @@ def DSMB15420(
             inplace=True,
         )
         # Replace Nan with Not Applicable
-        responseC_best_OV_df["Best Overall Response"].fillna("Not Applicable", inplace=True)
+        responseC_best_OV_df["Best Overall Response"] = responseC_best_OV_df["Best Overall Response"].fillna(
+            "Not Applicable"
+        )
         # Merge left with the current response dataframe
         final_responseC_retreatment_df = pd.merge(
             responseC_retreatment_current_df, responseC_best_OV_df, on="Subject", how="left"
@@ -2992,7 +3094,7 @@ def DSMB15420(
         # Get the indices of the rows with the minimum 'ED-Score' for each 'Subject'
         responseC_best_ED_idx = responseC_retreatment_df.groupby("Subject")["ED-Score"].idxmin()
         # Select these rows for the best ED response
-        responseC_best_ED_df = responseC_retreatment_df.loc[responseC_best_ED_idx]
+        responseC_best_ED_df = responseC_retreatment_df.loc[responseC_best_ED_idx].copy()
         # Select the columns
         responseC_best_ED_df = responseC_best_ED_df[
             [
@@ -3010,7 +3112,7 @@ def DSMB15420(
             inplace=True,
         )
         # Replace Nan with Not Applicable
-        responseC_best_ED_df["Best ED Response"].fillna("Not Applicable", inplace=True)
+        responseC_best_ED_df["Best ED Response"] = responseC_best_ED_df["Best ED Response"].fillna("Not Applicable")
         # Merge left with the retreatment response dataframe
         final_responseC_retreatment_df = pd.merge(
             final_responseC_retreatment_df, responseC_best_ED_df, on="Subject", how="left"
@@ -3020,7 +3122,7 @@ def DSMB15420(
         # Filter responseC_retreatment_df to only Day 28-R
         responseC_retreatment_M3_df = responseC_df[
             responseC_df["Retreatment Time Point (ig_RSALL1.RSALLTPTR)"] == "Day 28-R"
-        ]
+        ].copy()
         # Select the columns
         responseC_retreatment_M3_df = responseC_retreatment_M3_df[
             [
@@ -3028,7 +3130,7 @@ def DSMB15420(
                 "Overall Disease Response (ig_RSALL2.RSALLCAT)",
                 "Radiographic Tumor Response for	Extramedullary Disease (ig_RSALL2.RADTURESEXDS)",
             ]
-        ]
+        ].copy()
         # Add subjects that are not in responseC_retreatment_M3_df
         responseC_retreatment_M3_df = pd.concat(
             [
@@ -3092,8 +3194,8 @@ def DSMB15420(
             final_responseC_retreatment_df, responseC_retreatment_M3_df, on="Subject", how="left"
         )
         # Fill NaN with "Not Applicable"
-        final_responseC_retreatment_df["OV ORR"].fillna("Not Applicable", inplace=True)
-        final_responseC_retreatment_df["ED ORR"].fillna("Not Applicable", inplace=True)
+        final_responseC_retreatment_df["OV ORR"] = final_responseC_retreatment_df["OV ORR"].fillna("Not Applicable")
+        final_responseC_retreatment_df["ED ORR"] = final_responseC_retreatment_df["ED ORR"].fillna("Not Applicable")
         # Replace Extramedullary Disease Without Bone Marrow Involvement with Not Applicable
         final_responseC_retreatment_df["OV ORR"] = final_responseC_retreatment_df["OV ORR"].replace(
             "Extramedullary Disease Without Bone Marrow Involvement", "Not Applicable"
@@ -3110,12 +3212,14 @@ def DSMB15420(
         )
         # Check if subject has SAE
         final_responseC_retreatment_df["SAE"] = final_responseC_retreatment_df["Subject"].apply(
-            lambda x: "Y"
-            if x
-            in responseC_retreatment_AE_df[responseC_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
-                "Subject"
-            ].values
-            else "N"
+            lambda x: (
+                "Y"
+                if x
+                in responseC_retreatment_AE_df[responseC_retreatment_AE_df["AE or SAE? (ig_AE2.AESEV)"] == "SAE"][
+                    "Subject"
+                ].values
+                else "N"
+            )
         )
 
         ## Checking Study Status for ALL retreatment
@@ -3157,9 +3261,11 @@ def DSMB15420(
         final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df["Event Label"].map(event_C_dict)
         # replace all NaT of pandas with ""
         final_responseC_retreatment_df["Event Label"] = final_responseC_retreatment_df.apply(
-            lambda row: f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
-            if row["End of Study Date (ig_EOS1.EOSDAT)"] != ""
-            else row["Event Label"],
+            lambda row: (
+                f"{row['Event Label']} (EOS:{row['End of Study Date (ig_EOS1.EOSDAT)']})"
+                if row["End of Study Date (ig_EOS1.EOSDAT)"] != ""
+                else row["Event Label"]
+            ),
             axis=1,
         )
 

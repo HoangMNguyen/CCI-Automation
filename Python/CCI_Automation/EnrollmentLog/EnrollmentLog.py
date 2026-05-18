@@ -70,9 +70,12 @@ class EnrollmentLog:
 
         # Convert all potential date-like columns to datetime
         for col in self.output_df.columns:
+            # check if text is stored as the dedicated string dtype instead of object.
+            is_text_dtype = pd.api.types.is_object_dtype(self.output_df[col]) or pd.api.types.is_string_dtype(
+                self.output_df[col]
+            )
             if pd.api.types.is_datetime64_any_dtype(self.output_df[col]) or (
-                pd.api.types.is_object_dtype(self.output_df[col])
-                and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
+                is_text_dtype and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
             ):
                 self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce")
 

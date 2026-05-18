@@ -725,10 +725,10 @@ class DSMB12423:
             # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
             responseA_primary_df["PET-Score"] = responseA_primary_df[
                 "PET-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLPET_cl_NS_RSNHLPET1)"
-            ].map(DR_NHL_PET_dict)
+            ].map(DR_NHL_PET_dict).fillna(DR_NHL_PET_dict["Not Reported"])
             responseA_primary_df["CT-Score"] = responseA_primary_df[
                 "CT-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLCT_cl_NS_RSNHLCT1)"
-            ].map(DR_NHL_CT_dict)
+            ].map(DR_NHL_CT_dict).fillna(DR_NHL_CT_dict["Not Reported"])
 
             # * CURRENT RESPONSE
             # Filter responseA_primary_df to only subject with PET-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLPET_cl_NS_RSNHLPET1) not equal to "Not Reported"
@@ -826,7 +826,7 @@ class DSMB12423:
             # Get the indices of the rows with the minimum 'CT-Best' for each 'Subject'
             responseA_best_CT_idx = responseA_primary_df.groupby("Subject")["CT-Score"].idxmin()
             # Select these rows for the best CT-based response
-            responseA_best_CT_df = responseA_primary_df.loc[responseA_best_CT_idx]
+            responseA_best_CT_df = responseA_primary_df.loc[responseA_best_CT_idx].copy()
             # Select the columns subject and CT-Based NHL Disease Response from responseA_best_CT_df
             responseA_best_CT_df = responseA_best_CT_df[
                 [
@@ -1089,10 +1089,10 @@ class DSMB12423:
                 # Convert PET-Based NHL Disease Response and CT-Based NHL Disease Response to numeric values
                 responseA_retreatment_df["PET-Score"] = responseA_retreatment_df[
                     "PET-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLPET_cl_NS_RSNHLPET1)"
-                ].map(DR_NHL_PET_dict)
+                ].map(DR_NHL_PET_dict).fillna(DR_NHL_PET_dict["Not Reported"])
                 responseA_retreatment_df["CT-Score"] = responseA_retreatment_df[
                     "CT-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLCT_cl_NS_RSNHLCT1)"
-                ].map(DR_NHL_CT_dict)
+                ].map(DR_NHL_CT_dict).fillna(DR_NHL_CT_dict["Not Reported"])
 
                 # * CURRENT RESPONSE
                 # Filter responseA_retreatment_df to only subject with PET-Based NHL Disease Response (IG_NS_NA_NHLRS2.CL_NS_NH_NHLPET_cl_NS_RSNHLPET1) not equal to "Not Reported"
@@ -1191,7 +1191,7 @@ class DSMB12423:
                 # Get the indices of the rows with the minimum 'CT-Best' for each 'Subject'
                 responseA_best_CT_idx = responseA_retreatment_df.groupby("Subject")["CT-Score"].idxmin()
                 # Select these rows for the best CT-based response
-                responseA_best_CT_df = responseA_retreatment_df.loc[responseA_best_CT_idx]
+                responseA_best_CT_df = responseA_retreatment_df.loc[responseA_best_CT_idx].copy()
                 # Select the columns subject and CT-Based NHL Disease Response from responseA_best_CT_df
                 responseA_best_CT_df = responseA_best_CT_df[
                     [
