@@ -68,9 +68,7 @@ class ClockifyDashboard:
     def collect_data(self):
         ### Filter data
         # filter the raw data to selected columns
-        filter_data = self.raw_data[
-            ["Project", "Task", "User", "Tags", "Duration (h)", "Duration (decimal)"]
-        ].copy()
+        filter_data = self.raw_data[["Project", "Task", "User", "Tags", "Duration (h)", "Duration (decimal)"]].copy()
         # Replace NA values with empty strings
         filter_data["Project"] = filter_data["Project"].fillna("")
         filter_data["Task"] = filter_data["Task"].fillna("")
@@ -171,9 +169,7 @@ class ClockifyDashboard:
 
     def output(self):
         project_label = self.filter_data.iloc[0, 0] if not self.filter_data.empty else self.project_name
-        self.output_file_name = (
-            date.today().strftime("%y%m%d") + "-" + project_label + "-Clockify Dashboard"
-        )
+        self.output_file_name = date.today().strftime("%y%m%d") + "-" + project_label + "-Clockify Dashboard"
         with pd.ExcelWriter(self.output_dir + "/" + self.output_file_name + ".xlsx", engine="xlsxwriter") as writer:
             self.raw_data.to_excel(writer, sheet_name="Detailed Report", index=False, startcol=0)
             self.filter_data.to_excel(writer, sheet_name="Filtered Report", index=False, startcol=0)
@@ -374,9 +370,6 @@ class ClockifyDashboard:
 
             # set the row height of row 2 to 70
             worksheet3.set_row(1, 70)
-
-            # Insert the penn logo
-            worksheet3.insert_image(19, 7, "penn-logo.png", {"x_scale": 0.5, "y_scale": 0.5, "positioning": 1})
 
 
 # if __name__ == '__main__':
