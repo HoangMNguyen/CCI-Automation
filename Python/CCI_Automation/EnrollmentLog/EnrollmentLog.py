@@ -67,12 +67,22 @@ class EnrollmentLog:
     def output(self):
         output_path = f"{self.output_dir}/{self.output_file_name}.xlsx"
         sheet_name = "Enrollment Log " + self.study_name
+        subject_id_columns = [
+            col for col in self.output_df.columns if str(col).strip().lower().startswith("subject id")
+        ]
+        for col in subject_id_columns:
+            self.output_df[col] = self.output_df[col].where(self.output_df[col].isna(), self.output_df[col].astype(str))
 
         # Convert all potential date-like columns to datetime
         for col in self.output_df.columns:
+            if col in subject_id_columns:
+                continue
+            # check if text is stored as the dedicated string dtype instead of object.
+            is_text_dtype = pd.api.types.is_object_dtype(self.output_df[col]) or pd.api.types.is_string_dtype(
+                self.output_df[col]
+            )
             if pd.api.types.is_datetime64_any_dtype(self.output_df[col]) or (
-                pd.api.types.is_object_dtype(self.output_df[col])
-                and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
+                is_text_dtype and self.output_df[col].apply(lambda x: pd.to_datetime(x, errors="coerce")).notna().any()
             ):
                 self.output_df[col] = pd.to_datetime(self.output_df[col], errors="coerce")
 
@@ -85,6 +95,7 @@ class EnrollmentLog:
 
             # Excel date format with no leading zeros
             date_fmt = workbook.add_format({"num_format": "m/d/yyyy"})
+            text_fmt = workbook.add_format({"num_format": "@"})
 
             # Overwrite datetime cells with proper Excel dates
             for row_idx in range(1, len(self.output_df) + 1):  # +1 skips header
@@ -270,4 +281,7 @@ class EnrollmentLog:
 
             worksheet.set_row(0, 60)
             worksheet.set_column("A:CQ", 15)
+            for col_name in subject_id_columns:
+                col_idx = self.output_df.columns.get_loc(col_name)
+                worksheet.set_column(col_idx, col_idx, 15, text_fmt)
         # writer.save()

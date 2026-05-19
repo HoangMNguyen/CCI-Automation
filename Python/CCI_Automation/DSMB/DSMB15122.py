@@ -59,7 +59,7 @@ def DSMB15122(
         DM_df["Race other"] = DM_df[DM_df["Race other"].notna()]["Race other"].astype(str)
 
         DM_df["Race1"] = DM_df["Race1"].fillna("") + DM_df["Race other"].fillna("")
-        DM_df["Race1"].fillna(DM_df["Race1"], inplace=True)
+        DM_df["Race1"] = DM_df["Race1"].fillna(DM_df["Race1"])
         DM_df = DM_df.drop(
             columns=[
                 "Race other",
@@ -73,7 +73,7 @@ def DSMB15122(
         DM_df["Gender Identity SP"] = DM_df[DM_df["Gender Identity SP"].notna()]["Gender Identity SP"].astype(str)
         DM_df["Gender Identity"] = DM_df["Gender Identity"].fillna("") + DM_df["Gender Identity SP"].fillna("")
 
-        DM_df["Gender Identity"].fillna(DM_df["Gender Identity"], inplace=True)
+        DM_df["Gender Identity"] = DM_df["Gender Identity"].fillna(DM_df["Gender Identity"])
         DM_df = DM_df.drop(columns=["Gender Identity SP"])
 
         # # when there are two DM entered, use the latest DM
@@ -167,7 +167,7 @@ def DSMB15122(
 
         # combine disease and disease other into disease type
         enrollment_df["Disease Type"] = enrollment_df["Disease"].fillna("") + enrollment_df["Disease other"].fillna("")
-        enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"], inplace=True)
+        enrollment_df["Disease Type"] = enrollment_df["Disease Type"].fillna(enrollment_df["Disease Type"])
         enrollment_df = enrollment_df.drop(
             columns=[
                 "Disease",
@@ -216,7 +216,9 @@ def DSMB15122(
             IE_df["SF1"].fillna("") + IE_df["SF2"].fillna("") + IE_df["SF3"].fillna("") + IE_df["SF4"].fillna("")
         )
 
-        IE_df["Reason for Screen FailureIE"].fillna(IE_df["Reason for Screen FailureIE"], inplace=True)
+        IE_df["Reason for Screen FailureIE"] = IE_df["Reason for Screen FailureIE"].fillna(
+            IE_df["Reason for Screen FailureIE"]
+        )
         IE_df = IE_df.drop(columns=["SF1", "SF2", "SF3", "SF4"])
 
         # for two IEs, use the latest IE
@@ -305,9 +307,9 @@ def DSMB15122(
     enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
         "Subject meets all study eligibility?IE"
     ].fillna("") + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
-    enrollment_df["Subject meets all study eligibility?"].fillna(
-        enrollment_df["Subject meets all study eligibility?"], inplace=True
-    )
+    enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
+        "Subject meets all study eligibility?"
+    ].fillna(enrollment_df["Subject meets all study eligibility?"])
     enrollment_df = enrollment_df.drop(
         columns=[
             "Subject meets all study eligibility?IE",
@@ -317,7 +319,9 @@ def DSMB15122(
     enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen FailureIE"].fillna(
         ""
     ) + enrollment_df["Reason for Screen FailureEOS"].fillna("")
-    enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["Reason for Screen Failure"], inplace=True)
+    enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].fillna(
+        enrollment_df["Reason for Screen Failure"]
+    )
     enrollment_df = enrollment_df.drop(
         columns=[
             "Reason for Screen FailureIE",
@@ -328,7 +332,9 @@ def DSMB15122(
     enrollment_df["Study Treatment Administered"] = enrollment_df["Study Treatment AdministeredINF"].fillna(
         ""
     ) + enrollment_df["Study Treatment AdministeredEOS"].fillna("")
-    enrollment_df["Study Treatment Administered"].fillna(enrollment_df["Study Treatment Administered"], inplace=True)
+    enrollment_df["Study Treatment Administered"] = enrollment_df["Study Treatment Administered"].fillna(
+        enrollment_df["Study Treatment Administered"]
+    )
     enrollment_df = enrollment_df.drop(
         columns=[
             "Study Treatment AdministeredINF",
@@ -683,7 +689,7 @@ def DSMB15122(
         + status_df["Event Group Label3"].fillna("")
         + status_df["Event Group Label4"].fillna("")
     )
-    status_df["Event Group Label"].fillna(status_df["Event Group Label"], inplace=True)
+    status_df["Event Group Label"] = status_df["Event Group Label"].fillna(status_df["Event Group Label"])
     status_df = status_df.drop(
         columns=[
             "Event Group Label3",
@@ -965,7 +971,7 @@ def DSMB15122(
                     )
 
                     enrollment_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace INF with NaN
-                    enrollment_df.fillna("", inplace=True)  # Replace NaN with a placeholder
+                    enrollment_df = enrollment_df.fillna("")  # Replace NaN with a placeholder
                     for i in range(0, len(enrollment_df.columns)):
                         worksheet2.write(0, i, enrollment_df.columns[i], bold_11_format)
                     # * FORMAT DATA

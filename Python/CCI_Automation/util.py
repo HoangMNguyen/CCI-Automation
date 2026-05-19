@@ -400,12 +400,12 @@ def get_stats_df(column, *dfs):
 
     for i, df in enumerate(dfs):
         # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
-        df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
-        mean = df[column].mean()
-        std = df[column].std()
-        median = df[column].median()
-        minimum = df[column].min()
-        maximum = df[column].max()
+        numeric_column = pd.to_numeric(df[column], errors="coerce")
+        mean = numeric_column.mean()
+        std = numeric_column.std()
+        median = numeric_column.median()
+        minimum = numeric_column.min()
+        maximum = numeric_column.max()
 
         if np.isnan(std):
             std = 0
@@ -453,12 +453,12 @@ def get_stats_perc_df(column, *dfs):
 
     for i, df in enumerate(dfs):
         # Calculate the mean, standard deviation, median, and range of 'Age at Consent'
-        df.loc[:, column] = pd.to_numeric(df[column], errors="coerce")
-        mean = df[column].mean()
-        std = df[column].std()
-        median = df[column].median()
-        minimum = df[column].min()
-        maximum = df[column].max()
+        numeric_column = pd.to_numeric(df[column], errors="coerce")
+        mean = numeric_column.mean()
+        std = numeric_column.std()
+        median = numeric_column.median()
+        minimum = numeric_column.min()
+        maximum = numeric_column.max()
 
         if np.isnan(std):
             std = 0
@@ -545,7 +545,7 @@ def convert_sci_notation_2_float(s):
 def convert_integers_to_strings(df, column_name):
     """
     This function takes a dataframe and a column name as input.
-    It converts all integers in the specified column to strings, while keeping strings unchanged.
+    It converts all numeric values in the specified column to strings, while keeping strings unchanged.
 
     :param df: Pandas DataFrame
     :param column_name: Name of the column to process
@@ -555,10 +555,24 @@ def convert_integers_to_strings(df, column_name):
     if column_name not in df.columns:
         raise ValueError(f"Column '{column_name}' does not exist in the dataframe")
 
-    # Convert integers to strings, if the value is an integer, else keep it as is
-    df[column_name] = df[column_name].apply(lambda x: str(x) if isinstance(x, int) else x)
+    # Convert numeric values to strings, while keeping strings and missing values unchanged.
+    df[column_name] = df[column_name].apply(stringify_numeric)
 
     return df
+
+
+def stringify_numeric(value):
+    if pd.isna(value):
+        return value
+    if isinstance(value, (bool, np.bool_)):
+        return value
+    if isinstance(value, (int, np.integer)):
+        return str(value)
+    if isinstance(value, (float, np.floating)) and float(value).is_integer():
+        return str(int(value))
+    if isinstance(value, (float, np.floating)):
+        return str(value)
+    return value
 
 
 def get_data_from_dict(data: dict, input_dict: dict, *exclude) -> pd.DataFrame:

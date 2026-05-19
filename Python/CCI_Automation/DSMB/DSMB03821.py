@@ -86,7 +86,7 @@ def DSMB03821(
             "Gender Identity SP"
         ].fillna("")
 
-        enrollment_df["Gender Identity"].fillna(enrollment_df["Gender Identity"], inplace=True)
+        enrollment_df["Gender Identity"] = enrollment_df["Gender Identity"].fillna(enrollment_df["Gender Identity"])
         enrollment_df = enrollment_df.drop(columns=["Gender Identity SP"])
         # Age at Consent
         enrollment_df = add_rename_column_corelisting(
@@ -154,7 +154,7 @@ def DSMB03821(
         enrollment_df["Race other"] = enrollment_df[enrollment_df["Race other"].notna()]["Race other"].astype(str)
 
         enrollment_df["Race1"] = enrollment_df["Race1"].fillna("") + enrollment_df["Race other"].fillna("")
-        enrollment_df["Race1"].fillna(enrollment_df["Race1"], inplace=True)
+        enrollment_df["Race1"] = enrollment_df["Race1"].fillna(enrollment_df["Race1"])
         enrollment_df = enrollment_df.drop(
             columns=[
                 "Race other",
@@ -269,9 +269,9 @@ def DSMB03821(
             + " "
             + enrollment_df["Subject meets all study eligibility?EOS"].fillna("")
         )
-        enrollment_df["Subject meets all study eligibility?"].fillna(
-            enrollment_df["Subject meets all study eligibility?"], inplace=True
-        )
+        enrollment_df["Subject meets all study eligibility?"] = enrollment_df[
+            "Subject meets all study eligibility?"
+        ].fillna(enrollment_df["Subject meets all study eligibility?"])
         enrollment_df = enrollment_df.drop(
             columns=[
                 "Subject meets all study eligibility?IE",
@@ -283,7 +283,9 @@ def DSMB03821(
             + " "
             + enrollment_df["Reason for Screen FailureEOS"].fillna("")
         )
-        enrollment_df["Reason for Screen Failure"].fillna(enrollment_df["Reason for Screen Failure"], inplace=True)
+        enrollment_df["Reason for Screen Failure"] = enrollment_df["Reason for Screen Failure"].fillna(
+            enrollment_df["Reason for Screen Failure"]
+        )
         enrollment_df = enrollment_df.drop(
             columns=[
                 "Reason for Screen FailureIE",
@@ -1994,7 +1996,7 @@ def DSMB03821(
             + status_df["Event Label3"].fillna("")
             + status_df["Event Label4"].fillna("")
         )
-        status_df["Event Label"].fillna(status_df["Event Label"], inplace=True)
+        status_df["Event Label"] = status_df["Event Label"].fillna(status_df["Event Label"])
         status_df = status_df.drop(
             columns=[
                 "Event Label3",
@@ -2252,7 +2254,7 @@ def DSMB03821(
                     # * WRITING HEADER AND FORMATTING
                     # Assuming 'enrollment_df' is your DataFrame
                     enrollment_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace INF with NaN
-                    enrollment_df.fillna("N/A", inplace=True)  # Replace NaN with a placeholder
+                    enrollment_df = enrollment_df.fillna("N/A")  # Replace NaN with a placeholder
                     for i in range(0, len(enrollment_df.columns)):
                         worksheet2.write(0, i, enrollment_df.columns[i], bold_11_format)
                     # * FORMAT DATA
@@ -2268,7 +2270,7 @@ def DSMB03821(
                     infusion_df = infusion_df.drop(columns=["Event Group Label"])
                     infusionR_df = infusionR_df.drop(columns=["Event Group Label"])
                     # # replace "N/A" for blank coulumns
-                    # infusion_df.fillna("N/A", inplace=True)
+                    # infusion_df = infusion_df.fillna("N/A")
                     for i in range(0, len(infusion_df)):
                         for j in range(0, len(infusion_df.columns)):
                             worksheet3.write(i + 1, j, infusion_df.iloc[i, j], normal_data_format)

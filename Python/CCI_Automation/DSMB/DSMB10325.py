@@ -393,7 +393,7 @@ class DSMB10325:
 
         # Combine results by subject, giving NeoGenomics priority unless its value is "Not Done"
         def combine_labs(group):
-            res = {"Subject": group["Subject"].iloc[0]}
+            res = {"Subject": group.name}
             labs = group.get("Laboratory Name", pd.Series([], dtype=str)).fillna("").astype(str).str.strip()
             neo_mask = labs.eq("NeoGenomics")
             other_mask = ~neo_mask
@@ -422,7 +422,7 @@ class DSMB10325:
 
         combined_EGFR_df = (
             EGFR_df.groupby("Subject", dropna=False)
-            .apply(combine_labs)
+            .apply(combine_labs, include_groups=False)
             .reset_index(drop=True)
         )
 
@@ -1000,7 +1000,7 @@ class DSMB10325:
             status_df["Event Group Name3"].fillna("") + status_df["Event Group Name4"].fillna(""),
             status_df["Event Group Name"],
         )
-        status_df["Event Group Name"].fillna(status_df["Event Group Name"], inplace=True)
+        status_df["Event Group Name"] = status_df["Event Group Name"].fillna(status_df["Event Group Name"])
         status_df = status_df.drop(
             columns=[
                 "Event Group Name3",
