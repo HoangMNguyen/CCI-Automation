@@ -67,9 +67,7 @@ class EnrollmentLog:
     def output(self):
         output_path = f"{self.output_dir}/{self.output_file_name}.xlsx"
         sheet_name = "Enrollment Log " + self.study_name
-        subject_id_columns = [
-            col for col in self.output_df.columns if str(col).strip().lower().startswith("subject id")
-        ]
+        subject_id_columns = [col for col in self.output_df.columns if str(col).strip().lower().startswith("subject")]
         for col in subject_id_columns:
             self.output_df[col] = self.output_df[col].where(self.output_df[col].isna(), self.output_df[col].astype(str))
 
@@ -261,11 +259,11 @@ class EnrollmentLog:
                     worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
                 for i in range(8, 12):
                     worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
-                for i in range(12, 17):
+                for i in range(12, 24):
                     worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
-                for i in range(17, 22):
+                for i in range(24, 29):
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
-                for i in range(22, 23):
+                for i in range(29, 30):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
             elif self.study_name == "10325":
                 for i in range(8):
