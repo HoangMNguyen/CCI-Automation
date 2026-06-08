@@ -138,7 +138,7 @@ class Widget(QWidget):
         # Clear comboBox_2 and update based on the selected option
         self.ui.comboBox_2.clear()
         if self.selected_option == "Enrollment Log":
-            self.ui.comboBox_2.addItems(["03325", "03821", "11823", "10325", "12423", "15122", "15420", "16321"])
+            self.ui.comboBox_2.addItems(["03325", "03821", "11823", "10325", "12423", "15122", "15420", "16321", "50425"])
             self.ui.comboBox_2.setVisible(True)
         elif self.selected_option == "DSMB Report":
             self.ui.comboBox_2.addItems(["15420", "11823", "12423", "15122", "03821", "16321", "03325", "10325"])

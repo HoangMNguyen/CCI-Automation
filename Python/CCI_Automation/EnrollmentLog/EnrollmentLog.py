@@ -61,7 +61,10 @@ class EnrollmentLog:
             from .EnrollmentLog10325 import EnrollmentLog10325
 
             output_df = EnrollmentLog10325(self.data)
+        elif self.study_name == "50425":
+            from .EnrollmentLog50425 import EnrollmentLog50425
 
+            output_df = EnrollmentLog50425(self.data)
         return output_df
 
     def output(self):
@@ -165,6 +168,16 @@ class EnrollmentLog:
             pink_header_format = writer.book.add_format(
                 {
                     "bg_color": "#FABF8F",
+                    "text_wrap": True,
+                    "valign": "vcenter",
+                    "align": "center",
+                    "bold": True,
+                    "border": 2,
+                }
+            )
+            Lavender_header_format = writer.book.add_format(
+                {
+                    "bg_color": "#E5D6F5",
                     "text_wrap": True,
                     "valign": "vcenter",
                     "align": "center",
@@ -278,6 +291,19 @@ class EnrollmentLog:
                     worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
                 for i in range(26, 27):
                     worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
+            elif self.study_name == "50425":
+                            for i in range(9):
+                                worksheet.write(0, i, self.output_df.columns.values[i], pink_header_format)
+                            for i in range(9, 12):
+                                worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
+                            for i in range(12, 16):
+                                worksheet.write(0, i, self.output_df.columns.values[i], Lavender_header_format)
+                            for i in range(16, 19):
+                                worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
+                            for i in range(19, 26):
+                                worksheet.write(0, i, self.output_df.columns.values[i], green_header_format)
+                            for i in range(26, 28):
+                                worksheet.write(0, i, self.output_df.columns.values[i], yellow_header_format)
 
             worksheet.set_row(0, 60)
             worksheet.set_column("A:CQ", 15)
