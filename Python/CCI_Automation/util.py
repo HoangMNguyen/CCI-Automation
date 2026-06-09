@@ -281,9 +281,9 @@ def read_data_dict_zip_corelisting(input_dir: str, cut_off_date=None) -> dict:
                 with z.open(file_name) as f:
                     df = pd.read_csv(f)
                     # check if df has Event Date column and none of the data is blank
-                    if (
-                        "Event Date" in df.columns and df["Event Date"].isnull().sum() != len(df["Event Date"])
-                    ) or "EOS" in file_name_noCSV.split("_")[-1]:
+                    if ("Event Date" in df.columns and df["Event Date"].isnull().sum() != len(df["Event Date"])) or (
+                        "EOS" in file_name_noCSV.split("_")[-1] and "EOSTCONF" not in file_name_noCSV.split("_")[-1]
+                    ):
                         df["Event Date"] = pd.to_datetime(df["Event Date"])
                         # if cut_off_date is not None, then filter the data based on the cut_off_date
                         if cut_off_date is not None and "EOS" not in file_name_noCSV.split("_")[-1]:
