@@ -175,7 +175,7 @@ class EnrollmentLog:
                     "border": 2,
                 }
             )
-            Lavender_header_format = writer.book.add_format(
+            lavender_header_format = writer.book.add_format(
                 {
                     "bg_color": "#E5D6F5",
                     "text_wrap": True,
@@ -297,7 +297,7 @@ class EnrollmentLog:
                             for i in range(9, 12):
                                 worksheet.write(0, i, self.output_df.columns.values[i], purple_header_format)
                             for i in range(12, 16):
-                                worksheet.write(0, i, self.output_df.columns.values[i], Lavender_header_format)
+                                worksheet.write(0, i, self.output_df.columns.values[i], lavender_header_format)
                             for i in range(16, 19):
                                 worksheet.write(0, i, self.output_df.columns.values[i], blue_header_format)
                             for i in range(19, 26):
