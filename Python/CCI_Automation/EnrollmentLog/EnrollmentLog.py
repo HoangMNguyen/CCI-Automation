@@ -63,10 +63,12 @@ class EnrollmentLog:
             output_df = EnrollmentLog10325(self.data)
         elif self.study_name == "50425":
             from .EnrollmentLog50425 import EnrollmentLog50425
-            output_df = EnrollmentLog30425(self.data)
+
+            output_df = EnrollmentLog50425(self.data)
         elif self.study_name == "30425":
             from .EnrollmentLog30425 import EnrollmentLog30425
-            output_df = EnrollmentLog50425(self.data)
+
+            output_df = EnrollmentLog30425(self.data)
         return output_df
 
     def output(self):
