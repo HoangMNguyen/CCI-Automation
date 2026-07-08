@@ -26,7 +26,7 @@ ComboBox1.AddItem "Form Progress Listing Format"
 ComboBox1.AddItem "Query Detail Listing Format Site"
 ComboBox1.AddItem "Query Detail Listing Format Sponsor"
 ComboBox1.AddItem "Subject Progress Listing Format"
-ComboBox1.AddItem "Format Core Listing AE"
+ComboBox1.AddItem "Format Core Listing AE/PDAE"
 ComboBox1.AddItem "Format Core Listing Non AE"
 ComboBox1.AddItem "AE Assessment Join Data"
 ComboBox1.AddItem "15420 Ming's Comprehensive Form Summary Format"
@@ -48,7 +48,7 @@ Sub CommandButton1_Click()
         Call VeevaReports.QueryDetailListingFormatSponsor
     ElseIf ComboBox1.Value = "Subject Progress Listing Format" Then
         Call VeevaReports.SubjectProgressListingFormat
-    ElseIf ComboBox1.Value = "Format Core Listing AE" Then
+    ElseIf ComboBox1.Value = "Format Core Listing AE/PDAE" Then
         Call VeevaAE.FormatVeevaAE
     ElseIf ComboBox1.Value = "Format Core Listing Non AE" Then
         Call SafetyMacro.FormatNonAECRF

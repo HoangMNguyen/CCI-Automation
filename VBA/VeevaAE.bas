@@ -12,22 +12,45 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     
     Set WB1 = ActiveWorkbook
     Set WS1 = ActiveSheet
-    ActiveSheet.Name = "Veeva AE Data Listing"
     'Count number of rows w/ header
     lastRow = FindLastRowA(WS1)
     
-    'Add WS2 as output
-    With WB1
-        .Sheets.Add(Before:=.Sheets(.Sheets.count)).Name = "Reformated AE Report"
-        Set WS2 = Sheets("Reformated AE Report")
-    End With
-
     StudyNum = Left(WS1.Range("A2").Value, 5)
     If Len(StudyNum) <> 5 And Not IsNumeric(StudyNum) Then
         StudyNum = Left(ActiveWorkbook.Name, 5)
     End If
-    Call CopyColumnsWithHeaders(WS1, WS2, GetAEHeaders(StudyNum), 1, 1)
-    HeadersIndex = FindHeaderIndexes(WS1, GetAEHeaders(StudyNum))
+    ' TODO:
+    'Determine which set of headers to use based on the "Form Name" column
+    Dim FormNameCol As String
+    Dim FormNameValue As String
+    Dim SelectedHeaders As Variant
+    Dim ReportSheetName As String
+    Dim ListingSheetName As String
+    FormNameCol = FindColumn(WS1, "Form Name")
+    If FormNameCol <> "Not Found" Then
+        FormNameValue = CStr(WS1.Range(FormNameCol & "2").Value)
+    End If
+    'If the form name contains PDAE use the PDAE headers, otherwise (AE) use the AE headers
+    If InStr(1, FormNameValue, "PDAE", vbTextCompare) > 0 Then
+        SelectedHeaders = GetPDAEHeaders(StudyNum)
+        ReportSheetName = "Reformated PDAE Report"
+        ListingSheetName = "Veeva PDAE Data Listing"
+    Else
+        SelectedHeaders = GetAEHeaders(StudyNum)
+        ReportSheetName = "Reformated AE Report"
+        ListingSheetName = "Veeva AE Data Listing"
+    End If
+    'Rename the source listing sheet based on the form type
+    WS1.Name = ListingSheetName
+
+    'Add WS2 as output
+    With WB1
+        .Sheets.Add(Before:=.Sheets(.Sheets.count)).Name = ReportSheetName
+        Set WS2 = Sheets(ReportSheetName)
+    End With
+
+    Call CopyColumnsWithHeaders(WS1, WS2, SelectedHeaders, 1, 1)
+    HeadersIndex = FindHeaderIndexes(WS1, SelectedHeaders)
     Dim index As Long
     For index = 1 To UBound(HeadersIndex) + 1
         'Split header name to remove part after the last "("
@@ -50,7 +73,6 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
             j = j + 1
         End If
     Next i
-    
     'Calculate the Duration column
     'Find the start date column
     Dim StartDate As String
@@ -357,6 +379,28 @@ Function GetAEHeaders(StudyNum As String) As Variant
                             "Event Onset (IG_NS_NA_AE1.CL_NS_YH_AEONSET_cl_NS_AEONSET1)", _
                             "Additional Toxicity Details (IG_NS_NA_AE1.TX_YS_YH_AETOXTERM)", _
                             "Event Ongoing (IG_NS_NA_AE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)")
+    End If
+
+End Function
+
+Function GetPDAEHeaders(StudyNum As String) As Variant
+
+    If StudyNum = "15420" Then
+        GetPDAEHeaders = Array("Subject", _
+                               "AE or SAE? (ig_PDAE2.AESEV)", _
+                               "T-cell Attribution (ig_PDAE1.AEREL)", _
+                               "T-cell Expectedness (ig_PDAE1.AETRTINTP)", _
+                               "Other Attribution (ig_PDAE1.AERELOTH)", _
+                               "Specify Other Attribution (ig_PDAE1.AERELSPOTH)", _
+                               "Other Expectedness (ig_PDAE1.AETRTINTPOTH)", _
+                               "CTCAE Category (ig_PDAE1.AECAT)", _
+                               "Toxicity (ig_PDAE1.AETOX)", _
+                               "Grade (ig_PDAE1.AETOXGR)", _
+                               "Start Date (ig_PDAE1.AESTDAT)", _
+                               "Stop Date (ig_PDAE1.AEENDAT)", _
+                               "Additional Toxicity Details (ig_PDAE1.AETOXTERM)", _
+                               "Event Ongoing (ig_PDAE1.AEONGO)", _
+                               "Event Onset (ig_PDAE1.PDAEONSET)")
     End If
 
 End Function
