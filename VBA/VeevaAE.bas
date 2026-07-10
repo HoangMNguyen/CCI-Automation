@@ -62,6 +62,15 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     Dim LastColumnWS2 As Long
     LastColumn = FindLastColumn(WS1)
     LastColumnWS2 = FindLastColumn(WS2)
+    'When no headers are selected (e.g. PDAE before GetPDAEHeaders is populated),
+    'nothing was copied to WS2, but FindLastColumn returns 1 for an empty sheet.
+    'Force it to 0 so the raw columns start at column A instead of being shifted
+    'right by one (which would leave a blank leading column).
+    Dim numSelectedHeaders As Long
+    If IsArray(SelectedHeaders) Then
+        numSelectedHeaders = UBound(SelectedHeaders) - LBound(SelectedHeaders) + 1
+    End If
+    If numSelectedHeaders = 0 Then LastColumnWS2 = 0
     
     Dim i As Long
     Dim j As Long
@@ -79,66 +88,81 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
     StartDate = FindColumn(WS2, "Start Date")
     Dim StopDate As String
     StopDate = FindColumn(WS2, "Stop Date")
-    Set startDateRange = WS2.Range(StartDate & "2:" & StartDate & lastRow)
-    Set stopDateRange = WS2.Range(StopDate & "2:" & StopDate & lastRow)
-    Dim DurationColumn As Long
-    DurationColumn = stopDateRange.column + 1
-    'Insert empty column
-    WS2.Columns(DurationColumn).Insert Shift = xlToRight
-    ' Set the header for the duration column
-    WS2.Cells(1, DurationColumn).Value = "Duration"
-    'Check if there is no data
-    If lastRow > 1 Then
-        Set durationRange = WS2.Cells(2, DurationColumn).Resize(lastRow - 1, 1)
-        ' Read data into arrays
-        Dim startDateArray As Variant
-        Dim stopDateArray As Variant
-        Dim durationArray() As Variant
-        startDateArray = startDateRange.Value
-        stopDateArray = stopDateRange.Value
-        ' Prepare the duration array
-        If IsArray(startDateArray) Then
-            If UBound(startDateArray, 1) = 1 And UBound(startDateArray, 2) = 1 Then
-                ' Handle special case where there is only one row of data
-                ReDim durationArray(1 To 1, 1 To 1)
-            Else
-                ' General case for arrays with more than one element
-                ReDim durationArray(1 To UBound(startDateArray, 1), 1 To 1)
-            End If
-            
-            ' Perform the calculation
-            For i = 1 To UBound(startDateArray, 1)
-                If IsDate(startDateArray(i, 1)) And IsDate(stopDateArray(i, 1)) Then
-                    durationArray(i, 1) = DateDiff("d", startDateArray(i, 1), stopDateArray(i, 1)) + 1
+    'Only build the Duration column when both Start Date and Stop Date columns exist.
+    'Some form types (e.g. PDAE) do not have these columns; FindColumn then returns
+    '"Not Found" and building the range below would fail with "method Range failed".
+    If StartDate <> "Not Found" And StopDate <> "Not Found" Then
+    'When there is no data, lastRow = 1 (header only), which builds a reversed range
+    '(e.g. "J2:J1") and fails. Clamp the bottom row to at least 2 so the range stays valid.
+    'The actual date reads below are still guarded by "If lastRow > 1".
+    Dim rangeLastRow As Long
+    rangeLastRow = lastRow
+    If rangeLastRow < 2 Then rangeLastRow = 2
+        Set startDateRange = WS2.Range(StartDate & "2:" & StartDate & rangeLastRow)
+        Set stopDateRange = WS2.Range(StopDate & "2:" & StopDate & rangeLastRow)
+        Dim DurationColumn As Long
+        DurationColumn = stopDateRange.column + 1
+        'Insert empty column
+        WS2.Columns(DurationColumn).Insert Shift = xlToRight
+        ' Set the header for the duration column
+        WS2.Cells(1, DurationColumn).Value = "Duration"
+        'Check if there is no data
+        If lastRow > 1 Then
+            Set durationRange = WS2.Cells(2, DurationColumn).Resize(lastRow - 1, 1)
+            ' Read data into arrays
+            Dim startDateArray As Variant
+            Dim stopDateArray As Variant
+            Dim durationArray() As Variant
+            startDateArray = startDateRange.Value
+            stopDateArray = stopDateRange.Value
+            ' Prepare the duration array
+            If IsArray(startDateArray) Then
+                If UBound(startDateArray, 1) = 1 And UBound(startDateArray, 2) = 1 Then
+                    ' Handle special case where there is only one row of data
+                    ReDim durationArray(1 To 1, 1 To 1)
                 Else
-                    durationArray(i, 1) = "" ' Empty field
+                    ' General case for arrays with more than one element
+                    ReDim durationArray(1 To UBound(startDateArray, 1), 1 To 1)
                 End If
-            Next i
-        Else
-            ' Handle single value case
-            ReDim durationArray(1 To 1, 1 To 1)
-            If IsDate(startDateArray) And IsDate(stopDateArray) Then
-                durationArray(1, 1) = DateDiff("d", startDateArray, stopDateArray) + 1
+                
+                ' Perform the calculation
+                For i = 1 To UBound(startDateArray, 1)
+                    If IsDate(startDateArray(i, 1)) And IsDate(stopDateArray(i, 1)) Then
+                        durationArray(i, 1) = DateDiff("d", startDateArray(i, 1), stopDateArray(i, 1)) + 1
+                    Else
+                        durationArray(i, 1) = "" ' Empty field
+                    End If
+                Next i
             Else
-                durationArray(1, 1) = "" ' Empty field
+                ' Handle single value case
+                ReDim durationArray(1 To 1, 1 To 1)
+                If IsDate(startDateArray) And IsDate(stopDateArray) Then
+                    durationArray(1, 1) = DateDiff("d", startDateArray, stopDateArray) + 1
+                Else
+                    durationArray(1, 1) = "" ' Empty field
+                End If
             End If
+        ' Write the results back to the worksheet
+        durationRange.Value = durationArray
+        ' Set the number format of the duration column to number
+        durationRange.EntireColumn.NumberFormat = "0"
         End If
-    ' Write the results back to the worksheet
-    durationRange.Value = durationArray
-    ' Set the number format of the duration column to number
-    durationRange.EntireColumn.NumberFormat = "0"
+        ' Set the color of the new column to HEX #6666FF
+        WS2.Cells(2, DurationColumn).EntireColumn.Font.Color = RGB(102, 102, 255)
     End If
-    ' Set the color of the new column to HEX #6666FF
-    WS2.Cells(2, DurationColumn).EntireColumn.Font.Color = RGB(102, 102, 255)
-    
-    
-    
+
+
+
     'for study 15420 Derived Toxicity rule only
     If StudyNum = "15420" Then
         Dim innerString As String
         'Find column of Toxicity
         Dim Toxicity As String
         Toxicity = FindColumn(WS2, "Toxicity")
+        'Only derive toxicity when the Toxicity column exists and there is data.
+        'FindColumn returns "Not Found" when the column is absent, and with no data
+        'lastRow = 1 would build a reversed range.
+        If Toxicity <> "Not Found" And lastRow > 1 Then
         Set toxicityRange = WS2.Range(Toxicity & "2:" & Toxicity & lastRow)
         ' Read data into arrays
         toxicityArray = toxicityRange.Value
@@ -177,45 +201,52 @@ Sub FormatVeevaAE() 'Reformat Veeva Core listing for AE report to match the safe
         WS2.Cells(1, derivedToxicityColumn).Value = "Derived Toxicity"
         ' Set the font color of the new column to HEX #6666FF
         derivedToxicityRange.EntireColumn.Font.Color = RGB(102, 102, 255)
+        End If
     End If
-    
+
     Dim CTCAEabbrev As Variant
     CTCAEabbrev = Array("COVID", "GGT ", "INR ", "CD4 ", "CPK ", " I ", " II ", " T ", " QT ", " NOS", "CAR ", "HLH")
     'Find column of Derived Toxicity
     Dim DeTox As String
     DeTox = FindColumn(WS2, "Derived Toxicity")
-    Set DeToxRange = WS2.Range(DeTox & "2:" & DeTox & lastRow)
-    ' Read data into arrays
-    DeToxArray = DeToxRange.Value
-    Dim NewDeToxValue As String
-    Dim index2 As Long
-    If IsArray(DeToxArray) Then
-        For i = 1 To UBound(DeToxArray, 1)
-            If Not IsEmpty(DeToxArray(i, 1)) Then
-                NewDeToxValue = CStr(DeToxArray(i, 1))
-                For j = 0 To UBound(CTCAEabbrev, 1)
-                    index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
-                    If index2 > 0 Then
-                        DeToxArray(i, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
-                    End If
-                Next j
-            End If
-        Next i
-    Else
-        NewDeToxValue = DeToxArray
-        For j = 0 To UBound(CTCAEabbrev, 1)
-            index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
-            If index2 > 0 Then
-                DeToxArray(1, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
-            End If
-        Next j
+    'Only process Derived Toxicity when the column exists and there is data.
+    'Not all form types have a Derived Toxicity column (FindColumn returns "Not Found"),
+    'and with no data lastRow = 1 would build a reversed range.
+    If DeTox <> "Not Found" And lastRow > 1 Then
+        Set DeToxRange = WS2.Range(DeTox & "2:" & DeTox & lastRow)
+        ' Read data into arrays
+        DeToxArray = DeToxRange.Value
+        Dim NewDeToxValue As String
+        Dim index2 As Long
+        If IsArray(DeToxArray) Then
+            For i = 1 To UBound(DeToxArray, 1)
+                If Not IsEmpty(DeToxArray(i, 1)) Then
+                    NewDeToxValue = CStr(DeToxArray(i, 1))
+                    For j = 0 To UBound(CTCAEabbrev, 1)
+                        index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
+                        If index2 > 0 Then
+                            DeToxArray(i, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
+                        End If
+                    Next j
+                End If
+            Next i
+        Else
+            NewDeToxValue = DeToxArray
+            For j = 0 To UBound(CTCAEabbrev, 1)
+                index2 = InStr(1, UCase(NewDeToxValue), CTCAEabbrev(j), vbTextCompare)
+                If index2 > 0 Then
+                    DeToxArray(1, 1) = Left(NewDeToxValue, index2 - 1) & CTCAEabbrev(j) & Mid(NewDeToxValue, index2 + Len(CTCAEabbrev(j)))
+                End If
+            Next j
+        End If
+                
+        ' Write the results back to the worksheet
+        DeToxRange.Value = DeToxArray
+        DeToxRange.EntireColumn.Font.Color = RGB(102, 102, 255)
     End If
-            
-    ' Write the results back to the worksheet
-    DeToxRange.Value = DeToxArray
-    DeToxRange.EntireColumn.Font.Color = RGB(102, 102, 255)
-    
-    
+
+
+
     ' Remove columns whose headers end with "_RAW"
     Dim col As Long
     Dim lastColWS2AfterProcessing As Long
@@ -401,6 +432,103 @@ Function GetPDAEHeaders(StudyNum As String) As Variant
                                "Additional Toxicity Details (ig_PDAE1.AETOXTERM)", _
                                "Event Ongoing (ig_PDAE1.AEONGO)", _
                                "Event Onset (ig_PDAE1.PDAEONSET)")
+    ElseIf StudyNum = "16321" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "AE or SAE? (ig_PDAE2.AESEV)", _
+                            "T-cell Attribution (ig_PDAE1.AEREL)", _
+                            "T-cell Expectedness (ig_PDAE1.AETRTINTP)", _
+                            "Specify Other Attribution (ig_PDAE1.AERELSPOTH)", _
+                            "Other Attribution (ig_PDAE1.AERELOTH)", _
+                            "Other Expectedness (ig_PDAE1.AETRTINTPOTH)", _
+                            "CTCAE Category (ig_PDAE1.AECAT)", _
+                            "Derived Toxicity (ig_PDAE1.AETOXDV)", _
+                            "Toxicity (ig_PDAE1.AETOX)", _
+                            "Grade (ig_PDAE1.AETOXGR)", _
+                            "Start Date (ig_PDAE1.AESTDAT)", _
+                            "Stop Date (ig_PDAE1.AEENDAT)", _
+                            "Event Onset (ig_PDAE1.PDAEONSET)", _
+                            "Additional Toxicity Details (ig_PDAE1.AETOXTERM)", _
+                            "Event Onset (ig_PDAE1.PDAEONSET)")
+    ElseIf StudyNum = "12423" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "AE or SAE? (IG_NS_NA_PDAE2.CL_YS_YH_AESEV_cl_NS_AESAE1)", _
+                            "T-cell Attribution (IG_NS_NA_PDAE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)", _
+                            "T-cell Expectedness (IG_NS_NA_PDAE1.CL_YS_YH_AETRTINTP_cl_YS_YN1)", _
+                            "Specify Other Attribution (IG_NS_NA_PDAE1.TX_YS_NH_AERELSPOTH)", _
+                            "Other Attribution (IG_NS_NA_PDAE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
+                            "CTCAE Category (IG_NS_NA_PDAE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
+                            "Derived Toxicity (IG_NS_NA_PDAE1.DV_YS_YH_AETOXDV)", _
+                            "Toxicity (IG_NS_NA_PDAE1.TX_YS_NH_AETOX)", _
+                            "Grade (IG_NS_NA_PDAE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", _
+                            "Start Date (IG_NS_NA_PDAE1.DT_YS_NH_AESTDAT)", _
+                            "Stop Date (IG_NS_NA_PDAE1.DT_YS_YH_AEENDAT)", _
+                            "Additional Toxicity Details (IG_NS_NA_PDAE1.TX_YS_YH_AETOXTERM)", _
+                            "Event Ongoing? (IG_NS_NA_PDAE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)")
+    ElseIf StudyNum = "11823" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "AE or SAE? (IG_NS_NA_PDAE2.CL_YS_YH_AESEV_cl_NS_AESAE1)", _
+                            "T-cell Attribution (IG_NS_NA_PDAE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)", _
+                            "Specify Other Attribution (IG_NS_NA_PDAE1.TX_YS_NH_AERELSPOTH)", _
+                            "Other Attribution (IG_NS_NA_PDAE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
+                            "CTCAE Category (IG_NS_NA_PDAE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
+                            "Derived Toxicity (IG_NS_NA_PDAE1.DV_YS_YH_AETOXDV)", _
+                            "Toxicity (IG_NS_NA_PDAE1.TX_YS_NH_AETOX)", _
+                            "Grade (IG_NS_NA_PDAE1.CL_YS_YH_AETOXGR_cl_YS_AEGRADE1)", _
+                            "Start Date (IG_NS_NA_PDAE1.DT_YS_NH_AESTDAT)", _
+                            "Stop Date (IG_NS_NA_PDAE1.DT_YS_YH_AEENDAT)", _
+                            "Event Onset (IG_NS_NA_PDAE1.CL_NS_YH_PDAEOS_cl_NS_PDAEONSET1)", _
+                            "Additional Toxicity Details (IG_NS_NA_PDAE1.TX_YS_YH_AETOXTERM)", _
+                            "Event Ongoing? (IG_NS_NA_PDAE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)")
+    ElseIf StudyNum = "10325" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "PDAE or PDSAE (IG_NS_NA_PDAE2.CL_NS_YH_PDAESEV_cl_NS_PDAESAE1)", _
+                            "T-cell Attribution (IG_NS_NA_PDAE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB2)", _
+                            "Specify Other Attribution (IG_NS_NA_PDAE1.TX_YS_YH_AERELSPOTH)", _
+                            "Other Attribution (IG_NS_NA_PDAE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
+                            "CTCAE Category (IG_NS_NA_PDAE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
+                            "Derived Toxicity (IG_NS_NA_PDAE1.DV_YS_YH_AETOXDV)", _
+                            "Toxicity (IG_NS_NA_PDAE1.TX_YS_NH_AETOX)", _
+                            "Grade (IG_NS_NA_PDAE1.CL_NS_YH_PDAEGR_cl_YS_AEGRADE1)", _
+                            "Start Date (IG_NS_NA_PDAE1.DT_YS_NH_AESTDAT)", _
+                            "Stop Date (IG_NS_NA_PDAE1.DT_YS_YH_AEENDAT)", _
+                            "Event Onset (IG_NS_NA_PDAE1.CL_NS_YH_ONSET_cl_NS_PDAEONSET1)", _
+                            "Additional Toxicity Details (IG_NS_NA_PDAE1.TX_NS_YH_PDAETOXTERM)", _
+                            "Event Ongoing (IG_NS_NA_PDAE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)")
+    ElseIf StudyNum = "03325" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "PDAE or PDSAE (IG_NS_NA_PDAE2.CL_NS_YH_PDAESEV_cl_NS_PDAESAE1)", _
+                            "T-cell Attribution (IG_NS_NA_PDAE1.CL_NS_NH_AEREL_cl_NS_TCELLATRIB2)", _
+                            "Specify Other Attribution (IG_NS_NA_PDAE1.TX_YS_YH_AERELSPOTH)", _
+                            "Other Attribution (IG_NS_NA_PDAE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)", _
+                            "CTCAE Category (IG_NS_NA_PDAE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)", _
+                            "Derived Toxicity (IG_NS_NA_PDAE1.DV_YS_YH_AETOXDV)", _
+                            "Toxicity (IG_NS_NA_PDAE1.TX_YS_NH_AETOX)", _
+                            "Grade (IG_NS_NA_PDAE1.CL_NS_YH_PDAEGR_cl_YS_AEGRADE1)", _
+                            "Start Date (IG_NS_NA_PDAE1.DT_YS_NH_AESTDAT)", _
+                            "Stop Date (IG_NS_NA_PDAE1.DT_YS_YH_AEENDAT)", _
+                            "Event Onset (IG_NS_NA_PDAE1.CL_NS_YH_ONSET_cl_NS_PDAEONSET1)", _
+                            "Additional Toxicity Details (IG_NS_NA_PDAE1.TX_NS_YH_PDAETOXTERM)", _
+                            "Event Ongoing (IG_NS_NA_PDAE1.CL_YS_YH_AEONGO_cl_NS_AEONGO1)")
+    ElseIf StudyNum = "03821" Then
+        GetPDAEHeaders = Array("Subject", _
+                            "AE or SAE? (ig_PDAE2.AESEV)", _
+                            "Investigational Product(s) (ig_PDAE1.PDAEIP)", _
+                            "Attribution to T-cell Therapy (IP1) (ig_PDAE1.AEREL1)", _
+                            "T-cell Therapy Expectedness (IP1) (ig_PDAE1.AETRTINTP1)", _
+                            "Attribution to VCN-01 (IP2) (ig_PDAE1.AEREL2)", _
+                            "VCN-01 Expectedness (IP2) (ig_PDAE1.AETRTINTP2)", _
+                            "Other Attribution (ig_PDAE1.AERELOTH)", _
+                            "Specify Other Attribution (ig_PDAE1.AERELSPOTH)", _
+                            "CTCAE Category (ig_PDAE1.AECAT)", _
+                            "Toxicity (ig_PDAE1.AETOX)", _
+                            "Derived Toxicity (ig_PDAE1.AETOXDV)", _
+                            "Grade (ig_PDAE1.AETOXGR)", _
+                            "Start Date (ig_PDAE1.AESTDAT)", _
+                            "Stop Date (ig_PDAE1.AEENDAT)", _
+                            "Event Onset (ig_PDAE1.PDAEONSET)", _
+                            "Event Ongoing? (ig_PDAE1.AEONGO)", _
+                            "Additional Toxicity Details (ig_PDAE1.AETOXTERM)")
     End If
+
 
 End Function
