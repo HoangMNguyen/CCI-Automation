@@ -320,6 +320,9 @@ def DSMB15420(
 
     # TODO: PREPARE DATA FOR INFUSION LISTING
     EXCHMO_df = data["EXCHMO"].copy()
+    EXCHMO_df = EXCHMO_df.sort_values(
+        ["Subject", "Event Group Label", "Medication (ig_EXCHMO2.EXCCAT)"]
+    )
     # select unique subject and Event Group Label
     grouped_df = EXCHMO_df.groupby(["Subject", "Event Group Label"])["Medication (ig_EXCHMO2.EXCCAT)"].unique()
     # convert the unique list to string by joining the list with '+' if the list has more than 1 medication

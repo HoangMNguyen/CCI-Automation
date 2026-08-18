@@ -282,6 +282,13 @@ class DSMB12423:
 
         # *: PREPARE DATA FOR INFUSION LISTING
         EXCHMO_df = data["EXCHMO"].copy()
+        EXCHMO_df = EXCHMO_df.sort_values(
+            [
+                "Subject",
+                "Event Group Label",
+                "Medication (IG_NS_NA_EXCHMO2.CL_NS_NH_EXCCAT_cl_NS_EXCCAT1)",
+            ]
+        )
         # select unique subject and Event Group Label
         grouped_df = EXCHMO_df.groupby(["Subject", "Event Group Label"])[
             "Medication (IG_NS_NA_EXCHMO2.CL_NS_NH_EXCCAT_cl_NS_EXCCAT1)"

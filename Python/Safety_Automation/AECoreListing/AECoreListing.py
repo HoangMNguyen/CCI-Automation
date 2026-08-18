@@ -221,7 +221,7 @@ class AECoreListing:
                 "Subject",
                 "AE or SAE? (IG_NS_NA_AE2.CL_YS_YH_AESEV_cl_NS_AESAE1)",
                 "T-cell Attribution (IG_NS_NA_AE1.CL_YS_NH_AEREL_cl_NS_TCELLATRIB1)",
-                "T-cell Expectedness (IG_NS_NA_AE1.CL_NS_YH_AETRTINTP_cl_YS_YN1)",
+                "Sponsor T-cell Expectedness (IG_NS_NA_AE1.CL_NS_YH_AETRTINTP_cl_YS_YN1)",
                 "Specify Other Attribution (IG_NS_NA_AE1.TX_YS_NH_AERELSPOTH)",
                 "Other Attribution (IG_NS_NA_AE1.CL_YS_NH_RELOTH_cl_NS_OTHATRIB1)",
                 "CTCAE Category (IG_NS_NA_AE1.CL_YS_NH_AECAT_cl_NS_CTCAECAT2)",
@@ -857,7 +857,7 @@ class AECoreListing:
                     df = self.data[DSDLA_key]
 
                 # Replace NaN and Inf values with an empty string
-                df = df.replace([np.NAN, pd.NaT, float("inf"), float("-inf")], "")
+                df = df.replace([np.nan, pd.NaT, float("inf"), float("-inf")], "")
 
                 num_cols = len(df.columns)
                 num_rows = len(df)

@@ -1,4 +1,5 @@
 import sys
+import os
 import pandas as pd
 import csv
 from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QLabel, QFileDialog, QCheckBox, QMessageBox
@@ -8,6 +9,16 @@ from PRA import *
 import traceback
 
 
+def resource_path(relative_path):
+    """Return absolute path to a bundled resource.
+
+    Works both when running from source and when frozen by PyInstaller,
+    which extracts --add-data files to a temp folder exposed as sys._MEIPASS.
+    """
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
 class Widget(QMainWindow):
     def __init__(self):
         """_summary_"""
@@ -15,7 +26,7 @@ class Widget(QMainWindow):
         self.file_path = ""
         self.file_path_out = ""
         # Load the ui file
-        uic.loadUi("PRAwindow.ui", self)
+        uic.loadUi(resource_path("PRAwindow.ui"), self)
 
         # Define our widgets
         # Select SDS file button
