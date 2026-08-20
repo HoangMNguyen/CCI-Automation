@@ -47,7 +47,43 @@ WS2.Activate
 Call Main.OutFormat
 End Sub
 
-Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
+Sub QFSR(WS1, WS2, WS3, WS4, WS5, WS6, lastRow)
+
+    Dim splitRow As Long, splitLast As Long
+    Dim splitSubj As String
+    Dim dropRows As Range
+
+    'Copy cohort 3A data to another tab, cohort 3A shares the cohort 3 calendars
+     WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
+        "15CT055 Cohort 3 LTFU Calendar", _
+        "15CT055 Cohort 3 Primary Calendar", _
+        "15CT055 Cohort 3 Retreatment Calendar", _
+        "15CT055 Cohort 3 Retx-LTFU Calendar"), Operator:=xlFilterValues
+
+    WS1.Range("A1:J" & lastRow).Select
+    Selection.Copy
+
+    Set WS6 = Sheets.Add
+    WS6.Name = "Cohort 3A Form Status"
+    WS6.Paste
+    Call Main.OutFormat
+
+    'Drop subjects below 47, they belong on the cohort 3 tab
+    splitLast = WS6.Cells(WS6.Rows.count, 2).End(xlUp).row
+    For splitRow = 2 To splitLast
+        splitSubj = CStr(WS6.Cells(splitRow, 2).Value)
+        If Val(Mid$(splitSubj, InStrRev(splitSubj, "-") + 1)) < 47 Then
+            If dropRows Is Nothing Then
+                Set dropRows = WS6.Rows(splitRow)
+            Else
+                Set dropRows = Union(dropRows, WS6.Rows(splitRow))
+            End If
+        End If
+    Next splitRow
+    If Not dropRows Is Nothing Then dropRows.Delete
+    Set dropRows = Nothing
+
+   Sheets("All Cohorts Form Status Report").Move Before:=Sheets(1)
 
     'Copy cohort 3 data to another tab
      WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
@@ -55,17 +91,32 @@ Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
         "15CT055 Cohort 3 Primary Calendar", _
         "15CT055 Cohort 3 Retreatment Calendar", _
         "15CT055 Cohort 3 Retx-LTFU Calendar"), Operator:=xlFilterValues
-   
+
     WS1.Range("A1:J" & lastRow).Select
     Selection.Copy
-    
+
     Set WS5 = Sheets.Add
     WS5.Name = "Cohort 3 Form Status"
     WS5.Paste
     Call Main.OutFormat
 
+    'Drop subject 47 and above, they belong on the cohort 3A tab
+    splitLast = WS5.Cells(WS5.Rows.count, 2).End(xlUp).row
+    For splitRow = 2 To splitLast
+        splitSubj = CStr(WS5.Cells(splitRow, 2).Value)
+        If Val(Mid$(splitSubj, InStrRev(splitSubj, "-") + 1)) >= 47 Then
+            If dropRows Is Nothing Then
+                Set dropRows = WS5.Rows(splitRow)
+            Else
+                Set dropRows = Union(dropRows, WS5.Rows(splitRow))
+            End If
+        End If
+    Next splitRow
+    If Not dropRows Is Nothing Then dropRows.Delete
+    Set dropRows = Nothing
+
    Sheets("All Cohorts Form Status Report").Move Before:=Sheets(1)
-    
+
     'Copy cohort 2 data to another tab
      WS1.Range("A1").AutoFilter Field:=3, Criteria1:=Array( _
         "15CT055 Cohort 2 LTFU Calendar", _
@@ -111,7 +162,10 @@ Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
     
     WS4.Range("A22").Value = "Cohort 3 Form Status"
     Call FormStatusOverview(WS5, WS4, 22, lastRow)
- 
+
+    WS4.Range("A29").Value = "Cohort 3A Form Status"
+    Call FormStatusOverview(WS6, WS4, 29, lastRow)
+
     'Autofit and add borders for the form status overview table
     ActiveSheet.Range("A1").Select
     Call FormatTable
@@ -125,18 +179,27 @@ Sub QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
     ActiveSheet.Range("A22").Select
     Call FormatTable
 
+    ActiveSheet.Range("A29").Select
+    Call FormatTable
+
     WS1.Range("A1").AutoFilter Field:=3
 
 End Sub
 
-Sub QQSR(WS1 As Worksheet, WS2 As Worksheet, WS3 As Worksheet, WS4 As Worksheet, WS5 As Worksheet)
+Sub QQSR(WS1 As Worksheet, WS2 As Worksheet, WS3 As Worksheet, WS4 As Worksheet, WS5 As Worksheet, WS6 As Worksheet)
 
 Dim lastRow As Long
+Dim splitRow As Long, splitLast As Long
+Dim splitSubj As String
+Dim dropRows As Range
 
 Set WS5 = Sheets.Add(After:=WS1)
 WS5.Name = "Cohort 3 Query Report"
 
-Set WS2 = Sheets.Add(After:=WS5)
+Set WS6 = Sheets.Add(After:=WS5)
+WS6.Name = "Cohort 3A Query Report"
+
+Set WS2 = Sheets.Add(After:=WS6)
 WS2.Name = "Cohort 2 Query Report"
 
 Set WS3 = Sheets.Add(After:=WS2)
@@ -151,7 +214,7 @@ lastRow = Cells.Find(What:="*", SearchDirection:=xlPrevious).row
 Dim calendarNameCol As Integer
 calendarNameCol = L2N(FindColumn(WS1, "CALENDAR_NAME"))
 'Copy cohort 2 data to another tab
-WS1.Range("A1").AutoFilter Field:=5, Criteria1:=Array( _
+WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:=Array( _
    "15CT055 Cohort 2 LTFU Calendar", _
    "15CT055 Cohort 2 Primary Calendar", _
    "15CT055 Cohort 2 Retreatment Calendar V2", _
@@ -166,15 +229,48 @@ WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:="15CT055 Calendar"
 WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS3.Paste
 
-'Copy cohort 3 data to another tab
+'Copy cohort 3 and cohort 3A data to another tab, cohort 3A shares the cohort 3 calendars
 WS1.Range("A1").AutoFilter Field:=calendarNameCol, Criteria1:=Array( _
         "15CT055 Cohort 3 LTFU Calendar", _
         "15CT055 Cohort 3 Primary Calendar", _
         "15CT055 Cohort 3 Retreatment Calendar", _
         "15CT055 Cohort 3 Retx-LTFU Calendar"), Operator:=xlFilterValues
 
-WS1.Range("A1:S" & lastRow).SpecialCells(xlCellTypeVisible).Copy
+WS1.Range("A1:T" & lastRow).SpecialCells(xlCellTypeVisible).Copy
 WS5.Paste
+
+'Cohort 3A shares the cohort 3 calendars, duplicate the rows then split them by subject number
+WS5.UsedRange.Copy Destination:=WS6.Range("A1")
+
+'Drop subject 47 and above from cohort 3, they belong on the cohort 3A tab
+splitLast = WS5.Cells(WS5.Rows.count, 4).End(xlUp).row
+For splitRow = 2 To splitLast
+    splitSubj = CStr(WS5.Cells(splitRow, 4).Value)
+    If Val(Mid$(splitSubj, InStrRev(splitSubj, "-") + 1)) >= 47 Then
+        If dropRows Is Nothing Then
+            Set dropRows = WS5.Rows(splitRow)
+        Else
+            Set dropRows = Union(dropRows, WS5.Rows(splitRow))
+        End If
+    End If
+Next splitRow
+If Not dropRows Is Nothing Then dropRows.Delete
+Set dropRows = Nothing
+
+'Drop subjects below 47 from cohort 3A, they belong on the cohort 3 tab
+splitLast = WS6.Cells(WS6.Rows.count, 4).End(xlUp).row
+For splitRow = 2 To splitLast
+    splitSubj = CStr(WS6.Cells(splitRow, 4).Value)
+    If Val(Mid$(splitSubj, InStrRev(splitSubj, "-") + 1)) < 47 Then
+        If dropRows Is Nothing Then
+            Set dropRows = WS6.Rows(splitRow)
+        Else
+            Set dropRows = Union(dropRows, WS6.Rows(splitRow))
+        End If
+    End If
+Next splitRow
+If Not dropRows Is Nothing Then dropRows.Delete
+Set dropRows = Nothing
 
 WS1.Activate
 RemoveFilter
@@ -191,6 +287,9 @@ Call QueryReportOverview(WS2, WS4, 13)
 WS4.Range("A19").Value = "Cohort 3 Query Status"
 Call QueryReportOverview(WS5, WS4, 19)
 
+WS4.Range("A25").Value = "Cohort 3A Query Status"
+Call QueryReportOverview(WS6, WS4, 25)
+
 'Autofit and add borders for the form status overview table
 WS4.Activate
 WS4.Range("A1").Select
@@ -203,6 +302,9 @@ WS4.Range("A13").Select
 FormatTable
 
 WS4.Range("A19").Select
+FormatTable
+
+WS4.Range("A25").Select
 FormatTable
 
 End Sub

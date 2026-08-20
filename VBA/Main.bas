@@ -32,6 +32,7 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
     Dim WS3 As Worksheet
     Dim WS4 As Worksheet
     Dim WS5 As Worksheet
+    Dim WS6 As Worksheet
     Dim SheetNum As Long
     Dim VSheet As Worksheet
     Dim TempSheet As Worksheet
@@ -88,11 +89,12 @@ Sub QuickReportsFormStatusFormatSponsor() 'reformat quick report for form status
 
 
     ElseIf WS1.Range("A2").Value = "823312" Then
-        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
+        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, WS6, lastRow)
         WS1.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
         WS2.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
         WS3.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
         WS5.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
+        WS6.Range("A1").AutoFilter Field:=6, Criteria1:="Submitted to Sponsor"
 
     ElseIf WS1.Range("A2").Value = "826250" Then
         Call S32816.QFSR(WS1, WS2, WS3, WS4, lastRow)
@@ -218,6 +220,7 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
     Dim WS3 As Worksheet
     Dim WS4 As Worksheet
     Dim WS5 As Worksheet
+    Dim WS6 As Worksheet
     Dim SheetNum As Long
     Dim CurrentSheetNum As Long
     Dim fileSaveName As Variant
@@ -267,11 +270,12 @@ Sub QuickReportsFormStatusFormatSite() 'reformat quick report for form status re
         Call S01422.QFSR(WS1, "Incomplete", "Work In Progress")
 
     ElseIf WS1.Range("A2").Value = "823312" Then
-        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, lastRow)
+        Call S15CT055.QFSR(WS1, WS2, WS3, WS4, WS5, WS6, lastRow)
         WS1.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
         WS2.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
         WS3.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
         WS5.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
+        WS6.Range("A1").AutoFilter Field:=6, Criteria1:="Incomplete", Operator:=xlOr, Criteria2:="Work In Progress"
 
     ElseIf WS1.Range("A2").Value = "826250" Then
         Call S32816.QFSR(WS1, WS2, WS3, WS4, lastRow)
@@ -406,6 +410,7 @@ Sub QuickReportQueryStatusFormat()
     Dim WS3 As Worksheet
     Dim WS4 As Worksheet
     Dim WS5 As Worksheet
+    Dim WS6 As Worksheet
     Dim lastRow As Long
     Dim WSCount As Integer
     Dim Sh As Integer
@@ -457,7 +462,7 @@ Sub QuickReportQueryStatusFormat()
         Call S01422.QQSR(WS1) '01422 Study
         
     ElseIf WS1.Range("C2").Value = "823312" Then
-        Call S15CT055.QQSR(WS1, WS2, WS3, WS4, WS5) '15CT055 study
+        Call S15CT055.QQSR(WS1, WS2, WS3, WS4, WS5, WS6) '15CT055 study
         
     ElseIf WS1.Range("C2").Value = "826250" Then
         Call S32816.QQSR(WS1, WS2, WS3, WS4) '32816 study
